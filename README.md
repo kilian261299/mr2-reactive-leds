@@ -71,3 +71,8 @@ Power is tapped from the rear of the cigarette lighter circuit, fused, then step
 The two LED strips are wired as independent left and right outputs so they can react separately during acceleration, braking, and cornering.
 
 Full wiring details are in [`docs/wiring-plan.md`](docs/wiring-plan.md).
+
+## Documentation
+
+- [Wiring Plan](docs/wiring-plan.md)
+- [Build Log](docs/build-log.md)
