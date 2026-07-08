@@ -18,7 +18,20 @@ Version 1 will use:
 
 ## Stage 2 — Parts Ordered
 
-Pending.
+Parts have been ordered.
+
+Ordered components:
+
+- ESP32-C3 Super Mini
+- MPU6050 / GY-521 accelerometer
+- WS2812B addressable LED strip
+- SN74AHCT125N level shifter
+- Rotary encoder
+- 12V to 5V buck converter
+- Inline fuse holder
+- JST-XH connector kit
+- 18AWG red/black wire
+- VHB mounting tape
 
 ## Stage 3 — Bench Testing
 
