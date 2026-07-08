@@ -36,6 +36,21 @@ The aim is to create subtle reactive lighting that changes based on how the car 
 | JST-XH connectors | Connectors for removable wiring |
 | 18AWG wire | Power and ground wiring |
 
+## Tools / Equipment
+
+Basic tools already available:
+
+| Tool | Use |
+|---|---|
+| Soldering iron | Soldering wires, connectors, and perfboard |
+| Solder | Electrical joints |
+| Wire strippers | Preparing wires |
+| Multimeter | Checking voltage, continuity, and converter output |
+| Heat shrink | Insulating soldered joints |
+| Electrical tape | Temporary insulation and cable wrapping |
+| Small screwdriver set | Opening trim and securing parts |
+| USB cable | Programming and testing the ESP32-C3 |
+
 ## System Behaviour
 
 | Driving State | LED Behaviour |
