@@ -24,7 +24,7 @@ Ordered components:
 
 - ESP32-C3 Super Mini
 - MPU6050 / GY-521 accelerometer
-- WS2812B addressable LED strip
+- 2 × 1m WS2812B addressable LED strips
 - SN74AHCT125N level shifter
 - Rotary encoder
 - 12V to 5V buck converter
