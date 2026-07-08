@@ -74,5 +74,6 @@ Full wiring details are in [`docs/wiring-plan.md`](docs/wiring-plan.md).
 
 ## Documentation
 
-- [Wiring Plan](docs/wiring-plan.md)
-- [Build Log](docs/build-log.md)
+- [Wiring Plan](docs/wiring-plan.md) — full wiring layout, power distribution, connectors, and ESP32 pin assignments.
+- [Build Log](docs/build-log.md) — project progress, ordered parts, bench testing plan, results, and installation notes.
+- [Firmware Notes](firmware/README.md) — planned test sketches and final Arduino firmware structure.
