@@ -15,6 +15,8 @@ Version 1 will use:
 - Rotary encoder
 - 12V to 5V buck converter
 - Fused power from the cigarette lighter circuit
+- Gebildet Metal Toggle Switch
+- Custom EasyEDA PCB with JST-XH connectors
 
 ## Stage 2 — Parts Ordered
 
@@ -31,7 +33,10 @@ Ordered components:
 - Inline fuse holder
 - JST-XH connector kit
 - 18AWG red/black wire
+- 30AWG wire in various colours
 - VHB mounting tape
+- Gebildet Metal Toggle Switch
+- Custom EasyEDA PCB
 
 ## Stage 3 — Bench Testing Plan
 
@@ -176,7 +181,7 @@ Planned work:
 - Tap fused power from the rear of the cigarette lighter circuit
 - Mount the control box behind the centre dash
 - Route left and right LED strips
-- Mount rotary encoder near the shifter cover
+- Mount rotary encoder and toggle switch
 - Test system with low brightness first
 
 **Status:** Pending
