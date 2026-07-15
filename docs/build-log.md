@@ -82,8 +82,8 @@ Bench testing results will be recorded here as each test is completed.
 
 ### Test 1 — Rotary Encoder + LEDs
 
-**Date:** Pending  
-**Status:** Pending
+**Date:** 15/07/26  
+**Status:** Done
 
 **Setup:**
 
@@ -98,11 +98,15 @@ Confirm that the rotary encoder can control LED brightness and modes.
 
 **Result:**
 
-Pending.
+Pass.
 
 **Notes:**
 
-Pending.
+- The SN74AHCT125N correctly shifted the 3.3V data signal to 5V.
+- Brightness adjustment responded smoothly throughout the configured range.
+- Encoder button reliably cycled through all four LED modes.
+- No wiring faults or unexpected behaviour were observed.
+- Test confirms the ESP32-C3, custom PCB, rotary encoder, level shifter and LED strip are functioning correctly and are ready for accelerometer integration in Test 2.
 
 ### Test 2 — Add Accelerometer
 
