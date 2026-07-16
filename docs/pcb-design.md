@@ -25,7 +25,7 @@ Two-layer PCB with separate 5V power routing.
 
 ## 3D Preview
 
-![PCB 3D Render](../images/pcb/PCB_RENDER_TOP_3Dpng.png)
+![PCB 3D Render](../images/pcb/PCB_RENDER_TOP_3D.png)
 
 3D render before manufacture.
 
