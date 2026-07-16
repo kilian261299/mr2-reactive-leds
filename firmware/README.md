@@ -27,7 +27,7 @@ firmware/
 
 # Hardware Test Sketches
 
-The [`tests/`](firmware/tests) folder contains individual Arduino sketches used to validate hardware components before integrating the complete system.
+The [`tests/`](tests/) folder contains individual Arduino sketches used to validate hardware components before integrating the complete system.
 
 ---
 
@@ -80,7 +80,7 @@ Validate full hardware integration before vehicle installation.
 
 The production firmware is located in:
 
-[mr2-reactive-leds/](firmware/mr2-reactive-leds)
+[mr2-reactive-leds/](mr2-reactive-leds/)
 
 The firmware was developed through three major versions.
 
@@ -128,7 +128,7 @@ Added:
 
 For detailed version history and development notes, see:
 
-[mr2-reactive-leds/README.md](firmware/mr2-reactive-leds/README.md)
+[mr2-reactive-leds/README.md](mr2-reactive-leds/README.md)
 
 
 ---
