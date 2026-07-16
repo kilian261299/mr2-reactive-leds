@@ -4,6 +4,20 @@ This folder contains the hardware design files, manufacturing resources, and sou
 
 ---
 
+## System Bill of Materials (BOM)
+
+The complete project parts list, including components outside of the PCB assembly, is available here:
+
+[System BOM](bom)
+
+This includes:
+
+- Electronics components
+- Wiring
+- Power components
+- Mechanical parts
+- Installation hardware
+
 # PCB
 
 The custom PCB was designed in EasyEDA to replace the breadboard prototype and provide a permanent vehicle-ready control board.
