@@ -58,10 +58,10 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 | Mode | Purpose |
 |---|---|
 | **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, braking and cornering effects. Idle breathing effect. |
-| **Mode 1** | Purple. Static colour mode, user controls brightness. |
-| **Mode 2** | Red. Static colour mode, user controls brightness. | 
-| **Mode 3** | Blue. Static colour mode, user controls brightness. | 
-| **Mode 4** | Green.  Static colour mode, user controls brightness.| 
+| **Mode 1** | Purple colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
+| **Mode 2** | Red colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
+| **Mode 3** | Blue colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
+| **Mode 4** | Green colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
 
 ## System Behaviour
 
