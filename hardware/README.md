@@ -51,20 +51,11 @@ These files are generated from EasyEDA and are used by the PCB manufacturer to p
 
 ---
 
-## Bill of Materials (BOM)
+## PCB Bill of Materials (BOM)
 
-The component list required for PCB assembly is stored in:
+The PCB BOM contains the components required to populate the custom PCB.
 
-[BOM Files](hardware/pcb/bom)
-
-The BOM includes:
-
-- Component references
-- Part values
-- Quantities
-- Manufacturer information where available
-
----
+The PCB was ordered as a bare manufactured board. Components will be manually assembled and tested after delivery.
 
 ## EasyEDA Source Files
 
