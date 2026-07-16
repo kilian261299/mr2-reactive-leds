@@ -195,6 +195,11 @@ The PCB integrates:
 
 The design was verified against the breadboard prototype before ordering.
 
+
+Detailed PCB documentation, including schematics, PCB layout, and 3D renders:
+
+[PCB Design Documentation](pcb-design.md)
+
 **Status:** Complete
 
 **Notes:**
