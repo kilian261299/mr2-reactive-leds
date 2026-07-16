@@ -10,6 +10,26 @@ The system uses a chassis-mounted MPU6050 accelerometer to detect vehicle accele
 
 The controller is built around a custom PCB and includes adjustable brightness, startup sequence, different modes, and a physical power switch for complete system shutdown.
 
+## Project Status
+
+**Current Stage:** PCB assembly and vehicle testing preparation.
+
+Completed:
+
+- Hardware selection
+- Breadboard prototype
+- Firmware development
+- Custom PCB design
+- PCB manufacturing submission
+- Hardware documentation
+
+Upcoming:
+
+- PCB assembly
+- Control box construction
+- Vehicle testing
+- Final installation
+
 ## Features
 
 - Reactive LED brightness based on vehicle acceleration
