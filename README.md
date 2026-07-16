@@ -25,20 +25,27 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Hardware
 
+The system is built around an ESP32-C3 microcontroller with custom PCB hardware designed for integration into the Toyota MR2.
+
 | Component | Purpose |
 |---|---|
-| ESP32-C3 Super Mini | Main microcontroller |
-| MPU6050 / GY-521 | Acceleration sensing |
-| WS2812B LED strip | Addressable interior lighting |
-| SN74AHCT125N | 3.3V to 5V LED data level shifter |
-| Rotary encoder | Brightness adjustment and test mode selection |
+| ESP32-C3 Super Mini | Main microcontroller running the reactive lighting firmware |
+| MPU6050 / GY-521 | Accelerometer used for vehicle motion detection |
+| WS2812B LED strip | Addressable interior lighting output |
+| SN74AHCT125N | 3.3V to 5V logic level shifter for reliable LED data transmission |
+| Rotary encoder | Brightness adjustment and lighting mode selection |
 | Gebildet Metal Toggle Switch | Master power switch |
-| 12V to 5V buck converter | Converts vehicle power to 5V |
-| Inline fuse holder | Protects added wiring |
-| Custom PCB | Main controller board |
-| JST-XH connectors | Removable wiring connectors |
+| 12V to 5V buck converter | Converts vehicle electrical supply to regulated 5V |
+| Inline fuse holder | Protects the additional vehicle wiring |
+| Custom PCB | Dedicated controller board integrating the system hardware |
+| JST-XH connectors | Removable connections between PCB and external components |
 | 18AWG wire | Main power wiring |
-| 24AWG wire | Signal wiring |
+| 24AWG wire | Low-current signal wiring |
+
+Detailed hardware documentation, PCB design information, and manufacturing files:
+
+- [PCB Design Documentation](docs/pcb-design.md)
+- [Hardware Files](hardware/README.md)
 
 ## Tools / Equipment
 
@@ -92,3 +99,5 @@ Full wiring details are available in [`docs/wiring-plan.md`](docs/wiring-plan.md
 - [Wiring Plan](docs/wiring-plan.md) - Complete wiring diagram, connector pinouts and ESP32 pin assignments.
 - [Build Log](docs/build-log.md) - Project progress, PCB revisions, testing and installation notes.
 - [Firmware Notes](firmware/README.md) - Test sketches, firmware behaviour and final Arduino implementation.
+- [PCB Design Documentation](docs/pcb-design.md)
+- [Hardware Files](hardware/README.md)
