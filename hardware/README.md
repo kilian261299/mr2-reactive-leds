@@ -45,7 +45,7 @@ The PCB was designed as a two-layer FR4 board and verified against the breadboar
 
 PCB manufacturing files are stored in:
 
-[Gerber Files](hardware/pcb/gerbers/)
+[Gerber Files](../hardware/pcb/gerbers/)
 
 These files are generated from EasyEDA and are used by the PCB manufacturer to produce the physical circuit board.
 
@@ -57,11 +57,13 @@ The PCB BOM contains the components required to populate the custom PCB.
 
 The PCB was ordered as a bare manufactured board. Components will be manually assembled and tested after delivery.
 
+[BOM Files](../hardware/pcb/bom/)
+
 ## EasyEDA Source Files
 
 The original PCB design files are stored in:
 
-[EasyEDA Source Files](hardware/pcb/easyeda/)
+[EasyEDA Source Files](../hardware/pcb/easyeda/)
 
 These files allow the PCB schematic and layout to be reviewed or modified in EasyEDA.
 
