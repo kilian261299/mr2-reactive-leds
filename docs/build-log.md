@@ -1,10 +1,32 @@
 # Build Log
 
+## Current Status
+
+**Current Stage:** Stage 7 — PCB Assembly and Control Box Development
+
+**Status:** Waiting for PCB delivery.
+
+Completed:
+
+- Hardware selection
+- Hardware validation
+- Breadboard prototype
+- Firmware development
+- PCB design
+- PCB manufacture submission
+
+Next steps:
+
+- Assemble PCB
+- Validate manufactured board
+- Build control box
+- Install into MR2
+
 ## Stage 1 — Planning
 
 Created the initial GitHub repository and documented the project plan.
 
-The project was simplified from a GPS/OLED speed display into an accelerometer-only reactive LED system.
+The original concept included GPS/OLED speed display functionality. The project scope was refined into an accelerometer-based reactive LED system to improve reliability, reduce complexity, and focus on vehicle dynamics.
 
 Version 1 will use:
 
@@ -173,7 +195,7 @@ The complete system operated successfully on a breadboard. All hardware componen
 - Left and right LED strips operated independently.
 - Rotary encoder correctly adjusted brightness.
 - Accelerometer correctly detected acceleration, braking and cornering.
-- Breadboard prototype confirmed PCB design before manufacture.
+- Breadboard prototype validated the final hardware design before PCB manufacture.
 - Firmware architecture was successfully validated prior to PCB assembly.
 
 ## Stage 5 — PCB Design
@@ -195,12 +217,11 @@ The PCB integrates:
 
 The design was verified against the breadboard prototype before ordering.
 
-
 Detailed PCB documentation, including schematics, PCB layout, and 3D renders:
 
 [PCB Design Documentation](pcb-design.md)
 
-**Status:** Complete
+**Status:** Manufacturing
 
 **Notes:**
 
@@ -224,13 +245,29 @@ Key improvements included:
 
 See [firmware/README.md](../firmware/README.md) for the complete firmware version history.
 
-**Status:** Ongoing
+**Status:** Complete
 
-## Stage 7 — Control Box Build and PCB Assembly
+The final production firmware will be validated on the manufactured PCB during assembly testing.
+
+## Stage 7 — PCB Assembly and Control Box Development
 
 Goal: assemble and verify the manufactured PCB, then transfer the PCB into a 'control box'.
 
-Planned work:
+### PCB Inspection
+
+**Date:** DD/MM/26
+
+**Result:**
+
+Pending PCB arrival.
+
+**Notes:**
+
+Pending PCB arrival.
+
+---
+
+### Planned Assembly Work
 
 - Solder all components
 - Inspect solder joints
@@ -242,23 +279,50 @@ Planned work:
 - Mount PCB inside a box
 - Drill holes and fit glands for external wiring
 
-**Status:** Pending
+**Status:** Waiting for PCB delivery
 
 **Build notes:**
 
 Pending.
   
-## Stage 8 — Car Installation
+## Stage 8 — Vehicle Testing
 
-Goal: install the finished control box and LED strips in the MR2.
+Goal: validate the completed system in the vehicle before permanently mounting the control box and LED components.
+
+The system will be temporarily installed in the MR2 to confirm correct operation under real driving conditions.
 
 Planned work:
 
-- Tap fused power from the rear of the cigarette lighter circuit
-- Mount the control box behind the centre dash
-- Route left and right LED strips
-- Mount rotary encoder, MPU6050 and toggle switch
-- Test system with low brightness first
+- Mount MPU6050 accelerometer in final vehicle orientation
+- Connect control box temporarily
+- Power system from an external regulated 5V supply
+- Test startup sequence
+- Test acceleration response
+- Test braking response
+- Test left/right cornering effects
+- Adjust sensitivity and filtering if required
+- Verify behaviour during real driving conditions
+
+**Status:** Pending
+
+**Testing notes:**
+
+Pending.
+
+## Stage 9 — Final Installation
+
+Goal: permanently install the completed reactive LED system into the MR2.
+
+Planned work:
+
+- Mount control box behind centre dash
+- Secure PCB enclosure
+- Connect fused 12V vehicle power supply
+- Install rotary encoder
+- Install toggle switch
+- Install LED strips
+- Route and secure wiring
+- Complete final system test
 
 **Status:** Pending
 
