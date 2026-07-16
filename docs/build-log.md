@@ -36,7 +36,6 @@ Ordered components:
 - 30AWG wire in various colours
 - VHB mounting tape
 - Gebildet Metal Toggle Switch
-- Custom EasyEDA PCB
 
 ## Stage 3 — Bench Testing Plan
 
@@ -110,8 +109,8 @@ Pass.
 
 ### Test 2 — Add Accelerometer
 
-**Date:** Pending  
-**Status:** Pending
+**Date:** 16/07/26  
+**Status:** Done
 
 **Setup:**
 
@@ -127,48 +126,116 @@ Confirm that acceleration, braking, and cornering inputs can affect the LED beha
 
 **Result:**
 
-Pending.
+Pass.
+
+The MPU6050 communicated successfully with the ESP32-C3 over I²C. All four firmware modes operated as expected, with LED colours and brightness responding correctly to changes in accelerometer orientation and movement.
 
 **Notes:**
 
-Pending.
+- Initial communication with the MPU6050 was unreliable due to poor solder joints on the ESP32-C3 header pins.
+- After reflowing the solder joints, I²C communication became stable and the accelerometer was detected successfully.
+- MPU6050 initialised successfully with no further communication errors.
+- Longitudinal axis (X) correctly distinguished acceleration and braking.
+- Lateral axis (Y) correctly detected left and right movement.
+- Mode 1 accurately displayed acceleration (orange), braking (red), and stationary (blue).
+- Mode 2 accurately displayed left movement (green), right movement (purple), and stationary (blue).
+- Mode 3 correctly varied white LED brightness based on movement intensity.
+- Sensor orientation matched the expected vehicle mounting direction.
+- Bench testing confirmed correct accelerometer operation prior to vehicle installation.
 
-### Test 3 — Full Bench System
+### Test 3 — Full System Breadboard Test
 
-**Date:** Pending  
-**Status:** Pending
+**Date:** 16/07/26
+**Status:** Done
 
 **Setup:**
 
 - ESP32-C3
 - MPU6050
 - Rotary encoder
-- Left and right LED strips
+- Left and right WS2812B LED strips
 - SN74AHCT125N level shifter
-- 5V power supply or buck converter
+- Breadboard prototype
+- USB power
 
 **Goal:**
 
-Confirm that the full system works outside the car before building the final control box.
+Confirm that the complete hardware system operates correctly before manufacturing the custom PCB.
 
 **Result:**
 
-Pending.
+Pass.
+
+The complete system operated successfully on a breadboard. All hardware components communicated correctly and the firmware responded as expected to simulated vehicle movement.
 
 **Notes:**
 
-Pending.
+- Left and right LED strips operated independently.
+- Rotary encoder correctly adjusted brightness.
+- Accelerometer correctly detected acceleration, braking and cornering.
+- Breadboard prototype confirmed PCB design before manufacture.
+- Firmware architecture was successfully validated prior to PCB assembly.
 
-## Stage 5 — Control Box Build
+## Stage 5 — PCB Design
 
-Goal: transfer the tested circuit into the project box.
+Designed a custom PCB in EasyEDA to replace the breadboard prototype.
+
+The PCB integrates:
+
+- ESP32-C3 Super Mini
+- SN74AHCT125N level shifter
+- JST-XH connectors
+- Power input connector
+- Toggle switch connector
+- Left and right LED outputs
+- MPU6050 connector
+- Rotary encoder connector
+- Decoupling capacitors
+- Mounting holes
+
+The design was verified against the breadboard prototype before ordering.
+
+**Status:** Complete
+
+**Notes:**
+
+- Two-layer FR4 PCB designed in EasyEDA.
+- All power and signal routing completed.
+- PCB passed ERC and DRC checks.
+- Gerber files generated and submitted to JLCPCB for manufacture.
+
+## Stage 6 — Firmware Development
+
+Following successful hardware validation, the firmware underwent several major revisions to improve driving behaviour and user experience.
+
+Key improvements included:
+
+- Dynamic baseline filtering for hill compensation.
+- Improved colour blending.
+- Startup animation.
+- Idle breathing effect.
+- Solid colour modes.
+- Removal of diagnostic operating modes.
+
+See `firmware/README.md` for the complete firmware version history.
+
+**Status:** Ongoing
+
+## Stage 7 — Control Box Build and PCB Assembly
+
+Goal: assemble and verify the manufactured PCB, then transfer the PCB into a 'control box'.
 
 Planned work:
 
-- Mount ESP32-C3, level shifter, and MPU6050
-- Add connectors for power, left LED strip, right LED strip, and rotary encoder
-- Keep wiring short and secure
-- Confirm the MPU6050 is fixed firmly to the box
+- Solder all components
+- Inspect solder joints
+- Continuity testing
+- Power-on testing
+- Verify all connectors
+- Verify LED outputs
+- Verify accelerometer communication
+- Mount PCB inside a box
+- Drill holes and fit glands for external wiring
 
 **Status:** Pending
 
@@ -176,7 +243,7 @@ Planned work:
 
 Pending.
   
-## Stage 6 — Car Installation
+## Stage 8 — Car Installation
 
 Goal: install the finished control box and LED strips in the MR2.
 
@@ -185,7 +252,7 @@ Planned work:
 - Tap fused power from the rear of the cigarette lighter circuit
 - Mount the control box behind the centre dash
 - Route left and right LED strips
-- Mount rotary encoder and toggle switch
+- Mount rotary encoder, MPU6050 and toggle switch
 - Test system with low brightness first
 
 **Status:** Pending
