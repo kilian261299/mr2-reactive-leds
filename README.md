@@ -38,7 +38,7 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 | Custom PCB | Main controller board |
 | JST-XH connectors | Removable wiring connectors |
 | 18AWG wire | Main power wiring |
-| 30AWG wire | Signal wiring |
+| 24AWG wire | Signal wiring |
 
 ## Tools / Equipment
 
