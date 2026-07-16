@@ -85,3 +85,21 @@ Current status:
 **PCB design complete. Awaiting manufactured PCB delivery.**
 
 ---
+
+# PCB Assembly
+
+The PCB will be manually assembled after delivery.
+
+Planned assembly steps:
+
+- Inspect manufactured PCB
+- Solder components
+- Inspect solder joints
+- Perform continuity testing
+- Power-on testing
+- Validate ESP32-C3 programming
+- Test LED, encoder and accelerometer connections
+
+Status:
+
+**Pending PCB delivery.**
