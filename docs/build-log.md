@@ -42,7 +42,11 @@ Version 1 will use:
 
 ## Stage 2 — Parts Ordered
 
-Parts have been ordered.
+The complete system bill of materials was finalised and components were ordered.
+
+The full project BOM is available here:
+
+[System BOM](../hardware/bom)
 
 Ordered components:
 
