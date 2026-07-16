@@ -46,7 +46,7 @@ The complete system bill of materials was finalised and components were ordered.
 
 The full project BOM is available here:
 
-[System BOM](../hardware/bom)
+[System BOM](../hardware/bom/MR2_Reactive_LEDs_System_BOM.xlsx)
 
 Ordered components:
 
