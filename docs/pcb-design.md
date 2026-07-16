@@ -12,9 +12,9 @@ The design integrates:
 - SN74AHCT125N 3.3V to 5V level shifter
 - MPU6050 accelerometer connector
 - Rotary encoder connector
-- Left and right WS2812B LED outputs
+- Left and right WS2812B LED connectors
 - JST-XH connectors
-- 12V power input
+- 5V power input
 - Toggle switch connector
 - Decoupling capacitors
 - Mounting holes
