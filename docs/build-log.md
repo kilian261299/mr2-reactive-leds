@@ -222,7 +222,7 @@ Key improvements included:
 - Solid colour modes.
 - Removal of diagnostic operating modes.
 
-See `firmware/README.md` for the complete firmware version history.
+See [firmware/README.md](../firmware/README.md) for the complete firmware version history.
 
 **Status:** Ongoing
 
