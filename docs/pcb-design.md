@@ -47,46 +47,83 @@ The PCB layout was verified against the breadboard prototype before manufacture.
 
 ---
 
-## Design Files
+# Design Files
 
-The PCB manufacturing files and editable design files are available below:
+The PCB manufacturing files and editable design files are available below.
 
-### Gerber Files
+---
+
+## Gerber Files
 
 Manufacturing files generated from EasyEDA:
 
 [Gerber Files](../hardware/pcb/gerbers/)
 
----
-
-### Bill of Materials (BOM)
-
-Component list required for PCB assembly:
-
-[BOM Files](../hardware/pcb/bom/)
+These files were submitted to the PCB manufacturer to produce the physical circuit board.
 
 ---
 
-### EasyEDA Source
+## PCB Bill of Materials (BOM)
+
+The PCB BOM contains the components and reference designators used during PCB design.
+
+The PCB was ordered as a bare manufactured board. Components will be manually sourced and soldered during PCB assembly.
+
+[PCB BOM Files](../hardware/pcb/bom/)
+
+---
+
+## System Bill of Materials (BOM)
+
+The complete project BOM, including components outside of the PCB assembly such as wiring, power components, LEDs, and installation hardware, is available here:
+
+[System BOM](../hardware/bom/MR2_Reactive_LEDs_System_BOM.xlsx)
+
+---
+
+## EasyEDA Source
 
 Original editable PCB design source:
 
 [EasyEDA Source Files](../hardware/pcb/easyeda/)
 
+The EasyEDA source files allow the schematic and PCB layout to be reviewed or modified.
+
 ---
 
-## Manufacturing
+# Manufacturing
 
-**Status:** Pending PCB delivery.
+**Status:** PCB ordered — awaiting delivery.
 
-PCB manufacturing files were generated after completing schematic design, PCB layout, ERC checks, and DRC checks.
+The PCB manufacturing files were generated after completing:
+
+- Schematic design
+- PCB layout
+- Electrical Rule Check (ERC)
+- Design Rule Check (DRC)
 
 Gerber files were submitted to JLCPCB for manufacture.
 
+The order consists of bare manufactured PCBs only. No components were assembled by the manufacturer.
+
 ---
 
-## Assembled PCB
+# PCB Assembly
+
+After receiving the manufactured PCB, components will be manually assembled and tested.
+
+Planned assembly steps:
+
+- Inspect manufactured PCB
+- Solder PCB components
+- Inspect solder joints
+- Perform continuity testing
+- Power-on testing
+- Verify ESP32-C3 programming
+- Test LED, encoder and accelerometer connections
+
+---
+
+# Assembled PCB
 
 Pending.
-
-Assembly documentation and photographs will be added after PCB delivery and testing.
