@@ -8,7 +8,7 @@ This folder contains the hardware design files, manufacturing resources, and sou
 
 The complete project parts list, including components outside of the PCB assembly, is available here:
 
-[System BOM](bom)
+[System BOM](bom/MR2_Reactive_LEDs_System_BOM.xlsx)
 
 This includes:
 
