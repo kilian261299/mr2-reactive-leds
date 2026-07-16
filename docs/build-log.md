@@ -33,7 +33,7 @@ Ordered components:
 - Inline fuse holder
 - JST-XH connector kit
 - 18AWG red/black wire
-- 30AWG wire in various colours
+- 24AWG wire in various colours
 - VHB mounting tape
 - Gebildet Metal Toggle Switch
 
