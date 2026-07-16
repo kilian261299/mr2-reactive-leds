@@ -8,7 +8,7 @@ This project is a custom interior lighting controller for my 1992 Toyota MR2 SW2
 
 The system uses a chassis-mounted MPU6050 accelerometer to detect vehicle acceleration, braking, and cornering. An ESP32-C3 then controls two independent WS2812B LED strips, one in each footwell, creating smooth ambient lighting that reacts naturally to the car's movement.
 
-The controller is built around a custom PCB and includes adjustable brightness, diagnostic test modes, and a physical power switch for complete system shutdown.
+The controller is built around a custom PCB and includes adjustable brightness, startup sequence, different modes, and a physical power switch for complete system shutdown.
 
 ## Features
 
@@ -17,12 +17,11 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 - Independent left and right LED outputs
 - Cornering effects using lateral acceleration
 - User-adjustable maximum brightness
-- Rotary encoder controlled test modes
-- Four firmware modes for calibration and testing
+- Rotary encoder controlled modes and calibration
 - 3.3V to 5V logic level shifting using an SN74AHCT125N
 - Custom EasyEDA PCB with JST-XH connectors
 - Physical master power switch
-- Powered from the rear of the cigarette lighter circuit via a fused 12V to 5V buck converter
+- Powered from the cigarette lighter circuit via a fused 12V to 5V buck converter
 
 ## Hardware
 
@@ -58,10 +57,11 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 | Mode | Purpose |
 |---|---|
-| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, braking and cornering effects. |
-| **Mode 1** | TBD |
-| **Mode 2** | TBD | 
-| **Mode 3** | TBD | 
+| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, braking and cornering effects. Idle breathing effect. |
+| **Mode 1** | Purple. Static colour mode, user controls brightness. |
+| **Mode 2** | Red. Static colour mode, user controls brightness. | 
+| **Mode 3** | Blue. Static colour mode, user controls brightness. | 
+| **Mode 4** | Green.  Static colour mode, user controls brightness.| 
 
 ## System Behaviour
 
