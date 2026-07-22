@@ -4,8 +4,6 @@
 
 **Status:** Control box completed and functionally tested. Ready for temporary vehicle installation and real-world testing.
 
-**Status:** Replacement PCB assembled and validated. Control box development pending.
-
 Completed:
 
 - Hardware selection
@@ -198,6 +196,14 @@ The MPU6050 communicated successfully with the ESP32-C3 over I²C. All four firm
 **Goal:**
 
 Confirm that the complete hardware system operates correctly before manufacturing the custom PCB.
+
+### Test 3 Photos
+
+Photos documenting the completed breadboard prototype for test 3.
+
+![Full Breadboard System](../images/breadboard/breadboard_test_3.jpeg)
+
+![Full System Breadboard Overview](../images/breadboard/breadboard_test_3-1.jpeg)
 
 **Result:**
 
@@ -498,19 +504,23 @@ The control box is now ready for temporary vehicle installation. The buck conver
   
 ## Stage 8 — Vehicle Testing
 
-Goal: validate the completed system in the vehicle before permanently mounting the control box and LED components.
+Goal: validate the completed system in the MR2 before permanently mounting the control box and LED components.
 
-The system will be temporarily installed in the MR2 to confirm correct operation under real driving conditions.
+The completed control box will be temporarily installed in the MR2 to verify the buck converter, vehicle power connection, accelerometer orientation, and reactive lighting behaviour under real driving conditions.
 
 Planned work:
 
-- Mount MPU6050 accelerometer in final vehicle orientation
-- Connect control box temporarily
-- Power system from an external regulated 5V supply
+- Temporarily install the control box in the MR2
+- Connect the vehicle 12V supply to the control box
+- Verify the 12V to 5V buck converter output
+- Verify the system powers on and off correctly
+- Mount the MPU6050 accelerometer in its final vehicle orientation
 - Test startup sequence
 - Test acceleration response
 - Test braking response
 - Test left/right cornering effects
+- Verify rotary encoder brightness adjustment
+- Verify LED strip operation
 - Adjust sensitivity and filtering if required
 - Verify behaviour during real driving conditions
 
@@ -522,17 +532,18 @@ Pending.
 
 ## Stage 9 — Final Installation
 
-Goal: permanently install the completed reactive LED system into the MR2.
+Goal: permanently install the validated reactive LED system into the MR2 following successful vehicle testing.
 
 Planned work:
 
-- Mount control box behind centre dash
-- Secure PCB enclosure
-- Connect fused 12V vehicle power supply
-- Install rotary encoder
-- Install toggle switch
-- Install LED strips
-- Route and secure wiring
+- Permanently mount the control box behind the centre dash
+- Secure the PCB enclosure
+- Connect the fused 12V vehicle power supply
+- Permanently install the rotary encoder
+- Permanently install the master toggle switch
+- Permanently install the LED strips
+- Mount the MPU6050 accelerometer securely in its final orientation
+- Route and secure all wiring
 - Complete final system test
 
 **Status:** Pending
