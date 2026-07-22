@@ -49,6 +49,8 @@ Version 1 will use:
 - Gebildet Metal Toggle Switch
 - Custom EasyEDA PCB with JST-XH connectors
 
+**Status:** Complete — Project scope defined and initial system architecture established.
+
 ## Stage 2 — Parts Ordered
 
 The complete system bill of materials was finalised and components were ordered.
@@ -71,6 +73,8 @@ Ordered components:
 - 24AWG wire in various colours
 - VHB mounting tape
 - Gebildet Metal Toggle Switch
+
+**Status:** Complete — Required project hardware selected and ordered.
 
 ## Stage 3 — Bench Testing Plan
 
@@ -109,6 +113,8 @@ Planned setup:
 - MPU6050
 - Left and right LED strips
 - 5V power supply or buck converter
+
+**Status:** Complete — Bench testing plan defined and subsequently carried out in Stage 4.
 
 ## Stage 4 — Bench Testing Results
 
@@ -219,6 +225,8 @@ The complete system operated successfully on a breadboard. All hardware componen
 - Breadboard prototype validated the final hardware design before PCB manufacture.
 - Firmware architecture was successfully validated prior to PCB assembly.
 
+**Status:** Complete — All planned bench tests passed and the complete breadboard prototype successfully validated the system hardware and firmware architecture before PCB manufacture.
+
 ## Stage 5 — PCB Design
 
 Designed a custom PCB in EasyEDA to replace the breadboard prototype.
@@ -277,7 +285,7 @@ Goal: assemble and verify the manufactured PCB, then transfer the PCB into a 'co
 
 ### PCB Inspection and Initial Assembly
 
-**Date:** 22/07/26
+**Date:** 20/07/26
 
 **Status:** Completed — Initial PCB assembly resulted in GPIO4 fault
 
@@ -491,8 +499,7 @@ Photos documenting the control box construction, PCB installation, buck converte
 - The buck converter will be tested using the vehicle's 12V supply during vehicle installation.
 - The completed control box is ready for temporary vehicle installation and real-world testing.
 
-**Status:** Replacement PCB assembled and validated. Control box completed and functionally tested. Ready for vehicle installation and testing.
-**Build notes:**
+### Stage 7 Summary
 
 The first manufactured PCB was fully assembled and successfully passed initial functional testing except for rotary encoder brightness adjustment. Systematic testing isolated the issue to GPIO4 on the first ESP32-C3 module, with GPIO5 and GPIO7 confirmed to operate correctly.
 
@@ -501,6 +508,8 @@ A replacement PCB and new ESP32-C3 Super Mini were subsequently assembled. The r
 The validated PCB was installed into the completed control box alongside the 12V to 5V buck converter. The completed enclosure was functionally tested using a temporary regulated 5V supply, with all major system functions operating correctly.
 
 The control box is now ready for temporary vehicle installation. The buck converter will be tested using the vehicle's 12V supply during Stage 8, followed by real-world testing of the reactive lighting system.
+
+**Status:** Complete — PCB validated, control box completed and functionally tested. Ready for Stage 8 vehicle testing.
   
 ## Stage 8 — Vehicle Testing
 
