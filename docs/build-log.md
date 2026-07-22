@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Current Stage:** Stage 7 — PCB Assembly and Control Box Development
+**Status:** Control box completed and functionally tested. Ready for temporary vehicle installation and real-world testing.
 
-**Status:** Waiting for PCB delivery.
+**Status:** Replacement PCB assembled and validated. Control box development pending.
 
 Completed:
 
@@ -13,14 +13,25 @@ Completed:
 - Breadboard prototype
 - Firmware development
 - PCB design
-- PCB manufacture submission
+- PCB manufacture
+- Initial PCB assembly and testing
+- GPIO4 fault investigation
+- Replacement PCB assembly
+- Replacement PCB validation
+- Control box construction
+- PCB installation into control box
+- Buck converter installation
+- Control box functional testing
 
 Next steps:
 
-- Assemble PCB
-- Validate manufactured board
-- Build control box
-- Install into MR2
+- Temporarily install the control box in the MR2
+- Connect the vehicle 12V supply through the buck converter
+- Verify buck converter output
+- Mount the MPU6050 accelerometer in its final vehicle orientation
+- Test the system under real driving conditions
+- Adjust sensitivity and filtering if required
+- Complete permanent installation into MR2
 
 ## Stage 1 — Planning
 
@@ -131,7 +142,7 @@ Pass.
 - Brightness adjustment responded smoothly throughout the configured range.
 - Encoder button reliably cycled through all four LED modes.
 - No wiring faults or unexpected behaviour were observed.
-- Test confirms the ESP32-C3, custom PCB, rotary encoder, level shifter and LED strip are functioning correctly and are ready for accelerometer integration in Test 2.
+- Test confirms the ESP32-C3, rotary encoder, level shifter and LED strip are functioning correctly and are ready for accelerometer integration in Test 2.
 
 ### Test 2 — Add Accelerometer
 
@@ -225,7 +236,7 @@ Detailed PCB documentation, including schematics, PCB layout, and 3D renders:
 
 [PCB Design Documentation](pcb-design.md)
 
-**Status:** Manufacturing
+**Status:** Complete
 
 **Notes:**
 
@@ -233,6 +244,7 @@ Detailed PCB documentation, including schematics, PCB layout, and 3D renders:
 - All power and signal routing completed.
 - PCB passed ERC and DRC checks.
 - Gerber files generated and submitted to JLCPCB for manufacture.
+- Manufactured PCBs were received and progressed to Stage 7 for assembly and validation.
 
 ## Stage 6 — Firmware Development
 
@@ -257,37 +269,232 @@ The final production firmware will be validated on the manufactured PCB during a
 
 Goal: assemble and verify the manufactured PCB, then transfer the PCB into a 'control box'.
 
-### PCB Inspection
+### PCB Inspection and Initial Assembly
 
-**Date:** DD/MM/26
+**Date:** 22/07/26
 
-**Result:**
+**Status:** Completed — Initial PCB assembly resulted in GPIO4 fault
 
-Pending PCB arrival.
+The first manufactured PCB was received from JLCPCB and visually inspected before assembly.
 
-**Notes:**
+Continuity testing was performed on the PCB before soldering components. All tested connections were found to be correct, with no unexpected shorts or open circuits identified.
 
-Pending PCB arrival.
+The PCB was then fully assembled and all components were soldered in place.
+
+Following assembly, the completed PCB was powered on and tested.
+
+The following functions were successfully verified:
+
+- ESP32-C3 powered correctly.
+- WS2812B LED outputs operated correctly.
+- SN74AHCT125N level shifter operated correctly.
+- MPU6050 accelerometer communicated successfully.
+- Accelerometer-based reactive lighting operated correctly.
+- Rotary encoder button operated correctly for changing LED modes.
+- Rotary encoder brightness adjustment did not operate correctly.
+
+### GPIO4 Troubleshooting
+
+Further testing was performed to identify the cause of the rotary encoder brightness adjustment failure.
+
+The rotary encoder was connected using:
+
+- GPIO4 — CLK
+- GPIO5 — DT
+
+GPIO5 operated correctly and responded to the rotary encoder as expected.
+
+GPIO4, which was responsible for the encoder CLK signal, did not respond correctly.
+
+Testing showed that:
+
+- The physical GPIO4 signal was measured changing between approximately 0 V and 3.3 V when the encoder was rotated.
+- GPIO4 did not respond correctly when read using `digitalRead(4)`.
+- GPIO5 operated correctly using the same testing method.
+- GPIO4 was tested using a simple software input test but continued to remain in an incorrect state.
+- GPIO4 was also tested using a simple output test and did not behave as expected.
+- GPIO7 was tested as an alternative GPIO for the encoder CLK signal and operated correctly.
+- The rotary encoder itself was therefore confirmed to be functioning correctly.
+- The PCB wiring and encoder circuit were also confirmed to be functional.
+
+Further inspection suggested that the GPIO4 connection on the ESP32-C3 module may have been physically damaged or compromised during assembly. Solder was also found not to wet the suspected GPIO4 connection correctly.
+
+### Resolution
+
+As four additional manufactured PCBs were available from the original JLCPCB order, the decision was made to use a fresh PCB and a new ESP32-C3 Super Mini rather than continue troubleshooting the first assembled board.
+
+The first PCB will be retained as a development and troubleshooting board.
+
+The replacement PCB assembly was then tested progressively, beginning with the ESP32-C3 GPIOs and rotary encoder before completing the remaining hardware validation.
 
 ---
 
-### Planned Assembly Work
+### Replacement PCB Assembly
 
-- Solder all components
-- Inspect solder joints
-- Continuity testing
-- Power-on testing
-- Verify all connectors
-- Verify LED outputs
-- Verify accelerometer communication
-- Mount PCB inside a box
-- Drill holes and fit glands for external wiring
+**Date:** 22/07/26
 
-**Status:** Waiting for PCB delivery
+**Status:** Completed
 
+A replacement manufactured PCB was assembled using a new ESP32-C3 Super Mini.
+
+The replacement PCB was visually inspected before assembly and continuity testing was performed to verify that the board was free from unexpected shorts or open connections.
+
+The new ESP32-C3 Super Mini was soldered to the PCB and the board was tested before proceeding with the remaining hardware assembly.
+
+The replacement PCB successfully passed initial testing.
+
+The following functions were verified:
+
+- ESP32-C3 powered correctly.
+- GPIO4 operated correctly.
+- GPIO5 operated correctly.
+- Rotary encoder CLK and DT signals were detected correctly.
+- Rotary encoder brightness adjustment operated correctly.
+- Rotary encoder button operated correctly.
+- WS2812B LED outputs operated correctly.
+- SN74AHCT125N level shifter operated correctly.
+- MPU6050 accelerometer communicated successfully.
+- Accelerometer-based reactive lighting operated correctly.
+
+The original GPIO4 issue was therefore isolated to the first ESP32-C3 assembly rather than the PCB design or rotary encoder circuit.
+
+### Assembly Photos
+
+Photos documenting the PCB assembly and testing process are available in the project image archive:
+
+[PCB Assembly Photos](../images/pcb/)
+
+![Assembled PCB](../images/pcb/soldered_pcb.jpeg)
+
+---
+
+### Control Box Construction
+
+**Date:** 22/07/26
+
+**Status:** Completed
+
+The validated PCB was installed into a protective control box to provide a secure enclosure for the controller electronics and prepare the system for installation into the vehicle.
+
+The control box houses the custom PCB, 12V to 5V buck converter, and connections for the vehicle power supply, LED strips, rotary encoder, MPU6050 accelerometer, and master power switch.
+
+### Control Box Preparation
+
+The enclosure was prepared for installation by:
+
+- Marking the required mounting positions.
+- Drilling mounting holes for the PCB.
+- Drilling a cable entry point on the side of the enclosure.
+- Installing a cable gland to protect and secure the external wiring.
+- Checking internal clearance around the PCB, buck converter, and wiring.
+- Preparing the enclosure to allow all external connections to be routed securely.
+
+The enclosure was checked to ensure that all components and wiring could be installed without interference and that the lid could be securely closed.
+
+### PCB Installation
+
+The validated PCB was mounted securely inside the control box using two M3 screws.
+
+The PCB was positioned to:
+
+- Prevent contact between the PCB and the enclosure.
+- Provide sufficient clearance around components.
+- Allow access to external wiring connections.
+- Keep wiring organised and secure.
+- Prevent stress on the PCB or connectors when the enclosure was closed.
+
+### Buck Converter Installation
+
+The 12V to 5V buck converter was also installed inside the control box.
+
+The buck converter provides the regulated 5V supply required by the PCB.
+
+The converter was positioned inside the enclosure alongside the PCB, with sufficient clearance to prevent contact with other components and allow the wiring to be routed securely.
+
+### External Connections
+
+The external wiring was routed through a cable gland installed on the side of the control box.
+
+The following external connections are routed from the control box:
+
+- 12V vehicle power input
+- Master power switch
+- Left WS2812B LED strip
+- Right WS2812B LED strip
+- Rotary encoder
+- MPU6050 accelerometer
+
+The cable gland provides strain relief and protects the wiring where it enters and exits the enclosure.
+
+The wiring was routed and secured to prevent unnecessary movement or strain on the PCB and component connections.
+
+### Control Box Testing
+
+**Date:** 22/07/26
+
+**Status:** Completed — Passed
+
+After the PCB and buck converter were installed inside the enclosure, the completed control box was tested using a temporary regulated 5V power supply.
+
+The following functions were verified:
+
+- ESP32-C3 powered correctly.
+- Rotary encoder operation was confirmed.
+- Rotary encoder brightness adjustment operated correctly.
+- Rotary encoder button operated correctly.
+- WS2812B LED outputs operated correctly.
+- SN74AHCT125N level shifter operated correctly.
+- MPU6050 communication was confirmed.
+- Accelerometer-based reactive lighting operated correctly.
+- The completed enclosure operated correctly with all components installed.
+
+**Result:**
+
+The completed control box successfully passed functional testing using a temporary regulated 5V supply. All major system functions operated correctly after the PCB and buck converter were installed inside the enclosure.
+
+The 12V to 5V buck converter is installed inside the control box but will be fully tested during vehicle installation once connected to the vehicle's 12V supply.
+
+The control box is now ready for temporary vehicle installation and real-world testing.
+
+**Notes:**
+
+- PCB mounted using two M3 screws.
+- 12V to 5V buck converter mounted inside the enclosure.
+- External wiring routed through a cable gland installed on the side of the enclosure.
+- System testing was performed using a temporary regulated 5V supply.
+- Buck converter operation from the vehicle's 12V supply will be verified during vehicle installation.
+
+### Control Box Photos
+
+Photos documenting the control box construction, PCB installation, buck converter installation, wiring, and completed enclosure are included below.
+
+![Control Box](../images/control-box/control_box.jpg)
+
+![PCB Mounted Inside Control Box](../images/control-box/pcb_mounted.jpg)
+
+![Buck Converter and Control Box Wiring](../images/control-box/control_box_wiring.jpg)
+
+![Completed Control Box](../images/control-box/control_box_complete.jpg)
+
+**Notes:**
+
+- The custom PCB was securely mounted inside the enclosure using two M3 screws.
+- The 12V to 5V buck converter was mounted inside the enclosure alongside the PCB.
+- External wiring was routed through a cable gland installed on the side of the enclosure.
+- The completed control box was tested using a temporary regulated 5V power supply and all major system functions operated correctly.
+- The buck converter will be tested using the vehicle's 12V supply during vehicle installation.
+- The completed control box is ready for temporary vehicle installation and real-world testing.
+
+**Status:** Replacement PCB assembled and validated. Control box completed and functionally tested. Ready for vehicle installation and testing.
 **Build notes:**
 
-Pending.
+The first manufactured PCB was fully assembled and successfully passed initial functional testing except for rotary encoder brightness adjustment. Systematic testing isolated the issue to GPIO4 on the first ESP32-C3 module, with GPIO5 and GPIO7 confirmed to operate correctly.
+
+A replacement PCB and new ESP32-C3 Super Mini were subsequently assembled. The replacement system successfully passed testing, including GPIO4, GPIO5, rotary encoder operation, LED outputs, level shifting, and MPU6050 communication.
+
+The validated PCB was installed into the completed control box alongside the 12V to 5V buck converter. The completed enclosure was functionally tested using a temporary regulated 5V supply, with all major system functions operating correctly.
+
+The control box is now ready for temporary vehicle installation. The buck converter will be tested using the vehicle's 12V supply during Stage 8, followed by real-world testing of the reactive lighting system.
   
 ## Stage 8 — Vehicle Testing
 
