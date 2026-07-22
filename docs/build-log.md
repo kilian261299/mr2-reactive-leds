@@ -473,7 +473,7 @@ The control box is now ready for temporary vehicle installation and real-world t
 **Notes:**
 
 - PCB mounted using two M3 screws.
-- 12V to 5V buck converter mounted inside the enclosure.
+- 12V to 5V buck converter mounted inside the enclosure, using two M3 screws.
 - External wiring routed through a cable gland installed on the side of the enclosure.
 - System testing was performed using a temporary regulated 5V supply.
 - Buck converter operation from the vehicle's 12V supply will be verified during vehicle installation.
