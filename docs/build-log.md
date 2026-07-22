@@ -73,6 +73,7 @@ Ordered components:
 - 24AWG wire in various colours
 - VHB mounting tape
 - Gebildet Metal Toggle Switch
+- 2-pin Waterproof Automotive Connector
 
 **Status:** Complete — Required project hardware selected and ordered.
 
