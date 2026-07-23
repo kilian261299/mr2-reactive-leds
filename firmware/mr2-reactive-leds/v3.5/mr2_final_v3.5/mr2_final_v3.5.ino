@@ -21,111 +21,202 @@
   WHAT'S NEW IN V3.5
   --------------------------------------------------
 
-  V3.5 focuses on refining the reactive lighting behaviour
-  following bench testing of V3.4.
+  Improved accelerometer sensitivity and colour response.
 
-  The main improvements are:
+  V3.5 is based directly on V3.4.
 
-  - Improved blue-to-orange acceleration colour transition.
-  - Reduced unwanted colour washout during acceleration.
-  - Added accelerometer low-pass filtering.
-  - Increased acceleration dead zone.
-  - Refined braking threshold.
-  - Increased cornering threshold.
-  - Added movement hysteresis to reduce flickering.
-  - Smoothed reactive brightness changes.
-  - Reduced sensitivity to small movements and sensor noise.
-  - Maintained hill compensation from previous versions.
-  - Maintained V3.4 rotary encoder responsiveness improvements.
-
-  The aim is to make the system more suitable for real vehicle use.
-
-  Small movements, road vibration and sensor noise should produce
-  little or no visible reaction.
-
-  Genuine acceleration, braking and cornering should still produce
-  clear and responsive lighting effects.
+  The V3.4 interrupt-driven rotary encoder system has
+  been retained unchanged.
 
   --------------------------------------------------
-  V3.5 REACTIVE RESPONSE
+  ACCELEROMETER SENSITIVITY IMPROVEMENTS
   --------------------------------------------------
 
-  The accelerometer signal now passes through a low-pass filter
-  before being used for reactive lighting.
+  The previous version could react too strongly to small
+  accelerometer movements.
 
-  This reduces rapid fluctuations caused by:
+  Small movements, sensor noise, road vibration, and
+  minor vehicle movements could cause the LEDs to flicker
+  or change brightness when the car was not undergoing
+  meaningful acceleration, braking, or cornering.
 
-  - Road vibration
-  - Suspension movement
-  - Sensor noise
-  - Small vehicle movements
+  V3.5 introduces:
 
-  Acceleration and braking also use configurable dead zones.
+  - Accelerometer response smoothing.
+  - Forward acceleration dead zone.
+  - Braking dead zone.
+  - Cornering dead zone.
+  - Smoother intensity curves.
 
-  This prevents tiny accelerometer readings from immediately
-  changing the LED brightness.
+  The system now ignores small movements below the
+  configured thresholds.
 
-  Cornering also has a configurable threshold to reduce unwanted
-  left/right brightness changes during small movements.
+  Genuine acceleration, braking, and cornering still
+  produce a progressive response rather than simply
+  switching on at a fixed threshold.
 
-  Reactive brightness is smoothed separately so LED brightness
-  changes gradually rather than jumping between values.
-
-  --------------------------------------------------
-  BLUE TO ORANGE TRANSITION
-  --------------------------------------------------
-
-  The acceleration colour transition was refined in V3.5.
-
-  The previous direct RGB interpolation could produce a washed-out
-  purple or white appearance during the transition.
-
-  V3.5 uses a multi-stage colour transition:
-
-    Blue
-      ↓
-    Deep blue-violet
-      ↓
-    Purple-red
-      ↓
-    Red-orange
-      ↓
-    Orange
-
-  This produces a more visually controlled transition while
-  maintaining the original blue-to-orange concept.
+  The sensitivity values can be adjusted near the top
+  of the code if required after real-world testing.
 
   --------------------------------------------------
-  WHAT'S IN HILL COMPENSATION
+  COLOUR TRANSITION IMPROVEMENT
   --------------------------------------------------
 
-  A slowly-drifting accelerometer baseline is used to compensate
-  for sustained vehicle pitch changes.
+  The previous blue-to-orange transition used direct
+  RGB interpolation.
 
-  This helps prevent false acceleration or braking effects when
-  driving on hills.
+  This caused the colour to pass through an undesirable
+  pale purple/white-looking region during acceleration.
 
-  The baseline slowly follows sustained changes while remaining
-  responsive to genuine short-term acceleration and braking.
+  V3.5 replaces this with a controlled two-stage colour
+  transition:
+
+    Low acceleration:
+      Deep blue
+
+    Medium acceleration:
+      Blue / violet transition
+
+    Strong acceleration:
+      Warm orange
+
+  The green channel is deliberately controlled to prevent
+  the LEDs from appearing washed out or white during the
+  transition.
 
   --------------------------------------------------
-  WHAT THIS CODE DOES
+  WHAT'S NEW IN V3.4
   --------------------------------------------------
 
-  This code controls two LED strips in the MR2.
+  Improved rotary encoder responsiveness.
 
-  The LEDs react to movement measured by the MPU6050 accelerometer.
+  V3.3 used full quadrature decoding, which fixed the
+  previous brightness jitter and incorrect direction
+  behaviour. However, the encoder was still being
+  polled from the main loop.
 
-  Rotary encoder controls:
+  The main loop also performs several relatively slow
+  operations, including updating 320 WS2812B LEDs.
 
-  - Turn knob:
-      Adjust maximum LED brightness.
+  Because WS2812B data transmission temporarily keeps
+  the processor busy, rapid encoder movements could
+  still result in missed transitions.
 
-  - Short press:
-      Change LED mode.
+  V3.4 moves rotary encoder quadrature detection onto
+  GPIO interrupts.
 
-  - Long press:
-      Recalibrate the accelerometer baseline.
+  The encoder CLK and DT signals are now monitored
+  asynchronously by the ESP32-C3. Valid quadrature
+  transitions are accumulated by the interrupt handler,
+  allowing rapid knob movement to be captured even
+  while the main loop is updating the LED strips.
+
+  --------------------------------------------------
+  WHAT'S NEW IN V3.3
+  --------------------------------------------------
+
+  Fixed a jittery/unreliable brightness knob.
+
+  The old rotation-reading method reacted to any single
+  change on the CLK pin, trusting DT to tell it which
+  direction. That's fragile — contact bounce or a
+  slower loop can catch a pin mid-bounce or miss one,
+  misreading direction.
+
+  Replaced with full quadrature decoding.
+
+  CLK and DT are tracked together as a state, and only
+  valid quadrature transitions count as movement.
+
+  --------------------------------------------------
+  WHAT'S IN V3
+  --------------------------------------------------
+
+  Axis orientation is confirmed working.
+
+  Diagnostic modes and one-off test modes were removed.
+
+  Power is now handled by a physical switch, so the
+  old software "Off" mode was removed.
+
+  Modes are now:
+
+    Mode 0 — Reactive
+    Mode 1 — Static Purple
+    Mode 2 — Static Red
+    Mode 3 — Static Blue
+    Mode 4 — Static Green
+
+  Short-press cycles through all five modes.
+
+  Long-press recalibrates the accelerometer baseline.
+
+  The brightness knob sets the maximum brightness
+  ceiling for all modes.
+
+  --------------------------------------------------
+  EFFECTS
+  --------------------------------------------------
+
+  Startup sweep:
+
+  A one-off chase animation runs across both strips
+  during startup.
+
+  Idle breathing:
+
+  Mode 0 gently pulses while the car is calm.
+
+  The static theme modes also use the breathing effect.
+
+  --------------------------------------------------
+  HILL COMPENSATION
+  --------------------------------------------------
+
+  A slowly drifting accelerometer baseline is used to
+  compensate for sustained vehicle pitch changes.
+
+  This helps prevent hills from being interpreted as
+  continuous acceleration or braking.
+
+  Set HILL_COMPENSATION to false to disable this.
+
+  --------------------------------------------------
+  ROTARY ENCODER
+  --------------------------------------------------
+
+  Turn knob:
+
+    Adjust maximum LED brightness.
+
+  Short press:
+
+    Change LED mode.
+
+  Long press:
+
+    Recalibrate accelerometer baseline.
+
+  --------------------------------------------------
+  IMPORTANT BRIGHTNESS NOTE
+  --------------------------------------------------
+
+  The knob sets the maximum brightness.
+
+  The LEDs will not go brighter than userBrightness.
+
+  Example:
+
+    userBrightness = 80
+
+    Smooth driving:
+      dim ambient brightness
+
+    Hard acceleration:
+      brightness rises up to 80
+
+    Hard braking:
+      brightness rises up to 80
 
   --------------------------------------------------
   MODES
@@ -134,37 +225,49 @@
   Mode 0 — Reactive
 
     Calm / idle:
-      Dim blue, slowly breathing.
+      dim blue, slowly breathing
 
     Acceleration:
-      Blue transitions through violet/red tones toward orange
-      while brightness increases.
+      blue fades toward orange
 
     Braking:
-      Red glow, stronger braking = brighter red.
+      red glow
 
     Cornering:
-      One side becomes brighter than the other.
+      left/right brightness shift
 
-    Acceleration around a corner:
-      Orange/brighter + left/right brightness shift.
+  Mode 1 — Purple reactive theme
+  Mode 2 — Red reactive theme
+  Mode 3 — Blue reactive theme
+  Mode 4 — Green reactive theme
 
-    Braking around a corner:
-      Red + left/right brightness shift.
+    Colour remains fixed.
 
-  --------------------------------------------------
+    Brightness reacts to overall movement.
 
-  Mode 1 — Purple, themed reactive
-  Mode 2 — Red, themed reactive
-  Mode 3 — Blue, themed reactive
-  Mode 4 — Green, themed reactive
+    Cornering creates left/right brightness shifts.
 
-    Colour stays fixed, but brightness reacts to overall movement
-    and cornering.
-
-    When calm, the brightness gently breathes.
+    Calm conditions produce a breathing effect.
 
   --------------------------------------------------
+  INSTALLATION
+  --------------------------------------------------
+
+  1. Mount the MPU6050 flat and straight if possible.
+  2. Turn the car on.
+  3. Keep the car still on flat ground.
+  4. Long press the encoder to calibrate.
+  5. Wait for green confirmation flash.
+
+  --------------------------------------------------
+  POWER NOTES
+  --------------------------------------------------
+
+  - All grounds must be common.
+  - LED strips must be powered from the 5V converter.
+  - Do not power LED strips from the ESP32.
+  - Use a fuse on the 12V input side.
+  - Keep brightness low during first tests.
 */
 
 
@@ -190,8 +293,17 @@
 #define NUM_LEDS_LEFT   160
 #define NUM_LEDS_RIGHT  160
 
-Adafruit_NeoPixel leftStrip(NUM_LEDS_LEFT, LEFT_LED_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel rightStrip(NUM_LEDS_RIGHT, RIGHT_LED_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel leftStrip(
+  NUM_LEDS_LEFT,
+  LEFT_LED_PIN,
+  NEO_GRB + NEO_KHZ800
+);
+
+Adafruit_NeoPixel rightStrip(
+  NUM_LEDS_RIGHT,
+  RIGHT_LED_PIN,
+  NEO_GRB + NEO_KHZ800
+);
 
 
 // ==================================================
@@ -217,7 +329,12 @@ float driftBaseX = 0.0;
 float driftBaseY = 0.0;
 float driftBaseZ = 0.0;
 
-void updateDriftingBaseline(float rawX, float rawY, float rawZ) {
+
+void updateDriftingBaseline(
+  float rawX,
+  float rawY,
+  float rawZ
+) {
 
 #if HILL_COMPENSATION
 
@@ -234,7 +351,6 @@ void updateDriftingBaseline(float rawX, float rawY, float rawZ) {
     rawZ * baselineDriftRate;
 
 #endif
-
 }
 
 
@@ -263,118 +379,125 @@ const int minBrightness = 0;
 const int maxBrightness = 220;
 
 int mode = 0;
-
 const int numberOfModes = 5;
 
 
 // ==================================================
-// REACTIVE RESPONSE SETTINGS
+// ACCELEROMETER RESPONSE SETTINGS
 // ==================================================
 
-// --------------------------------------------------
-// ACCELERATION
-// --------------------------------------------------
-
-// Acceleration below this value is ignored.
+// Small sensor movements below these values are ignored.
 //
-// Increase this value if small throttle changes or road
-// vibration cause unwanted acceleration lighting.
+// Increasing these values makes the system less sensitive.
+// Decreasing them makes the system react to smaller movements.
 //
-// Decrease this value if the system feels unresponsive.
-const float accelerationDeadZone = 0.08;
+// These values should be adjusted after real-world testing.
 
-// Acceleration value at which the acceleration effect
-// reaches maximum intensity.
-const float accelerationFullScale = 0.35;
-
-
-// --------------------------------------------------
-// BRAKING
-// --------------------------------------------------
-
-// Braking must exceed this negative value before
-// the braking effect is activated.
-//
-// Example:
-// -0.05g = ignored
-// -0.10g = begins reacting
-// -0.40g = maximum braking intensity
+const float accelerationDeadZone = 0.04;
 const float brakingDeadZone = 0.12;
-
-const float brakingFullScale = 0.40;
+const float corneringDeadZone = 0.08;
 
 
 // --------------------------------------------------
-// CORNERING
+// ACCELERATION RESPONSE RANGE
 // --------------------------------------------------
 
-// Sideways acceleration below this value is ignored.
+// Acceleration reaches maximum reactive intensity
+// at approximately this G value.
+
+const float accelerationResponseG = 0.35;
+
+
+// --------------------------------------------------
+// BRAKING RESPONSE RANGE
+// --------------------------------------------------
+
+// Braking reaches maximum reactive intensity
+// at approximately this G value.
+
+const float brakingResponseG = 0.40;
+
+
+// --------------------------------------------------
+// CORNERING RESPONSE RANGE
+// --------------------------------------------------
+
+// Cornering reaches maximum side brightness shift
+// at approximately this G value.
+
+const float corneringResponseG = 0.35;
+
+
+// --------------------------------------------------
+// ACCELEROMETER SMOOTHING
+// --------------------------------------------------
+
+// Lower values = smoother and less sensitive to sudden noise.
+// Higher values = faster response but more movement/noise.
 //
-// This helps prevent small road movements from constantly
-// shifting brightness between the left and right strips.
-const float corneringDeadZone = 0.10;
+// 0.15 provides moderate smoothing.
 
-// Side acceleration at which maximum cornering effect
-// is reached.
-const float corneringFullScale = 0.35;
+const float accelerationSmoothing = 0.15;
 
 
-// --------------------------------------------------
-// ACCELEROMETER FILTERING
-// --------------------------------------------------
+// Smoothed accelerometer values.
 
-// Lower value = smoother and less sensitive to vibration.
-//
-// Higher value = faster response but more sensitive to noise.
-//
-// 0.15 is a moderate starting point for vehicle testing.
-const float accelerometerFilterRate = 0.15;
-
-
-// --------------------------------------------------
-// LED BRIGHTNESS SMOOTHING
-// --------------------------------------------------
-
-// Controls how quickly reactive brightness follows
-// the calculated target brightness.
-//
-// Lower = smoother/slower.
-// Higher = faster/more responsive.
-const float brightnessSmoothingRate = 0.20;
-
-
-// --------------------------------------------------
-// MOVEMENT HYSTERESIS
-// --------------------------------------------------
-
-// Prevents the reactive system from rapidly switching
-// between "movement" and "calm" around the threshold.
-
-const float movementStartThreshold = 0.08;
-const float movementStopThreshold  = 0.05;
-
-bool movementActive = false;
-
-
-// ==================================================
-// FILTERED ACCELEROMETER VALUES
-// ==================================================
-
-float filteredForwardG = 0.0;
-float filteredSideG = 0.0;
-float filteredMovementG = 0.0;
-
-
-// ==================================================
-// SMOOTHED BRIGHTNESS VALUES
-// ==================================================
-
-float smoothedReactiveBrightness = 0.0;
+float smoothedForwardG = 0.0;
+float smoothedSideG = 0.0;
+float smoothedMovementG = 0.0;
 
 
 // ==================================================
 // ENCODER / BUTTON VARIABLES
 // ==================================================
+
+// Full quadrature transition table.
+//
+// The encoder state is represented by two bits:
+//
+// CLK DT
+//
+// The previous state and current state are combined
+// into a four-bit lookup value.
+
+const int8_t encoderTransitionTable[16] = {
+   0, -1,  1,  0,
+   1,  0,  0, -1,
+  -1,  0,  0,  1,
+   0,  1, -1,  0
+};
+
+
+// Current encoder state.
+
+volatile uint8_t encoderState = 0;
+
+
+// Accumulated valid quadrature movement.
+//
+// This is modified inside the interrupt handler and
+// read by the main loop.
+
+volatile int32_t encoderAccumulatedSteps = 0;
+
+
+// Number of valid quadrature transitions required
+// for one brightness adjustment.
+//
+// Most KY-040 encoders produce 4 transitions per
+// physical detent, but some modules behave differently.
+//
+// V3.3 used 2 and this is retained for V3.4/V3.5.
+
+const int8_t stepsPerDetent = 2;
+
+
+// Amount brightness changes per encoder step.
+
+const int brightnessStep = 5;
+
+
+// Button state variables.
 
 bool buttonWasDown = false;
 bool longPressHandled = false;
@@ -407,7 +530,6 @@ float getSelectedAxis(
 ) {
 
   if (axis == AXIS_X) return xG;
-
   if (axis == AXIS_Y) return yG;
 
   return zG;
@@ -420,66 +542,122 @@ float getSelectedAxis(
 
 // V3.5 improved blue-to-orange transition.
 //
-// The transition uses several controlled colour stages
-// rather than direct RGB interpolation.
+// The previous version directly interpolated:
 //
-// This prevents the colour from becoming washed out
-// or appearing white during acceleration.
+// Blue  = (0, 0, 255)
+// Orange = (255, 40, 0)
+//
+// This caused an undesirable pale purple/white-looking
+// transition.
+//
+// V3.5 uses two controlled colour stages:
+//
+// 0.0 -> 0.5:
+// Deep blue to blue/violet.
+//
+// 0.5 -> 1.0:
+// Blue/violet to warm orange.
+//
+// The green channel is deliberately limited.
 
 uint32_t blueToOrange(
   float amount,
   Adafruit_NeoPixel &strip
 ) {
 
-  amount = constrain(amount, 0.0, 1.0);
+  amount =
+    constrain(
+      amount,
+      0.0,
+      1.0
+    );
+
 
   int r;
   int g;
   int b;
 
-  if (amount < 0.25) {
 
-    // Blue → Deep blue-violet
+  // --------------------------------------------------
+  // BLUE -> DEEP VIOLET / BLUE
+  // --------------------------------------------------
 
-    float t = amount / 0.25;
+  if (amount < 0.5) {
 
-    r = 0 + (40 * t);
-    g = 0;
-    b = 255 - (35 * t);
+    float t =
+      amount / 0.5;
 
-  } else if (amount < 0.50) {
+    // Start:
+    // Deep blue
+    //
+    // End:
+    // Controlled violet-blue
 
-    // Deep blue-violet → Purple-red
+    const int startR = 0;
+    const int startG = 0;
+    const int startB = 255;
 
-    float t = (amount - 0.25) / 0.25;
+    const int midR = 80;
+    const int midG = 0;
+    const int midB = 220;
 
-    r = 40 + (130 - 40) * t;
-    g = 0;
-    b = 220 - (80 * t);
+    r =
+      startR +
+      (midR - startR) * t;
 
-  } else if (amount < 0.75) {
+    g =
+      startG +
+      (midG - startG) * t;
 
-    // Purple-red → Red-orange
-
-    float t = (amount - 0.50) / 0.25;
-
-    r = 130 + (220 - 130) * t;
-    g = 0 + (20 * t);
-    b = 140 - (90 * t);
-
-  } else {
-
-    // Red-orange → Orange
-
-    float t = (amount - 0.75) / 0.25;
-
-    r = 220 + (255 - 220) * t;
-    g = 20 + (40 - 20) * t;
-    b = 50 - (50 * t);
+    b =
+      startB +
+      (midB - startB) * t;
 
   }
 
-  return strip.Color(r, g, b);
+
+  // --------------------------------------------------
+  // DEEP VIOLET / BLUE -> ORANGE
+  // --------------------------------------------------
+
+  else {
+
+    float t =
+      (amount - 0.5) / 0.5;
+
+    // Start:
+    // Controlled violet-blue
+    //
+    // End:
+    // Warm orange
+
+    const int startR = 80;
+    const int startG = 0;
+    const int startB = 220;
+
+    const int endR = 255;
+    const int endG = 40;
+    const int endB = 0;
+
+    r =
+      startR +
+      (endR - startR) * t;
+
+    g =
+      startG +
+      (endG - startG) * t;
+
+    b =
+      startB +
+      (endB - startB) * t;
+  }
+
+
+  return strip.Color(
+    r,
+    g,
+    b
+  );
 }
 
 
@@ -494,14 +672,27 @@ void setStrip(
   int brightness
 ) {
 
-  brightness = constrain(brightness, 0, 255);
+  brightness =
+    constrain(
+      brightness,
+      0,
+      255
+    );
 
-  strip.setBrightness(brightness);
+  strip.setBrightness(
+    brightness
+  );
 
-  for (int i = 0; i < ledCount; i++) {
+  for (
+    int i = 0;
+    i < ledCount;
+    i++
+  ) {
 
-    strip.setPixelColor(i, colour);
-
+    strip.setPixelColor(
+      i,
+      colour
+    );
   }
 
   strip.show();
@@ -534,18 +725,33 @@ void setBothStrips(
 void allOff() {
 
   setBothStrips(
-    leftStrip.Color(0, 0, 0),
-    rightStrip.Color(0, 0, 0),
+    leftStrip.Color(
+      0,
+      0,
+      0
+    ),
+
+    rightStrip.Color(
+      0,
+      0,
+      0
+    ),
+
     0,
     0
   );
-
 }
 
 
-void flashConfirmation(uint32_t colour) {
+void flashConfirmation(
+  uint32_t colour
+) {
 
-  for (int i = 0; i < 2; i++) {
+  for (
+    int i = 0;
+    i < 2;
+    i++
+  ) {
 
     setBothStrips(
       colour,
@@ -559,9 +765,7 @@ void flashConfirmation(uint32_t colour) {
     allOff();
 
     delay(150);
-
   }
-
 }
 
 
@@ -576,15 +780,21 @@ void startupSweep() {
   const int sweepB = 255;
 
   const int tailLength = 14;
-
   const int sweepDelay = 3;
 
-  leftStrip.setBrightness(userBrightness);
-  rightStrip.setBrightness(userBrightness);
+  leftStrip.setBrightness(
+    userBrightness
+  );
+
+  rightStrip.setBrightness(
+    userBrightness
+  );
 
   for (
     int head = 0;
-    head < NUM_LEDS_LEFT + tailLength;
+    head <
+    NUM_LEDS_LEFT +
+    tailLength;
     head++
   ) {
 
@@ -599,7 +809,8 @@ void startupSweep() {
 
       if (
         distanceBehindHead >= 0 &&
-        distanceBehindHead < tailLength
+        distanceBehindHead <
+        tailLength
       ) {
 
         int fade =
@@ -639,22 +850,20 @@ void startupSweep() {
           i,
           0
         );
-
       }
-
     }
 
     leftStrip.show();
     rightStrip.show();
 
-    delay(sweepDelay);
-
+    delay(
+      sweepDelay
+    );
   }
 
   allOff();
 
   delay(200);
-
 }
 
 
@@ -680,10 +889,6 @@ void readAcceleration(
   );
 
 
-  // --------------------------------------------------
-  // UPDATE HILL COMPENSATION BASELINE
-  // --------------------------------------------------
-
   updateDriftingBaseline(
     accel.acceleration.x,
     accel.acceleration.y,
@@ -691,25 +896,40 @@ void readAcceleration(
   );
 
 
-  // --------------------------------------------------
-  // CONVERT TO G
-  // --------------------------------------------------
-
   xG =
-    (accel.acceleration.x - driftBaseX)
+    (
+      accel.acceleration.x -
+      driftBaseX
+    )
     / 9.81;
 
   yG =
-    (accel.acceleration.y - driftBaseY)
+    (
+      accel.acceleration.y -
+      driftBaseY
+    )
     / 9.81;
 
   zG =
-    (accel.acceleration.z - driftBaseZ)
+    (
+      accel.acceleration.z -
+      driftBaseZ
+    )
     / 9.81;
 
 
+  // Raw overall movement.
+
+  movementG =
+    sqrt(
+      (xG * xG) +
+      (yG * yG) +
+      (zG * zG)
+    );
+
+
   // --------------------------------------------------
-  // SELECT VEHICLE AXES
+  // DETERMINE AXIS VALUES
   // --------------------------------------------------
 
   float rawForwardG =
@@ -718,7 +938,10 @@ void readAcceleration(
       yG,
       zG,
       FORWARD_AXIS
-    ) * FORWARD_SIGN;
+    )
+    *
+    FORWARD_SIGN;
+
 
   float rawSideG =
     getSelectedAxis(
@@ -726,56 +949,74 @@ void readAcceleration(
       yG,
       zG,
       SIDE_AXIS
-    ) * SIDE_SIGN;
+    )
+    *
+    SIDE_SIGN;
 
 
   // --------------------------------------------------
-  // ACCELEROMETER LOW-PASS FILTER
+  // SMOOTH ACCELEROMETER RESPONSE
   // --------------------------------------------------
 
-  filteredForwardG =
-    filteredForwardG *
-    (1.0 - accelerometerFilterRate)
+  smoothedForwardG =
+    smoothedForwardG *
+    (
+      1.0 -
+      accelerationSmoothing
+    )
     +
     rawForwardG *
-    accelerometerFilterRate;
+    accelerationSmoothing;
 
 
-  filteredSideG =
-    filteredSideG *
-    (1.0 - accelerometerFilterRate)
+  smoothedSideG =
+    smoothedSideG *
+    (
+      1.0 -
+      accelerationSmoothing
+    )
     +
     rawSideG *
-    accelerometerFilterRate;
+    accelerationSmoothing;
 
 
-  // Calculate overall movement from the filtered
-  // forward and side acceleration values.
+  smoothedMovementG =
+    smoothedMovementG *
+    (
+      1.0 -
+      accelerationSmoothing
+    )
+    +
+    movementG *
+    accelerationSmoothing;
 
-  filteredMovementG =
-    sqrt(
-      (filteredForwardG * filteredForwardG)
-      +
-      (filteredSideG * filteredSideG)
+
+  // Return smoothed axis values.
+
+  xG =
+    getSelectedAxis(
+      smoothedForwardG,
+      smoothedSideG,
+      0,
+      FORWARD_AXIS
     );
 
+  yG =
+    smoothedSideG;
 
-  // Return the filtered values.
+  zG =
+    0;
 
-  xG = filteredForwardG;
 
-  yG = filteredSideG;
-
-  zG = 0.0;
+  // Return movement value.
 
   movementG =
-    filteredMovementG;
-
+    smoothedMovementG;
 }
 
 
 // ==================================================
-// MPU6050 CALIBRATION
+// CALIBRATION
 // ==================================================
 
 void calibrateMPU6050() {
@@ -788,14 +1029,11 @@ void calibrateMPU6050() {
     "Keep the car/box still."
   );
 
-
   allOff();
 
   delay(200);
 
-
   const int samples = 120;
-
 
   float totalX = 0.0;
   float totalY = 0.0;
@@ -812,13 +1050,11 @@ void calibrateMPU6050() {
     sensors_event_t gyro;
     sensors_event_t temp;
 
-
     mpu.getEvent(
       &accel,
       &gyro,
       &temp
     );
-
 
     totalX +=
       accel.acceleration.x;
@@ -829,20 +1065,21 @@ void calibrateMPU6050() {
     totalZ +=
       accel.acceleration.z;
 
-
     delay(10);
-
   }
 
 
   baseX =
-    totalX / samples;
+    totalX /
+    samples;
 
   baseY =
-    totalY / samples;
+    totalY /
+    samples;
 
   baseZ =
-    totalZ / samples;
+    totalZ /
+    samples;
 
 
   driftBaseX =
@@ -855,25 +1092,16 @@ void calibrateMPU6050() {
     baseZ;
 
 
-  // Reset filtering after calibration.
+  // Reset smoothing after calibration.
 
-  filteredForwardG = 0.0;
-
-  filteredSideG = 0.0;
-
-  filteredMovementG = 0.0;
-
-  smoothedReactiveBrightness =
-    userBrightness * 0.25;
-
-  movementActive =
-    false;
+  smoothedForwardG = 0.0;
+  smoothedSideG = 0.0;
+  smoothedMovementG = 0.0;
 
 
   Serial.println(
     "Calibration complete."
   );
-
 
   Serial.print(
     "Base X: "
@@ -883,7 +1111,6 @@ void calibrateMPU6050() {
     baseX
   );
 
-
   Serial.print(
     "Base Y: "
   );
@@ -891,7 +1118,6 @@ void calibrateMPU6050() {
   Serial.println(
     baseY
   );
-
 
   Serial.print(
     "Base Z: "
@@ -909,7 +1135,6 @@ void calibrateMPU6050() {
       0
     )
   );
-
 }
 
 
@@ -924,22 +1149,50 @@ void applyCorneringBrightness(
   int &rightBrightness
 ) {
 
-
-  // Remove small sideways movements.
+  // Ignore small side movements.
 
   if (
-    abs(sideG)
-    < corneringDeadZone
+    abs(sideG) <
+    corneringDeadZone
   ) {
 
-    sideG = 0.0;
+    leftBrightness =
+      baseBrightness;
 
+    rightBrightness =
+      baseBrightness;
+
+    return;
   }
 
 
+  // Remove the dead zone from
+  // the effective signal.
+
+  float effectiveSideG;
+
+  if (sideG > 0) {
+
+    effectiveSideG =
+      sideG -
+      corneringDeadZone;
+
+  } else {
+
+    effectiveSideG =
+      sideG +
+      corneringDeadZone;
+  }
+
+
+  float availableRange =
+    corneringResponseG -
+    corneringDeadZone;
+
+
   float sideIntensity =
-    abs(sideG)
-    / corneringFullScale;
+    abs(effectiveSideG) /
+    availableRange;
 
 
   sideIntensity =
@@ -958,58 +1211,49 @@ void applyCorneringBrightness(
 
 
   if (
-    sideG
-    > corneringDeadZone
+    sideG >
+    corneringDeadZone
   ) {
 
     leftBrightness =
-      baseBrightness
-      +
+      baseBrightness +
       (
-        userBrightness
-        * 0.4
-        * sideIntensity
+        userBrightness *
+        0.4 *
+        sideIntensity
       );
 
-
     rightBrightness =
-      baseBrightness
-      *
+      baseBrightness *
       (
-        1.0
-        -
-        0.4
-        * sideIntensity
+        1.0 -
+        0.4 *
+        sideIntensity
       );
 
   }
 
 
   else if (
-    sideG
-    < -corneringDeadZone
+    sideG <
+    -corneringDeadZone
   ) {
 
     rightBrightness =
-      baseBrightness
-      +
+      baseBrightness +
       (
-        userBrightness
-        * 0.4
-        * sideIntensity
+        userBrightness *
+        0.4 *
+        sideIntensity
       );
-
 
     leftBrightness =
-      baseBrightness
-      *
+      baseBrightness *
       (
-        1.0
-        -
-        0.4
-        * sideIntensity
+        1.0 -
+        0.4 *
+        sideIntensity
       );
-
   }
 
 
@@ -1020,14 +1264,12 @@ void applyCorneringBrightness(
       userBrightness
     );
 
-
   rightBrightness =
     constrain(
       rightBrightness,
       0,
       userBrightness
     );
-
 }
 
 
@@ -1039,8 +1281,8 @@ float breathingMultiplier() {
 
   float phase =
     (
-      millis()
-      % 4000
+      millis() %
+      4000
     )
     /
     4000.0
@@ -1052,22 +1294,18 @@ float breathingMultiplier() {
 
   float wave =
     (
-      sin(phase)
-      +
+      sin(phase) +
       1.0
     )
     /
     2.0;
 
 
-  return
-    0.6
-    +
+  return 0.6 +
     (
-      0.4
-      * wave
+      0.4 *
+      wave
     );
-
 }
 
 
@@ -1083,16 +1321,14 @@ void updateStaticThemeMode(
   float sideG
 ) {
 
-
   int ambientBrightness =
-    userBrightness
-    * 0.25
-    * breathingMultiplier();
+    userBrightness *
+    0.25 *
+    breathingMultiplier();
 
 
   float intensity =
-    movementG
-    /
+    movementG /
     0.50;
 
 
@@ -1105,12 +1341,10 @@ void updateStaticThemeMode(
 
 
   int themeBrightness =
-    ambientBrightness
-    +
+    ambientBrightness +
     (
       (
-        userBrightness
-        -
+        userBrightness -
         ambientBrightness
       )
       *
@@ -1127,7 +1361,6 @@ void updateStaticThemeMode(
 
 
   int leftBrightness;
-
   int rightBrightness;
 
 
@@ -1140,7 +1373,6 @@ void updateStaticThemeMode(
 
 
   setBothStrips(
-
     leftStrip.Color(
       r,
       g,
@@ -1154,11 +1386,8 @@ void updateStaticThemeMode(
     ),
 
     leftBrightness,
-
     rightBrightness
-
   );
-
 }
 
 
@@ -1172,50 +1401,10 @@ void updateMainReactiveMode(
   float movementG
 ) {
 
-
-  // --------------------------------------------------
-  // MOVEMENT HYSTERESIS
-  // --------------------------------------------------
-
-  if (!movementActive) {
-
-    if (
-      movementG
-      >
-      movementStartThreshold
-    ) {
-
-      movementActive =
-        true;
-
-    }
-
-  }
-
-  else {
-
-    if (
-      movementG
-      <
-      movementStopThreshold
-    ) {
-
-      movementActive =
-        false;
-
-    }
-
-  }
-
-
-  // --------------------------------------------------
-  // AMBIENT BRIGHTNESS
-  // --------------------------------------------------
-
   int ambientBrightness =
-    userBrightness
-    * 0.25
-    * breathingMultiplier();
+    userBrightness *
+    0.25 *
+    breathingMultiplier();
 
 
   // --------------------------------------------------
@@ -1223,24 +1412,23 @@ void updateMainReactiveMode(
   // --------------------------------------------------
 
   if (
-    forwardG
-    <
+    forwardG <
     -brakingDeadZone
   ) {
 
+    float effectiveBrakeG =
+      abs(forwardG) -
+      brakingDeadZone;
+
+
+    float availableRange =
+      brakingResponseG -
+      brakingDeadZone;
+
 
     float brakeIntensity =
-      (
-        abs(forwardG)
-        -
-        brakingDeadZone
-      )
-      /
-      (
-        brakingFullScale
-        -
-        brakingDeadZone
-      );
+      effectiveBrakeG /
+      availableRange;
 
 
     brakeIntensity =
@@ -1251,13 +1439,18 @@ void updateMainReactiveMode(
       );
 
 
-    int targetBrightness =
-      ambientBrightness
-      +
+    // Smooth response curve.
+
+    brakeIntensity =
+      brakeIntensity *
+      brakeIntensity;
+
+
+    int brakeBrightness =
+      ambientBrightness +
       (
         (
-          userBrightness
-          -
+          userBrightness -
           ambientBrightness
         )
         *
@@ -1265,35 +1458,20 @@ void updateMainReactiveMode(
       );
 
 
-    targetBrightness =
+    brakeBrightness =
       constrain(
-        targetBrightness,
+        brakeBrightness,
         0,
         userBrightness
       );
 
 
-    // Smooth the brightness response.
-
-    smoothedReactiveBrightness =
-      smoothedReactiveBrightness
-      +
-      (
-        targetBrightness
-        -
-        smoothedReactiveBrightness
-      )
-      *
-      brightnessSmoothingRate;
-
-
     int leftBrightness;
-
     int rightBrightness;
 
 
     applyCorneringBrightness(
-      smoothedReactiveBrightness,
+      brakeBrightness,
       sideG,
       leftBrightness,
       rightBrightness
@@ -1301,7 +1479,6 @@ void updateMainReactiveMode(
 
 
     setBothStrips(
-
       leftStrip.Color(
         255,
         0,
@@ -1315,19 +1492,16 @@ void updateMainReactiveMode(
       ),
 
       leftBrightness,
-
       rightBrightness
-
     );
 
 
     return;
-
   }
 
 
   // --------------------------------------------------
-  // ACCELERATION
+  // ACCELERATION / NORMAL DRIVING
   // --------------------------------------------------
 
   float accelIntensity =
@@ -1335,28 +1509,23 @@ void updateMainReactiveMode(
 
 
   if (
-    movementActive
-    &&
-    forwardG
-    >
+    forwardG >
     accelerationDeadZone
   ) {
 
+    float effectiveAccelG =
+      forwardG -
+      accelerationDeadZone;
 
-    float effectiveAcceleration =
-      forwardG
-      -
+
+    float availableRange =
+      accelerationResponseG -
       accelerationDeadZone;
 
 
     accelIntensity =
-      effectiveAcceleration
-      /
-      (
-        accelerationFullScale
-        -
-        accelerationDeadZone
-      );
+      effectiveAccelG /
+      availableRange;
 
 
     accelIntensity =
@@ -1366,20 +1535,20 @@ void updateMainReactiveMode(
         1.0
       );
 
+
+    // Smooth response curve.
+
+    accelIntensity =
+      accelIntensity *
+      accelIntensity;
   }
 
 
-  // --------------------------------------------------
-  // REACTIVE BRIGHTNESS
-  // --------------------------------------------------
-
-  int targetBrightness =
-    ambientBrightness
-    +
+  int reactiveBrightness =
+    ambientBrightness +
     (
       (
-        userBrightness
-        -
+        userBrightness -
         ambientBrightness
       )
       *
@@ -1387,31 +1556,13 @@ void updateMainReactiveMode(
     );
 
 
-  targetBrightness =
+  reactiveBrightness =
     constrain(
-      targetBrightness,
+      reactiveBrightness,
       0,
       userBrightness
     );
 
-
-  // Smooth brightness.
-
-  smoothedReactiveBrightness =
-    smoothedReactiveBrightness
-    +
-    (
-      targetBrightness
-      -
-      smoothedReactiveBrightness
-    )
-    *
-    brightnessSmoothingRate;
-
-
-  // --------------------------------------------------
-  // ACCELERATION COLOUR
-  // --------------------------------------------------
 
   uint32_t leftColour =
     blueToOrange(
@@ -1427,44 +1578,24 @@ void updateMainReactiveMode(
     );
 
 
-  // --------------------------------------------------
-  // CORNERING
-  // --------------------------------------------------
-
   int leftBrightness;
-
   int rightBrightness;
 
 
   applyCorneringBrightness(
-
-    smoothedReactiveBrightness,
-
+    reactiveBrightness,
     sideG,
-
     leftBrightness,
-
     rightBrightness
-
   );
 
-
-  // --------------------------------------------------
-  // OUTPUT
-  // --------------------------------------------------
 
   setBothStrips(
-
     leftColour,
-
     rightColour,
-
     leftBrightness,
-
     rightBrightness
-
   );
-
 }
 
 
@@ -1474,50 +1605,39 @@ void updateMainReactiveMode(
 
 void updateLEDs() {
 
-
   float xG;
-
   float yG;
-
   float zG;
-
   float movementG;
 
 
   readAcceleration(
-
     xG,
-
     yG,
-
     zG,
-
     movementG
-
   );
 
 
+  // Reconstruct forward and side values
+  // from the smoothed signals.
+
   float forwardG =
-    xG;
+    smoothedForwardG;
 
 
   float sideG =
-    yG;
+    smoothedSideG;
 
 
   switch (mode) {
 
-
     case 0:
 
       updateMainReactiveMode(
-
         forwardG,
-
         sideG,
-
         movementG
-
       );
 
       break;
@@ -1526,17 +1646,11 @@ void updateLEDs() {
     case 1:
 
       updateStaticThemeMode(
-
         54,
-
         1,
-
         63,
-
         movementG,
-
         sideG
-
       );
 
       break;
@@ -1545,17 +1659,11 @@ void updateLEDs() {
     case 2:
 
       updateStaticThemeMode(
-
         255,
-
         0,
-
         0,
-
         movementG,
-
         sideG
-
       );
 
       break;
@@ -1564,17 +1672,11 @@ void updateLEDs() {
     case 3:
 
       updateStaticThemeMode(
-
         0,
-
         0,
-
         255,
-
         movementG,
-
         sideG
-
       );
 
       break;
@@ -1583,36 +1685,22 @@ void updateLEDs() {
     case 4:
 
       updateStaticThemeMode(
-
         0,
-
         255,
-
         10,
-
         movementG,
-
         sideG
-
       );
 
       break;
-
   }
 
 
-  // --------------------------------------------------
-  // SERIAL DEBUG
-  // --------------------------------------------------
-
   if (
-    millis()
-    -
-    lastSerialPrint
-    >
+    millis() -
+    lastSerialPrint >
     serialPrintInterval
   ) {
-
 
     Serial.print(
       "Mode: "
@@ -1622,7 +1710,6 @@ void updateLEDs() {
       mode
     );
 
-
     Serial.print(
       " | Brightness max: "
     );
@@ -1631,16 +1718,14 @@ void updateLEDs() {
       userBrightness
     );
 
-
     Serial.print(
       " | Forward: "
     );
 
     Serial.print(
       forwardG,
-      3
+      2
     );
-
 
     Serial.print(
       "g | Side: "
@@ -1648,9 +1733,8 @@ void updateLEDs() {
 
     Serial.print(
       sideG,
-      3
+      2
     );
-
 
     Serial.print(
       "g | Movement: "
@@ -1658,75 +1742,44 @@ void updateLEDs() {
 
     Serial.print(
       movementG,
-      3
-    );
-
-
-    Serial.print(
-      "g | Movement active: "
+      2
     );
 
     Serial.println(
-      movementActive
+      "g"
     );
-
 
     lastSerialPrint =
       millis();
-
   }
-
 }
 
 
 // ==================================================
-// ENCODER HANDLING
+// ENCODER INTERRUPT HANDLER
 // ==================================================
 
-
-// Full quadrature state-transition decoding.
+// This function is called whenever either encoder
+// signal changes state.
 //
-// This version retains the V3.4 encoder implementation.
-
-const int8_t encoderTransitionTable[16] = {
-
-   0, -1,  1,  0,
-
-   1,  0,  0, -1,
-
-  -1,  0,  0,  1,
-
-   0,  1, -1,  0
-
-};
-
-
-uint8_t encoderState =
-  0;
-
-
-int8_t encoderAccumulatedSteps =
-  0;
-
-
-// Most KY-040 encoders produce 4 valid quarter-steps
-// per physical detent.
+// It must remain extremely fast.
 //
-// V3.4 used 2 to provide a practical balance between
-// responsiveness and control resolution.
+// Do NOT:
+//
+// - Use Serial.print()
+// - Update LEDs
+// - Call delay()
+// - Perform floating point calculations
+//
+// The ISR only reads the encoder and accumulates
+// valid quadrature movement.
 
-const int8_t stepsPerDetent =
-  2;
-
-
-void readEncoderRotation() {
-
+void IRAM_ATTR encoderISR() {
 
   int clk =
     digitalRead(
       ENCODER_CLK
     );
-
 
   int dt =
     digitalRead(
@@ -1742,7 +1795,7 @@ void readEncoderRotation() {
     dt;
 
 
-  encoderState =
+  uint8_t transition =
     (
       (
         encoderState
@@ -1757,103 +1810,135 @@ void readEncoderRotation() {
 
   int8_t movement =
     encoderTransitionTable[
-      encoderState
+      transition
     ];
 
 
+  encoderState =
+    newState;
+
+
   if (
-    movement
-    !=
+    movement !=
     0
   ) {
 
-
-    encoderAccumulatedSteps
-      +=
+    encoderAccumulatedSteps +=
       movement;
+  }
+}
 
 
-    if (
-      encoderAccumulatedSteps
-      >=
-      stepsPerDetent
-    ) {
+// ==================================================
+// PROCESS ENCODER MOVEMENT
+// ==================================================
+
+void processEncoderRotation() {
+
+  int32_t accumulatedSteps;
 
 
+  // Copy and clear the accumulated movement
+  // atomically so the ISR cannot modify it halfway
+  // through the operation.
+
+  noInterrupts();
+
+
+  accumulatedSteps =
+    encoderAccumulatedSteps;
+
+
+  encoderAccumulatedSteps =
+    0;
+
+
+  interrupts();
+
+
+  // Process all complete encoder detents.
+
+  while (
+    accumulatedSteps >=
+    stepsPerDetent
+  ) {
+
+    userBrightness +=
+      brightnessStep;
+
+
+    userBrightness =
+      constrain(
+        userBrightness,
+        minBrightness,
+        maxBrightness
+      );
+
+
+    accumulatedSteps -=
+      stepsPerDetent;
+
+
+    Serial.print(
+      "Brightness max set to: "
+    );
+
+
+    Serial.println(
       userBrightness
-        +=
-        5;
-
-
-      encoderAccumulatedSteps =
-        0;
-
-
-      userBrightness =
-        constrain(
-
-          userBrightness,
-
-          minBrightness,
-
-          maxBrightness
-
-        );
-
-
-      Serial.print(
-        "Brightness max set to: "
-      );
-
-
-      Serial.println(
-        userBrightness
-      );
-
-    }
-
-
-    else if (
-      encoderAccumulatedSteps
-      <=
-      -stepsPerDetent
-    ) {
-
-
-      userBrightness
-        -=
-        5;
-
-
-      encoderAccumulatedSteps =
-        0;
-
-
-      userBrightness =
-        constrain(
-
-          userBrightness,
-
-          minBrightness,
-
-          maxBrightness
-
-        );
-
-
-      Serial.print(
-        "Brightness max set to: "
-      );
-
-
-      Serial.println(
-        userBrightness
-      );
-
-    }
-
+    );
   }
 
+
+  while (
+    accumulatedSteps <=
+    -stepsPerDetent
+  ) {
+
+    userBrightness -=
+      brightnessStep;
+
+
+    userBrightness =
+      constrain(
+        userBrightness,
+        minBrightness,
+        maxBrightness
+      );
+
+
+    accumulatedSteps +=
+      stepsPerDetent;
+
+
+    Serial.print(
+      "Brightness max set to: "
+    );
+
+
+    Serial.println(
+      userBrightness
+    );
+  }
+
+
+  // Return any incomplete movement to the
+  // shared accumulator.
+
+  if (
+    accumulatedSteps !=
+    0
+  ) {
+
+    noInterrupts();
+
+
+    encoderAccumulatedSteps +=
+      accumulatedSteps;
+
+
+    interrupts();
+  }
 }
 
 
@@ -1863,101 +1948,85 @@ void readEncoderRotation() {
 
 void readEncoderButton() {
 
-
   bool buttonDown =
     digitalRead(
       ENCODER_SW
-    )
-    ==
-    LOW;
+    ) == LOW;
 
 
   unsigned long now =
     millis();
 
 
+  // Button has just been pressed.
+
   if (
-    buttonDown
-    &&
+    buttonDown &&
     !buttonWasDown
   ) {
-
 
     buttonWasDown =
       true;
 
-
     longPressHandled =
       false;
 
-
     buttonDownTime =
       now;
-
   }
 
 
+  // Check for long press.
+
   if (
-    buttonDown
-    &&
+    buttonDown &&
     !longPressHandled
   ) {
 
-
     if (
-      now
-      -
-      buttonDownTime
-      >
+      now -
+      buttonDownTime >
       longPressTime
     ) {
-
 
       longPressHandled =
         true;
 
-
       calibrateMPU6050();
-
     }
-
   }
 
 
+  // Button has been released.
+
   if (
-    !buttonDown
-    &&
+    !buttonDown &&
     buttonWasDown
   ) {
-
 
     buttonWasDown =
       false;
 
 
+    // Short press.
+
     if (
-      !longPressHandled
-      &&
-      now
-      -
-      lastButtonEvent
-      >
+      !longPressHandled &&
+      now -
+      lastButtonEvent >
       debounceDelay
     ) {
-
 
       mode++;
 
 
       if (
-        mode
-        >=
+        mode >=
         numberOfModes
       ) {
 
         mode =
           0;
-
       }
 
 
@@ -1972,27 +2041,18 @@ void readEncoderButton() {
 
 
       flashConfirmation(
-
         leftStrip.Color(
-
           0,
-
           0,
-
           255
-
         )
-
       );
 
 
       lastButtonEvent =
         now;
-
     }
-
   }
-
 }
 
 
@@ -2001,7 +2061,6 @@ void readEncoderButton() {
 // ==================================================
 
 void setup() {
-
 
   Serial.begin(
     115200
@@ -2033,44 +2092,7 @@ void setup() {
 #endif
 
 
-  Serial.println(
-    "Reactive response refinement: ENABLED"
-  );
-
-
-  Serial.print(
-    "Acceleration dead zone: "
-  );
-
-
-  Serial.println(
-    accelerationDeadZone
-  );
-
-
-  Serial.print(
-    "Braking dead zone: "
-  );
-
-
-  Serial.println(
-    brakingDeadZone
-  );
-
-
-  Serial.print(
-    "Cornering dead zone: "
-  );
-
-
-  Serial.println(
-    corneringDeadZone
-  );
-
-
-  // --------------------------------------------------
-  // ENCODER SETUP
-  // --------------------------------------------------
+  // Encoder pins.
 
   pinMode(
     ENCODER_CLK,
@@ -2090,24 +2112,45 @@ void setup() {
   );
 
 
-  // Seed quadrature state.
+  // Seed the encoder state with the actual
+  // physical encoder position.
 
   encoderState =
     (
-      digitalRead(
-        ENCODER_CLK
+      (
+        digitalRead(
+          ENCODER_CLK
+        )
+        << 1
       )
-      << 1
-    )
-    |
-    digitalRead(
-      ENCODER_DT
+      |
+      digitalRead(
+        ENCODER_DT
+      )
     );
 
 
-  // --------------------------------------------------
-  // LED SETUP
-  // --------------------------------------------------
+  // Attach interrupts to both encoder channels.
+
+  attachInterrupt(
+    digitalPinToInterrupt(
+      ENCODER_CLK
+    ),
+    encoderISR,
+    CHANGE
+  );
+
+
+  attachInterrupt(
+    digitalPinToInterrupt(
+      ENCODER_DT
+    ),
+    encoderISR,
+    CHANGE
+  );
+
+
+  // Start LED strips.
 
   leftStrip.begin();
 
@@ -2124,30 +2167,24 @@ void setup() {
   rightStrip.show();
 
 
-  // --------------------------------------------------
-  // STARTUP ANIMATION
-  // --------------------------------------------------
+  // Startup animation.
 
   startupSweep();
 
 
-  // --------------------------------------------------
-  // MPU6050 SETUP
-  // --------------------------------------------------
+  // Start I2C.
 
   Wire.begin(
-
     I2C_SDA,
-
     I2C_SCL
-
   );
 
+
+  // Start MPU6050.
 
   if (
     !mpu.begin()
   ) {
-
 
     Serial.println(
       "ERROR: MPU6050 not found."
@@ -2163,33 +2200,21 @@ void setup() {
       1
     ) {
 
-
       setBothStrips(
-
         leftStrip.Color(
-
           255,
-
           0,
-
           0
-
         ),
 
         rightStrip.Color(
-
           255,
-
           0,
-
           0
-
         ),
 
         50,
-
         50
-
       );
 
 
@@ -2204,9 +2229,7 @@ void setup() {
       delay(
         300
       );
-
     }
-
   }
 
 
@@ -2216,29 +2239,19 @@ void setup() {
 
 
   mpu.setAccelerometerRange(
-
     MPU6050_RANGE_4_G
-
   );
 
 
   mpu.setGyroRange(
-
     MPU6050_RANGE_500_DEG
-
   );
 
 
   mpu.setFilterBandwidth(
-
     MPU6050_BAND_21_HZ
-
   );
 
-
-  // --------------------------------------------------
-  // INITIAL CALIBRATION
-  // --------------------------------------------------
 
   calibrateMPU6050();
 
@@ -2246,7 +2259,6 @@ void setup() {
   Serial.println(
     "Setup complete."
   );
-
 }
 
 
@@ -2256,18 +2268,18 @@ void setup() {
 
 void loop() {
 
+  // Process any encoder movement captured by
+  // the interrupt handler.
 
-  // Encoder is handled first so brightness and
-  // button input remain responsive.
+  processEncoderRotation();
 
-  readEncoderRotation();
 
+  // Handle encoder push button.
 
   readEncoderButton();
 
 
-  // Update accelerometer and LED behaviour.
+  // Update accelerometer and LEDs.
 
   updateLEDs();
-
 }
