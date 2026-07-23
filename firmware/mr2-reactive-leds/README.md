@@ -190,33 +190,169 @@ The rotary encoder now provides a more responsive and usable brightness adjustme
 
 The encoder can be rotated more quickly without losing as many brightness adjustments, making it easier to move rapidly through the full brightness range.
 
-Further refinement may be carried out following vehicle testing if additional improvements to encoder responsiveness or brightness adjustment are required.
+---
+
+## v3.5 – LED Output and Colour Refinement
+
+The firmware was refined following continued development of the LED output and lighting behaviour.
+
+### Changes
+
+- Reworked LED brightness handling to use manual RGB channel scaling.
+- Retained the NeoPixel library at maximum brightness while applying brightness directly to each colour channel before output.
+- Improved consistency of colour ratios across different brightness levels.
+- Refined the blue-to-orange acceleration colour transition.
+- Reduced unwanted green contribution during acceleration colour transitions.
+- Tuned the purple theme colour for a deeper, more controlled appearance.
+- Retained full breathing effect depth across reactive and theme modes.
+- Continued use of smoothed accelerometer values for stable reactive behaviour.
+- Retained progressive acceleration, braking, and cornering responses.
+
+### Manual RGB Brightness Scaling
+
+Brightness is now controlled by directly scaling the red, green, and blue channels before the colour is sent to the LED strips.
+
+This avoids relying on `setBrightness()` for normal runtime brightness control.
+
+The approach provides more predictable colour behaviour during:
+
+- Idle breathing.
+- Acceleration response.
+- Braking response.
+- Cornering brightness changes.
+- Static theme modes.
+
+### Colour Refinement
+
+The main reactive mode continues to transition from deep blue through a controlled violet-blue stage before reaching warm orange under stronger acceleration.
+
+The green channel is deliberately kept low during the transition to prevent the LEDs from producing an unwanted pale purple, white, or yellow appearance.
+
+The purple theme was also hand-tuned to use a controlled RGB value rather than a full-intensity mixture.
+
+### Result
+
+v3.5 provided a more consistent and visually controlled LED output while maintaining the established reactive lighting behaviour.
+
+The firmware was now ready for further refinement of the accelerometer baseline system and real-world hill compensation behaviour.
 
 ---
 
-# Current Firmware – v3.4
+## v3.6 – Smart Dynamic Baseline and Final Robust Firmware
 
-The current firmware version is **v3.4**.
+v3.6 is the final planned firmware version for the MR2 Reactive LEDs project.
 
-The production firmware currently provides:
+This version builds directly on the established v3.5 LED output, colour handling, reactive behaviour, and rotary encoder system.
 
-- Reactive acceleration lighting.
-- Reactive braking lighting.
-- Independent left/right cornering effects.
-- Dynamic baseline filtering for hill compensation.
-- Startup sweep animation.
-- Idle breathing animation.
-- Four selectable solid colour theme modes.
-- Reactive movement behaviour across all theme modes.
-- Reactive left/right cornering brightness shifts across all theme modes.
-- Rotary encoder brightness adjustment.
-- Responsive rotary encoder brightness control.
-- Rotary encoder mode selection.
-- Full quadrature rotary encoder decoding.
-- Automatic MPU6050 sensor calibration.
-- Improved colour transitions.
-- Smoothed brightness and movement response.
+The primary improvement in v3.6 is a more robust smart hill-compensation system designed to distinguish between long-term vehicle orientation changes and genuine dynamic vehicle movement.
 
-The firmware is now ready for vehicle testing on the completed PCB and control box assembly.
+### Smart Hill Compensation
 
-Further firmware changes may be made following real-world vehicle testing if sensitivity, filtering, brightness response, encoder responsiveness, or reactive behaviour require additional refinement.
+The MPU6050 measures both gravity and dynamic acceleration.
+
+Because the accelerometer is mounted to the vehicle, changes in vehicle pitch can alter the measured forward-axis acceleration even when the vehicle is travelling at a constant speed.
+
+For example:
+
+- Driving uphill can produce an apparent forward acceleration change.
+- Driving downhill can produce an apparent braking change.
+
+The hill-compensation system therefore maintains a slowly adapting accelerometer baseline representing the vehicle's current orientation.
+
+Reactive acceleration and braking behaviour is calculated relative to this baseline.
+
+### Smart Baseline Gating
+
+Unlike the previous continuously adapting baseline system, v3.6 prevents the baseline from adapting during meaningful dynamic vehicle movement.
+
+The baseline is frozen when the system detects:
+
+- Significant forward acceleration.
+- Significant braking.
+- Significant lateral cornering movement.
+
+This prevents genuine acceleration or braking events from being gradually absorbed into the baseline.
+
+### Baseline State Machine
+
+The smart baseline system operates using three states:
+
+#### STABLE
+
+The vehicle is considered sufficiently calm.
+
+The baseline is allowed to adapt slowly to long-term changes in vehicle orientation.
+
+This allows the system to gradually compensate for sustained gradients such as:
+
+- Uphill driving.
+- Downhill driving.
+- Long-term changes in vehicle pitch.
+
+#### DYNAMIC
+
+Meaningful vehicle movement has been detected.
+
+The baseline is completely frozen.
+
+This includes:
+
+- Acceleration.
+- Braking.
+- Cornering.
+
+The baseline remains frozen for as long as meaningful dynamic movement continues.
+
+This prevents genuine vehicle dynamics from being mistaken for a change in vehicle orientation.
+
+#### SETTLING
+
+Dynamic movement has stopped.
+
+The baseline remains frozen temporarily while the vehicle settles.
+
+A settling delay prevents the system from immediately adapting to the end of an acceleration, braking, or cornering event.
+
+If dynamic movement resumes during this period, the system immediately returns to the DYNAMIC state.
+
+Once the settling period has completed and the vehicle remains sufficiently stable, the system returns to STABLE and slow baseline adaptation resumes.
+
+### Smart Baseline Behaviour
+
+The intended behaviour is:
+
+```text
+Vehicle stationary / stable
+        |
+        v
+Baseline slowly adapts
+        |
+        v
+Hill or sustained gradient
+        |
+        v
+Baseline gradually follows orientation change
+        |
+        v
+Genuine acceleration detected
+        |
+        v
+Baseline FREEZES
+        |
+        v
+Acceleration held
+        |
+        v
+Baseline remains FROZEN
+        |
+        v
+Acceleration ends
+        |
+        v
+SETTLING period
+        |
+        v
+Vehicle becomes stable
+        |
+        v
+Baseline slowly adapts again

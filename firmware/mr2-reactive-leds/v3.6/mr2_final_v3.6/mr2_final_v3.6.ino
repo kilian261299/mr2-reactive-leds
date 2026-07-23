@@ -5,123 +5,119 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V3.5
+  MR2 REACTIVE LEDs — FINAL FIRMWARE V3.6
   ==================================================
 
   Hardware:
 
   - ESP32-C3 Super Mini
-  - MPU6050 / GY-521 accelerometer
+  - MPU6050 / GY-521
   - KY-040 rotary encoder
   - Two WS2812B LED strips
   - SN74AHCT125N level shifter
-  - 12V to 5V converter
+  - 12V to 5V buck converter
 
-  --------------------------------------------------
-  V3.5 CHANGES
-  --------------------------------------------------
 
-  V3.5 is based directly on V3.4.
+  ==================================================
+  V3.6 FINAL FEATURES
+  ==================================================
 
-  The V3.4 interrupt-driven rotary encoder system has
-  been retained.
+  - Smart hill compensation
+  - Slow gravity / pitch baseline tracking
+  - Fast dynamic movement detection
+  - Baseline freezes during acceleration
+  - Baseline freezes during braking
+  - Baseline freezes during cornering
+  - Baseline freezes during sustained dynamic movement
+  - Dynamic movement must stop before baseline can adapt
+  - Settling delay after dynamic movement
+  - Slow baseline adaptation
+  - Hysteresis prevents state chatter
+  - Accelerometer low-pass filtering
+  - Acceleration dead zone
+  - Braking dead zone
+  - Cornering dead zone
+  - Progressive acceleration response
+  - Progressive braking response
+  - Progressive cornering response
+  - Blue -> violet-blue -> orange acceleration colour
+  - Red braking
+  - Left/right cornering brightness bias
+  - Five lighting modes
+  - Rotary encoder brightness control
+  - Short press changes mode
+  - Long press recalibrates MPU6050
+  - Startup sweep
+  - Calibration confirmation flash
 
-  Improvements in V3.5:
 
-  - Accelerometer response smoothing.
-  - Forward acceleration dead zone.
-  - Braking dead zone.
-  - Cornering dead zone.
-  - Progressive acceleration response.
-  - Progressive braking response.
-  - Progressive cornering response.
-  - Improved blue-to-orange colour transition.
-  - Cleaner accelerometer signal processing.
-  - Manual RGB brightness scaling, replacing the
-    library's setBrightness() for colour output, to
-    fix a hue shift on theme colours during the idle
-    breathing effect.
+  ==================================================
+  V3.6 SMART HILL COMPENSATION
+  ==================================================
 
-  --------------------------------------------------
-  COLOUR TRANSITION
-  --------------------------------------------------
+  The MPU6050 measures gravity and dynamic acceleration.
 
-  Main reactive mode:
+  A vehicle travelling up or down a hill changes the
+  orientation of the gravity vector relative to the
+  sensor.
 
-    Low acceleration:
-      Deep blue
+  This can appear as forward or backward acceleration.
 
-    Medium acceleration:
-      Controlled blue / violet-blue
+  V3.6 therefore separates:
 
-    Strong acceleration:
-      Warm orange
+    FAST component
+      Used to detect real dynamic acceleration,
+      braking and cornering.
 
-  The green channel is deliberately kept low during
-  the transition to avoid the pale purple/white
-  appearance produced by the previous RGB interpolation.
+    SLOW component
+      Used to estimate long-term gravity / hill
+      orientation.
 
-  --------------------------------------------------
-  BRIGHTNESS / COLOUR SCALING
-  --------------------------------------------------
+  The slow baseline is only allowed to adapt when
+  the vehicle is considered stable.
 
-  Brightness is no longer applied using the NeoPixel
-  library's setBrightness(). Both strips are fixed at
-  maximum library brightness (255) once, in setup().
+  During dynamic movement:
 
-  Instead, every effect scales its own R, G, and B
-  values directly (see setStrip()) before the colour
-  is ever sent to the strip.
+    Baseline FREEZES.
 
-  Reason:
-  The library's setBrightness() scales each channel
-  independently using integer math, which does not
-  stay proportional between channels when they start
-  at very different values. At low brightness during
-  breathing, this produced a visible hue shift rather
-  than a clean dim colour.
+  After dynamic movement:
 
-  Scaling all channels together, in one place, using
-  the same brightness fraction keeps hue stable across
-  the full breathing/reactive brightness range.
+    SETTLING period begins.
 
-  Purple uses a clearly blue-dominant RGB ratio
-  (45/0/90) rather than the previous near-even
-  red/blue ratio (54/0/63). This makes the purple
-  more visually deep while reducing sensitivity to
-  low-brightness integer rounding.
+  After settling:
 
-  --------------------------------------------------
-  ACCELEROMETER RESPONSE
-  --------------------------------------------------
+    Baseline slowly adapts.
 
-  Accelerometer signals are low-pass filtered before
-  being used by the LED effects.
+  This prevents the system from immediately learning
+  genuine acceleration as a new baseline.
 
-  Lower smoothing value:
-    Faster response.
-    More sensitive to noise.
 
-  Higher smoothing value:
-    Slower response.
-    Smoother and more stable.
+  ==================================================
+  BASELINE STATES
+  ==================================================
 
-  Dead zones prevent small movements from triggering
-  reactive effects.
+  STABLE
 
-  --------------------------------------------------
-  HILL COMPENSATION
-  --------------------------------------------------
+    Vehicle is calm.
+    Slow baseline may adapt.
 
-  A slowly drifting accelerometer baseline compensates
-  for sustained vehicle pitch changes.
+  DYNAMIC
 
-  This helps prevent hills from being interpreted as
-  continuous acceleration or braking.
+    Acceleration, braking or cornering detected.
+    Baseline is frozen.
 
-  --------------------------------------------------
+  SETTLING
+
+    Dynamic movement has stopped.
+    Baseline remains frozen temporarily.
+
+    This prevents the end of an acceleration event
+    from immediately becoming the new baseline.
+
+
+  ==================================================
   MODES
-  --------------------------------------------------
+  ==================================================
 
   Mode 0 — Main Reactive
 
@@ -132,32 +128,24 @@
       Blue -> violet-blue -> orange.
 
     Braking:
-      Red glow.
+      Red.
 
     Cornering:
       Left/right brightness shift.
 
-  Mode 1 — Purple Theme
 
-    Deep purple with full breathing depth.
+  Mode 1 — Purple
 
-  Mode 2 — Red Theme
+  Mode 2 — Red
 
-  Mode 3 — Blue Theme
+  Mode 3 — Blue
 
-  Mode 4 — Green Theme
+  Mode 4 — Green
 
-  Theme modes use fixed colours.
 
-  Brightness responds to overall movement.
-
-  Cornering shifts brightness between the two strips.
-
-  Calm conditions produce the breathing effect.
-
-  --------------------------------------------------
+  ==================================================
   ENCODER
-  --------------------------------------------------
+  ==================================================
 
   Rotate:
     Adjust maximum brightness.
@@ -166,27 +154,29 @@
     Change mode.
 
   Long press:
-    Recalibrate accelerometer baseline.
+    Recalibrate accelerometer.
 
-  --------------------------------------------------
+
+  ==================================================
   INSTALLATION
-  --------------------------------------------------
+  ==================================================
 
-  1. Mount MPU6050 flat and straight if possible.
-  2. Turn the car on.
-  3. Keep the car still on flat ground.
-  4. Long press encoder to calibrate.
-  5. Wait for green confirmation flash.
+  1. Mount MPU6050 securely.
+  2. Keep sensor orientation consistent.
+  3. Turn car on.
+  4. Keep car stationary during calibration.
+  5. Long press encoder to recalibrate if required.
 
-  --------------------------------------------------
+
+  ==================================================
   POWER
-  --------------------------------------------------
+  ==================================================
 
-  - All grounds must be common.
   - LED strips powered from 5V converter.
-  - Do not power LED strips from ESP32.
+  - ESP32 powered appropriately.
+  - All grounds common.
   - Use fuse on 12V input.
-  - Keep brightness low during first tests.
+  - Do not power LED strips from ESP32.
 */
 
 
@@ -226,17 +216,10 @@ Adafruit_NeoPixel rightStrip(
 
 
 // ==================================================
-// MPU6050 SETUP
+// MPU6050
 // ==================================================
 
 Adafruit_MPU6050 mpu;
-
-
-// Fixed calibration baseline.
-
-float baseX = 0.0;
-float baseY = 0.0;
-float baseZ = 0.0;
 
 
 // ==================================================
@@ -244,42 +227,6 @@ float baseZ = 0.0;
 // ==================================================
 
 #define HILL_COMPENSATION true
-
-const float baselineDriftRate = 0.004;
-
-float driftBaseX = 0.0;
-float driftBaseY = 0.0;
-float driftBaseZ = 0.0;
-
-
-void updateDriftingBaseline(
-  float rawX,
-  float rawY,
-  float rawZ
-) {
-
-#if HILL_COMPENSATION
-
-  driftBaseX =
-    driftBaseX *
-    (1.0 - baselineDriftRate) +
-    rawX *
-    baselineDriftRate;
-
-  driftBaseY =
-    driftBaseY *
-    (1.0 - baselineDriftRate) +
-    rawY *
-    baselineDriftRate;
-
-  driftBaseZ =
-    driftBaseZ *
-    (1.0 - baselineDriftRate) +
-    rawZ *
-    baselineDriftRate;
-
-#endif
-}
 
 
 // ==================================================
@@ -294,64 +241,140 @@ void updateDriftingBaseline(
 // Forward acceleration axis.
 
 const int FORWARD_AXIS = AXIS_X;
+
 const int FORWARD_SIGN = -1;
 
 
 // Sideways acceleration axis.
 
 const int SIDE_AXIS = AXIS_Y;
+
 const int SIDE_SIGN = -1;
 
 
 // ==================================================
-// USER SETTINGS
+// CALIBRATION BASELINE
 // ==================================================
 
-int userBrightness = 80;
-
-const int minBrightness = 0;
-const int maxBrightness = 220;
-
-int mode = 0;
-
-const int numberOfModes = 5;
+float baseX = 0.0;
+float baseY = 0.0;
+float baseZ = 0.0;
 
 
 // ==================================================
-// ACCELEROMETER RESPONSE SETTINGS
+// SMART BASELINE
 // ==================================================
 
-// --------------------------------------------------
-// DEAD ZONES
-// --------------------------------------------------
+// The baseline represents the slowly changing gravity
+// vector caused by vehicle pitch / hill angle.
 
-const float accelerationDeadZone = 0.04;
-
-const float brakingDeadZone = 0.12;
-
-const float corneringDeadZone = 0.08;
+float driftBaseX = 0.0;
+float driftBaseY = 0.0;
+float driftBaseZ = 0.0;
 
 
-// --------------------------------------------------
-// RESPONSE RANGES
-// --------------------------------------------------
+// ==================================================
+// BASELINE ADAPTATION
+// ==================================================
 
-const float accelerationResponseG = 0.35;
+// Very slow adaptation.
+//
+// Lower = stronger protection against absorbing
+// genuine acceleration.
+//
+// Higher = faster hill adaptation.
 
-const float brakingResponseG = 0.40;
-
-const float corneringResponseG = 0.35;
+const float baselineDriftRate = 0.0008;
 
 
-// --------------------------------------------------
-// ACCELEROMETER SMOOTHING
-// --------------------------------------------------
+// ==================================================
+// DYNAMIC MOVEMENT THRESHOLDS
+// ==================================================
+
+// Acceleration threshold.
+
+const float baselineAccelerationThreshold = 0.08;
+
+
+// Braking threshold.
+
+const float baselineBrakingThreshold = 0.10;
+
+
+// Cornering threshold.
+
+const float baselineCorneringThreshold = 0.08;
+
+
+// ==================================================
+// STABILITY THRESHOLDS
+// ==================================================
+
+// Dynamic movement must be below this level before
+// the system can eventually become stable.
+
+const float baselineStableThreshold = 0.045;
+
+
+// Hysteresis threshold.
+//
+// Once stable, movement must exceed this level to
+// return to dynamic behaviour.
+
+const float baselineDynamicReentryThreshold = 0.075;
+
+
+// ==================================================
+// SETTLING
+// ==================================================
+
+const unsigned long baselineSettleTime = 2000;
+
+
+// ==================================================
+// BASELINE STATE
+// ==================================================
+
+enum BaselineState {
+
+  BASELINE_STABLE,
+
+  BASELINE_DYNAMIC,
+
+  BASELINE_SETTLING
+};
+
+
+BaselineState baselineState =
+  BASELINE_STABLE;
+
+
+// ==================================================
+// BASELINE TIMING
+// ==================================================
+
+unsigned long dynamicMovementEndedTime = 0;
+
+
+// ==================================================
+// ACCELEROMETER FILTERING
+// ==================================================
+
+// Main reactive smoothing.
 
 const float accelerationSmoothing = 0.15;
 
 
+// Slow gravity / hill tracking.
+//
+// This must be significantly slower than the main
+// reactive filter.
+
+const float gravitySmoothing = 0.008;
+
+
 // ==================================================
-// SMOOTHED ACCELEROMETER VALUES
+// FILTERED VALUES
 // ==================================================
 
 float smoothedForwardG = 0.0;
@@ -362,7 +385,63 @@ float smoothedMovementG = 0.0;
 
 
 // ==================================================
-// ENCODER / BUTTON VARIABLES
+// GRAVITY ESTIMATE
+// ==================================================
+
+float gravityX = 0.0;
+
+float gravityY = 0.0;
+
+float gravityZ = 0.0;
+
+
+// ==================================================
+// USER SETTINGS
+// ==================================================
+
+int userBrightness = 80;
+
+const int minBrightness = 0;
+
+const int maxBrightness = 220;
+
+int mode = 0;
+
+const int numberOfModes = 5;
+
+
+// ==================================================
+// ACCELEROMETER RESPONSE
+// ==================================================
+
+// Acceleration dead zone.
+
+const float accelerationDeadZone = 0.04;
+
+
+// Braking dead zone.
+
+const float brakingDeadZone = 0.12;
+
+
+// Cornering dead zone.
+
+const float corneringDeadZone = 0.08;
+
+
+// ==================================================
+// RESPONSE RANGES
+// ==================================================
+
+const float accelerationResponseG = 0.35;
+
+const float brakingResponseG = 0.40;
+
+const float corneringResponseG = 0.35;
+
+
+// ==================================================
+// ENCODER
 // ==================================================
 
 const int8_t encoderTransitionTable[16] = {
@@ -381,10 +460,15 @@ volatile uint8_t encoderState = 0;
 
 volatile int32_t encoderAccumulatedSteps = 0;
 
+
 const int8_t stepsPerDetent = 2;
 
 const int brightnessStep = 5;
 
+
+// ==================================================
+// BUTTON
+// ==================================================
 
 bool buttonWasDown = false;
 
@@ -400,7 +484,7 @@ const unsigned long longPressTime = 1200;
 
 
 // ==================================================
-// TIMING VARIABLES
+// SERIAL DEBUG
 // ==================================================
 
 unsigned long lastSerialPrint = 0;
@@ -409,7 +493,7 @@ const unsigned long serialPrintInterval = 300;
 
 
 // ==================================================
-// BASIC HELPERS
+// AXIS HELPER
 // ==================================================
 
 float getSelectedAxis(
@@ -419,22 +503,233 @@ float getSelectedAxis(
   int axis
 ) {
 
-  if (axis == AXIS_X) {
+  if (
+    axis ==
+    AXIS_X
+  ) {
 
     return xG;
   }
 
-  if (axis == AXIS_Y) {
+
+  if (
+    axis ==
+    AXIS_Y
+  ) {
 
     return yG;
   }
+
 
   return zG;
 }
 
 
 // ==================================================
-// COLOUR HELPERS
+// SMART BASELINE UPDATE
+// ==================================================
+
+void updateSmartBaseline(
+  float rawX,
+  float rawY,
+  float rawZ,
+  float forwardG,
+  float sideG,
+  float movementG
+) {
+
+#if HILL_COMPENSATION
+
+  unsigned long now =
+    millis();
+
+
+  // =================================================
+  // DETECT DYNAMIC MOVEMENT
+  // =================================================
+
+  bool accelerating =
+    forwardG >
+    baselineAccelerationThreshold;
+
+
+  bool braking =
+    forwardG <
+    -baselineBrakingThreshold;
+
+
+  bool cornering =
+    abs(sideG) >
+    baselineCorneringThreshold;
+
+
+  bool dynamicMovement =
+    accelerating ||
+    braking ||
+    cornering;
+
+
+  // =================================================
+  // DYNAMIC STATE
+  // =================================================
+
+  if (
+    dynamicMovement
+  ) {
+
+    baselineState =
+      BASELINE_DYNAMIC;
+
+
+    dynamicMovementEndedTime =
+      now;
+
+
+    return;
+  }
+
+
+  // =================================================
+  // DYNAMIC -> SETTLING
+  // =================================================
+
+  if (
+    baselineState ==
+    BASELINE_DYNAMIC
+  ) {
+
+    baselineState =
+      BASELINE_SETTLING;
+
+
+    dynamicMovementEndedTime =
+      now;
+
+
+    return;
+  }
+
+
+  // =================================================
+  // SETTLING STATE
+  // =================================================
+
+  if (
+    baselineState ==
+    BASELINE_SETTLING
+  ) {
+
+    // If meaningful movement starts again,
+    // immediately return to dynamic.
+
+    if (
+      movementG >
+      baselineDynamicReentryThreshold
+    ) {
+
+      baselineState =
+        BASELINE_DYNAMIC;
+
+
+      dynamicMovementEndedTime =
+        now;
+
+
+      return;
+    }
+
+
+    // If the vehicle has not remained sufficiently
+    // calm, restart settling.
+
+    if (
+      movementG >
+      baselineStableThreshold
+    ) {
+
+      dynamicMovementEndedTime =
+        now;
+
+
+      return;
+    }
+
+
+    // Wait for the complete settling period.
+
+    if (
+      now -
+      dynamicMovementEndedTime <
+      baselineSettleTime
+    ) {
+
+      return;
+    }
+
+
+    // Settling complete.
+
+    baselineState =
+      BASELINE_STABLE;
+  }
+
+
+  // =================================================
+  // STABLE STATE
+  // =================================================
+
+  if (
+    baselineState ==
+    BASELINE_STABLE
+  ) {
+
+    // Only adapt when the vehicle is very calm.
+
+    if (
+      movementG <
+      baselineStableThreshold
+    ) {
+
+      driftBaseX =
+        driftBaseX *
+        (
+          1.0 -
+          baselineDriftRate
+        )
+        +
+        rawX *
+        baselineDriftRate;
+
+
+      driftBaseY =
+        driftBaseY *
+        (
+          1.0 -
+          baselineDriftRate
+        )
+        +
+        rawY *
+        baselineDriftRate;
+
+
+      driftBaseZ =
+        driftBaseZ *
+        (
+          1.0 -
+          baselineDriftRate
+        )
+        +
+        rawZ *
+        baselineDriftRate;
+    }
+  }
+
+#endif
+}
+
+
+// ==================================================
+// COLOUR — BLUE TO ORANGE
 // ==================================================
 
 uint32_t blueToOrange(
@@ -451,15 +746,20 @@ uint32_t blueToOrange(
 
 
   int r;
+
   int g;
+
   int b;
 
 
-  // ------------------------------------------------
+  // =================================================
   // BLUE -> CONTROLLED VIOLET-BLUE
-  // ------------------------------------------------
+  // =================================================
 
-  if (amount < 0.5) {
+  if (
+    amount <
+    0.5
+  ) {
 
     float t =
       amount /
@@ -467,12 +767,16 @@ uint32_t blueToOrange(
 
 
     const int startR = 0;
+
     const int startG = 0;
+
     const int startB = 255;
 
 
     const int midR = 80;
+
     const int midG = 0;
+
     const int midB = 220;
 
 
@@ -504,9 +808,9 @@ uint32_t blueToOrange(
   }
 
 
-  // ------------------------------------------------
-  // CONTROLLED VIOLET-BLUE -> ORANGE
-  // ------------------------------------------------
+  // =================================================
+  // VIOLET-BLUE -> ORANGE
+  // =================================================
 
   else {
 
@@ -520,12 +824,16 @@ uint32_t blueToOrange(
 
 
     const int startR = 80;
+
     const int startG = 0;
+
     const int startB = 220;
 
 
     const int endR = 255;
+
     const int endG = 40;
+
     const int endB = 0;
 
 
@@ -566,7 +874,7 @@ uint32_t blueToOrange(
 
 
 // ==================================================
-// LED OUTPUT HELPERS
+// LED OUTPUT
 // ==================================================
 
 void setStrip(
@@ -584,19 +892,102 @@ void setStrip(
     );
 
 
-  int origR = (colour >> 16) & 0xFF;
-  int origG = (colour >> 8) & 0xFF;
-  int origB = colour & 0xFF;
+  int origR =
+    (
+      colour >>
+      16
+    )
+    &
+    0xFF;
 
-  int r = (int)round((origR * brightness) / 255.0f);
-  int g = (int)round((origG * brightness) / 255.0f);
-  int b = (int)round((origB * brightness) / 255.0f);
 
-  r = constrain(r, 0, 255);
-  g = constrain(g, 0, 255);
-  b = constrain(b, 0, 255);
+  int origG =
+    (
+      colour >>
+      8
+    )
+    &
+    0xFF;
 
-  uint32_t scaledColour = strip.Color(r, g, b);
+
+  int origB =
+    colour
+    &
+    0xFF;
+
+
+  int r =
+    (
+      int
+    )
+    round(
+      (
+        origR *
+        brightness
+      )
+      /
+      255.0f
+    );
+
+
+  int g =
+    (
+      int
+    )
+    round(
+      (
+        origG *
+        brightness
+      )
+      /
+      255.0f
+    );
+
+
+  int b =
+    (
+      int
+    )
+    round(
+      (
+        origB *
+        brightness
+      )
+      /
+      255.0f
+    );
+
+
+  r =
+    constrain(
+      r,
+      0,
+      255
+    );
+
+
+  g =
+    constrain(
+      g,
+      0,
+      255
+    );
+
+
+  b =
+    constrain(
+      b,
+      0,
+      255
+    );
+
+
+  uint32_t scaledColour =
+    strip.Color(
+      r,
+      g,
+      b
+    );
 
 
   for (
@@ -615,6 +1006,10 @@ void setStrip(
   strip.show();
 }
 
+
+// ==================================================
+// BOTH STRIPS
+// ==================================================
 
 void setBothStrips(
   uint32_t leftColour,
@@ -640,6 +1035,10 @@ void setBothStrips(
 }
 
 
+// ==================================================
+// ALL OFF
+// ==================================================
+
 void allOff() {
 
   setBothStrips(
@@ -660,6 +1059,10 @@ void allOff() {
   );
 }
 
+
+// ==================================================
+// CONFIRMATION FLASH
+// ==================================================
 
 void flashConfirmation(
   uint32_t colour
@@ -691,7 +1094,7 @@ void flashConfirmation(
 
 
 // ==================================================
-// STARTUP SWEEP ANIMATION
+// STARTUP SWEEP
 // ==================================================
 
 void startupSweep() {
@@ -749,21 +1152,24 @@ void startupSweep() {
               sweepR *
               fade *
               userBrightness
-            ) /
+            )
+            /
             65025,
 
             (
               sweepG *
               fade *
               userBrightness
-            ) /
+            )
+            /
             65025,
 
             (
               sweepB *
               fade *
               userBrightness
-            ) /
+            )
+            /
             65025
           );
 
@@ -778,7 +1184,6 @@ void startupSweep() {
           i,
           colour
         );
-
       }
 
 
@@ -817,7 +1222,7 @@ void startupSweep() {
 
 
 // ==================================================
-// MPU6050 READING
+// READ ACCELEROMETER
 // ==================================================
 
 void readAcceleration() {
@@ -836,104 +1241,217 @@ void readAcceleration() {
   );
 
 
-  // ------------------------------------------------
-  // UPDATE DRIFTING BASELINE
-  // ------------------------------------------------
+  // =================================================
+  // RAW ACCELERATION
+  // =================================================
 
-  updateDriftingBaseline(
-    accel.acceleration.x,
-    accel.acceleration.y,
-    accel.acceleration.z
+  float rawX =
+    accel.acceleration.x;
+
+
+  float rawY =
+    accel.acceleration.y;
+
+
+  float rawZ =
+    accel.acceleration.z;
+
+
+  // =================================================
+  // INITIALISE GRAVITY ESTIMATE
+  // =================================================
+
+  if (
+    gravityX == 0.0 &&
+    gravityY == 0.0 &&
+    gravityZ == 0.0
+  ) {
+
+    gravityX =
+      rawX;
+
+
+    gravityY =
+      rawY;
+
+
+    gravityZ =
+      rawZ;
+  }
+
+
+  // =================================================
+  // SLOW GRAVITY / HILL FILTER
+  // =================================================
+
+  gravityX =
+    gravityX *
+    (
+      1.0 -
+      gravitySmoothing
+    )
+    +
+    rawX *
+    gravitySmoothing;
+
+
+  gravityY =
+    gravityY *
+    (
+      1.0 -
+      gravitySmoothing
+    )
+    +
+    rawY *
+    gravitySmoothing;
+
+
+  gravityZ =
+    gravityZ *
+    (
+      1.0 -
+      gravitySmoothing
+    )
+    +
+    rawZ *
+    gravitySmoothing;
+
+
+  // =================================================
+  // DYNAMIC COMPONENT
+  // =================================================
+
+  float dynamicX =
+    rawX -
+    gravityX;
+
+
+  float dynamicY =
+    rawY -
+    gravityY;
+
+
+  float dynamicZ =
+    rawZ -
+    gravityZ;
+
+
+  // =================================================
+  // UPDATE SMART BASELINE
+  // =================================================
+
+  updateSmartBaseline(
+    rawX,
+    rawY,
+    rawZ,
+    smoothedForwardG,
+    smoothedSideG,
+    smoothedMovementG
   );
 
 
-  // ------------------------------------------------
-  // CONVERT TO G
-  // ------------------------------------------------
+  // =================================================
+  // BASELINE-CORRECTED VALUES
+  // =================================================
 
-  float xG =
+  float currentXG =
     (
-      accel.acceleration.x -
+      rawX -
       driftBaseX
     )
     /
     9.81;
 
 
-  float yG =
+  float currentYG =
     (
-      accel.acceleration.y -
+      rawY -
       driftBaseY
     )
     /
     9.81;
 
 
-  float zG =
+  float currentZG =
     (
-      accel.acceleration.z -
+      rawZ -
       driftBaseZ
     )
     /
     9.81;
 
 
-  // ------------------------------------------------
-  // SELECT FORWARD AXIS
-  // ------------------------------------------------
+  // =================================================
+  // FORWARD
+  // =================================================
 
   float rawForwardG =
     getSelectedAxis(
-      xG,
-      yG,
-      zG,
+      currentXG,
+      currentYG,
+      currentZG,
       FORWARD_AXIS
     )
     *
     FORWARD_SIGN;
 
 
-  // ------------------------------------------------
-  // SELECT SIDE AXIS
-  // ------------------------------------------------
+  // =================================================
+  // SIDE
+  // =================================================
 
   float rawSideG =
     getSelectedAxis(
-      xG,
-      yG,
-      zG,
+      currentXG,
+      currentYG,
+      currentZG,
       SIDE_AXIS
     )
     *
     SIDE_SIGN;
 
 
-  // ------------------------------------------------
-  // CALCULATE OVERALL MOVEMENT
-  // ------------------------------------------------
+  // =================================================
+  // DYNAMIC MOVEMENT MAGNITUDE
+  // =================================================
+
+  float dynamicXG =
+    dynamicX /
+    9.81;
+
+
+  float dynamicYG =
+    dynamicY /
+    9.81;
+
+
+  float dynamicZG =
+    dynamicZ /
+    9.81;
+
 
   float rawMovementG =
     sqrt(
       (
-        xG *
-        xG
+        dynamicXG *
+        dynamicXG
       )
       +
       (
-        yG *
-        yG
+        dynamicYG *
+        dynamicYG
       )
       +
       (
-        zG *
-        zG
+        dynamicZG *
+        dynamicZG
       )
     );
 
 
-  // ------------------------------------------------
+  // =================================================
   // LOW-PASS FILTER
-  // ------------------------------------------------
+  // =================================================
 
   smoothedForwardG =
     (
@@ -1064,7 +1582,7 @@ void calibrateMPU6050() {
     samples;
 
 
-  // Initialise drifting baseline.
+  // Initialise adaptive baseline.
 
   driftBaseX =
     baseX;
@@ -1078,7 +1596,31 @@ void calibrateMPU6050() {
     baseZ;
 
 
-  // Reset smoothing filters.
+  // Initialise gravity estimate.
+
+  gravityX =
+    baseX;
+
+
+  gravityY =
+    baseY;
+
+
+  gravityZ =
+    baseZ;
+
+
+  // Reset state.
+
+  baselineState =
+    BASELINE_STABLE;
+
+
+  dynamicMovementEndedTime =
+    millis();
+
+
+  // Reset filters.
 
   smoothedForwardG =
     0.0;
@@ -1138,7 +1680,7 @@ void calibrateMPU6050() {
 
 
 // ==================================================
-// SIDE / CORNERING BRIGHTNESS
+// CORNERING BRIGHTNESS
 // ==================================================
 
 void applyCorneringBrightness(
@@ -1148,9 +1690,9 @@ void applyCorneringBrightness(
   float &rightBrightness
 ) {
 
-  // ------------------------------------------------
+  // =================================================
   // DEAD ZONE
-  // ------------------------------------------------
+  // =================================================
 
   if (
     abs(sideG) <
@@ -1169,9 +1711,9 @@ void applyCorneringBrightness(
   }
 
 
-  // ------------------------------------------------
+  // =================================================
   // REMOVE DEAD ZONE
-  // ------------------------------------------------
+  // =================================================
 
   float effectiveSideG;
 
@@ -1185,7 +1727,6 @@ void applyCorneringBrightness(
       sideG -
       corneringDeadZone;
   }
-
 
   else {
 
@@ -1216,7 +1757,7 @@ void applyCorneringBrightness(
     );
 
 
-  // Smooth cornering response.
+  // Smooth response.
 
   sideIntensity =
     sideIntensity *
@@ -1231,9 +1772,9 @@ void applyCorneringBrightness(
     baseBrightness;
 
 
-  // ------------------------------------------------
-  // TURN ONE DIRECTION
-  // ------------------------------------------------
+  // =================================================
+  // ONE DIRECTION
+  // =================================================
 
   if (
     sideG >
@@ -1259,9 +1800,9 @@ void applyCorneringBrightness(
   }
 
 
-  // ------------------------------------------------
-  // TURN OTHER DIRECTION
-  // ------------------------------------------------
+  // =================================================
+  // OTHER DIRECTION
+  // =================================================
 
   else if (
     sideG <
@@ -1305,7 +1846,7 @@ void applyCorneringBrightness(
 
 
 // ==================================================
-// IDLE BREATHING EFFECT
+// BREATHING
 // ==================================================
 
 float breathingMultiplier() {
@@ -1356,19 +1897,11 @@ void updateStaticThemeMode(
   float sideG
 ) {
 
-  // ------------------------------------------------
-  // LOW AMBIENT BRIGHTNESS
-  // ------------------------------------------------
-
   float ambientBrightness =
     userBrightness *
     0.25 *
     breathingMultiplier();
 
-
-  // ------------------------------------------------
-  // MOVEMENT INTENSITY
-  // ------------------------------------------------
 
   float intensity =
     movementG /
@@ -1383,16 +1916,10 @@ void updateStaticThemeMode(
     );
 
 
-  // Smooth movement response.
-
   intensity =
     intensity *
     intensity;
 
-
-  // ------------------------------------------------
-  // CALCULATE THEME BRIGHTNESS
-  // ------------------------------------------------
 
   float themeBrightness =
     ambientBrightness +
@@ -1414,10 +1941,6 @@ void updateStaticThemeMode(
     );
 
 
-  // ------------------------------------------------
-  // APPLY CORNERING
-  // ------------------------------------------------
-
   float leftBrightness;
 
   float rightBrightness;
@@ -1430,10 +1953,6 @@ void updateStaticThemeMode(
     rightBrightness
   );
 
-
-  // ------------------------------------------------
-  // OUTPUT
-  // ------------------------------------------------
 
   setBothStrips(
     leftStrip.Color(
@@ -1463,9 +1982,9 @@ void updateMainReactiveMode(
   float sideG
 ) {
 
-  // ------------------------------------------------
-  // AMBIENT BREATHING
-  // ------------------------------------------------
+  // =================================================
+  // AMBIENT
+  // =================================================
 
   float ambientBrightness =
     userBrightness *
@@ -1507,8 +2026,6 @@ void updateMainReactiveMode(
         1.0
       );
 
-
-    // Smooth braking response.
 
     brakeIntensity =
       brakeIntensity *
@@ -1571,7 +2088,7 @@ void updateMainReactiveMode(
 
 
   // =================================================
-  // ACCELERATION / NORMAL DRIVING
+  // ACCELERATION
   // =================================================
 
   float accelIntensity =
@@ -1606,17 +2123,15 @@ void updateMainReactiveMode(
       );
 
 
-    // Smooth acceleration response.
-
     accelIntensity =
       accelIntensity *
       accelIntensity;
   }
 
 
-  // ------------------------------------------------
+  // =================================================
   // BRIGHTNESS
-  // ------------------------------------------------
+  // =================================================
 
   float reactiveBrightness =
     ambientBrightness +
@@ -1638,9 +2153,9 @@ void updateMainReactiveMode(
     );
 
 
-  // ------------------------------------------------
+  // =================================================
   // COLOUR
-  // ------------------------------------------------
+  // =================================================
 
   uint32_t leftColour =
     blueToOrange(
@@ -1656,9 +2171,9 @@ void updateMainReactiveMode(
     );
 
 
-  // ------------------------------------------------
+  // =================================================
   // CORNERING
-  // ------------------------------------------------
+  // =================================================
 
   float leftBrightness;
 
@@ -1673,9 +2188,9 @@ void updateMainReactiveMode(
   );
 
 
-  // ------------------------------------------------
+  // =================================================
   // OUTPUT
-  // ------------------------------------------------
+  // =================================================
 
   setBothStrips(
     leftColour,
@@ -1692,12 +2207,8 @@ void updateMainReactiveMode(
 
 void updateLEDs() {
 
-  // Update filtered accelerometer values.
-
   readAcceleration();
 
-
-  // Use filtered values.
 
   float forwardG =
     smoothedForwardG;
@@ -1712,16 +2223,12 @@ void updateLEDs() {
 
 
   // =================================================
-  // SELECT MODE
+  // MODE SELECT
   // =================================================
 
   switch (
     mode
   ) {
-
-    // ------------------------------------------------
-    // MODE 0 — MAIN REACTIVE
-    // ------------------------------------------------
 
     case 0:
 
@@ -1733,30 +2240,18 @@ void updateLEDs() {
       break;
 
 
-    // ------------------------------------------------
-    // MODE 1 — PURPLE
-    // ------------------------------------------------
-
     case 1:
 
-      // Deep purple.
-      // Blue-dominant 45:0:90 ratio helps maintain
-      // stable hue during low-brightness breathing.
-
       updateStaticThemeMode(
-        45,
+        54,
         0,
-        90,
+        63,
         movementG,
         sideG
       );
 
       break;
 
-
-    // ------------------------------------------------
-    // MODE 2 — RED
-    // ------------------------------------------------
 
     case 2:
 
@@ -1771,10 +2266,6 @@ void updateLEDs() {
       break;
 
 
-    // ------------------------------------------------
-    // MODE 3 — BLUE
-    // ------------------------------------------------
-
     case 3:
 
       updateStaticThemeMode(
@@ -1787,10 +2278,6 @@ void updateLEDs() {
 
       break;
 
-
-    // ------------------------------------------------
-    // MODE 4 — GREEN
-    // ------------------------------------------------
 
     case 4:
 
@@ -1807,7 +2294,7 @@ void updateLEDs() {
 
 
   // =================================================
-  // SERIAL DEBUG OUTPUT
+  // SERIAL DEBUG
   // =================================================
 
   if (
@@ -1864,9 +2351,37 @@ void updateLEDs() {
     );
 
 
-    Serial.println(
-      "g"
+    Serial.print(
+      "g | Baseline: "
     );
+
+
+    if (
+      baselineState ==
+      BASELINE_STABLE
+    ) {
+
+      Serial.println(
+        "STABLE"
+      );
+    }
+
+    else if (
+      baselineState ==
+      BASELINE_DYNAMIC
+    ) {
+
+      Serial.println(
+        "DYNAMIC"
+      );
+    }
+
+    else {
+
+      Serial.println(
+        "SETTLING"
+      );
+    }
 
 
     lastSerialPrint =
@@ -1876,7 +2391,7 @@ void updateLEDs() {
 
 
 // ==================================================
-// ENCODER INTERRUPT HANDLER
+// ENCODER ISR
 // ==================================================
 
 void IRAM_ATTR encoderISR() {
@@ -1937,15 +2452,13 @@ void IRAM_ATTR encoderISR() {
 
 
 // ==================================================
-// PROCESS ENCODER MOVEMENT
+// PROCESS ENCODER
 // ==================================================
 
 void processEncoderRotation() {
 
   int32_t accumulatedSteps;
 
-
-  // Atomically copy and clear movement.
 
   noInterrupts();
 
@@ -1961,9 +2474,9 @@ void processEncoderRotation() {
   interrupts();
 
 
-  // ------------------------------------------------
+  // =================================================
   // CLOCKWISE
-  // ------------------------------------------------
+  // =================================================
 
   while (
     accumulatedSteps >=
@@ -1997,9 +2510,9 @@ void processEncoderRotation() {
   }
 
 
-  // ------------------------------------------------
+  // =================================================
   // ANTICLOCKWISE
-  // ------------------------------------------------
+  // =================================================
 
   while (
     accumulatedSteps <=
@@ -2033,9 +2546,9 @@ void processEncoderRotation() {
   }
 
 
-  // ------------------------------------------------
+  // =================================================
   // RETURN INCOMPLETE MOVEMENT
-  // ------------------------------------------------
+  // =================================================
 
   if (
     accumulatedSteps !=
@@ -2072,9 +2585,9 @@ void readEncoderButton() {
     millis();
 
 
-  // ------------------------------------------------
+  // =================================================
   // BUTTON PRESSED
-  // ------------------------------------------------
+  // =================================================
 
   if (
     buttonDown &&
@@ -2094,9 +2607,9 @@ void readEncoderButton() {
   }
 
 
-  // ------------------------------------------------
+  // =================================================
   // LONG PRESS
-  // ------------------------------------------------
+  // =================================================
 
   if (
     buttonDown &&
@@ -2118,9 +2631,9 @@ void readEncoderButton() {
   }
 
 
-  // ------------------------------------------------
+  // =================================================
   // BUTTON RELEASED
-  // ------------------------------------------------
+  // =================================================
 
   if (
     !buttonDown &&
@@ -2131,9 +2644,9 @@ void readEncoderButton() {
       false;
 
 
-    // ------------------------------------------------
+    // =================================================
     // SHORT PRESS
-    // ------------------------------------------------
+    // =================================================
 
     if (
       !longPressHandled &&
@@ -2196,27 +2709,27 @@ void setup() {
 
 
   Serial.println(
-    "MR2 Reactive LEDs — Final Firmware V3.5"
+    "MR2 Reactive LEDs — FINAL FIRMWARE V3.6"
   );
 
 
 #if HILL_COMPENSATION
 
   Serial.println(
-    "Hill compensation: ENABLED (drifting baseline)"
+    "Smart hill compensation: ENABLED"
   );
 
 #else
 
   Serial.println(
-    "Hill compensation: DISABLED (fixed baseline)"
+    "Hill compensation: DISABLED"
   );
 
 #endif
 
 
   // =================================================
-  // ENCODER PINS
+  // ENCODER
   // =================================================
 
   pinMode(
@@ -2237,7 +2750,7 @@ void setup() {
   );
 
 
-  // Seed encoder state from actual position.
+  // Seed encoder state.
 
   encoderState =
     (
@@ -2255,7 +2768,7 @@ void setup() {
     );
 
 
-  // Attach interrupts to both encoder channels.
+  // Attach interrupts.
 
   attachInterrupt(
     digitalPinToInterrupt(
@@ -2284,12 +2797,14 @@ void setup() {
   rightStrip.begin();
 
 
-  // Fixed at maximum library brightness.
-  // All dimming is performed manually.
+  leftStrip.setBrightness(
+    255
+  );
 
-  leftStrip.setBrightness(255);
 
-  rightStrip.setBrightness(255);
+  rightStrip.setBrightness(
+    255
+  );
 
 
   leftStrip.clear();
@@ -2411,17 +2926,17 @@ void setup() {
 
 void loop() {
 
-  // Process encoder movement captured by ISR.
+  // Encoder rotation.
 
   processEncoderRotation();
 
 
-  // Handle encoder push button.
+  // Encoder button.
 
   readEncoderButton();
 
 
-  // Read accelerometer and update LEDs.
+  // Accelerometer and LEDs.
 
   updateLEDs();
 }
