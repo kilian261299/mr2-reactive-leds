@@ -159,9 +159,44 @@ The new full quadrature decoding method tracks valid CLK/DT state transitions an
 
 ---
 
-# Current Firmware – v3.3
+## v3.4 – Improved Rotary Encoder Responsiveness
 
-The current firmware version is **v3.3**.
+Following testing of v3.3, the rotary encoder brightness control was further refined.
+
+Although the full quadrature decoding introduced in v3.3 improved direction reliability, brightness adjustment could still become less responsive during rapid encoder rotation.
+
+This was caused by the main firmware loop performing large LED update operations. The two 160-LED strips are updated repeatedly, and these operations can temporarily prevent the encoder from being sampled frequently enough during fast rotation.
+
+### Changes
+
+The rotary encoder handling was redesigned to improve responsiveness during rapid rotation.
+
+The encoder is now handled using a more responsive quadrature decoding approach that is better suited to the high-frequency LED update loop.
+
+The brightness control was also tuned to provide a more direct response to physical encoder movement.
+
+### Improvements
+
+- Improved brightness adjustment responsiveness.
+- Improved encoder performance during rapid rotation.
+- Reduced missed encoder transitions when turning the knob quickly.
+- Maintained reliable clockwise and counter-clockwise direction detection.
+- Maintained stable minimum brightness control.
+- Improved overall feel of the brightness control during normal use.
+
+### Result
+
+The rotary encoder now provides a more responsive and usable brightness adjustment experience while maintaining the reliability improvements introduced in v3.3.
+
+The encoder can be rotated more quickly without losing as many brightness adjustments, making it easier to move rapidly through the full brightness range.
+
+Further refinement may be carried out following vehicle testing if additional improvements to encoder responsiveness or brightness adjustment are required.
+
+---
+
+# Current Firmware – v3.4
+
+The current firmware version is **v3.4**.
 
 The production firmware currently provides:
 
@@ -175,6 +210,7 @@ The production firmware currently provides:
 - Reactive movement behaviour across all theme modes.
 - Reactive left/right cornering brightness shifts across all theme modes.
 - Rotary encoder brightness adjustment.
+- Responsive rotary encoder brightness control.
 - Rotary encoder mode selection.
 - Full quadrature rotary encoder decoding.
 - Automatic MPU6050 sensor calibration.
@@ -183,4 +219,4 @@ The production firmware currently provides:
 
 The firmware is now ready for vehicle testing on the completed PCB and control box assembly.
 
-Further firmware changes may be made following real-world vehicle testing if sensitivity, filtering, brightness response, or reactive behaviour require additional refinement.
+Further firmware changes may be made following real-world vehicle testing if sensitivity, filtering, brightness response, encoder responsiveness, or reactive behaviour require additional refinement.
