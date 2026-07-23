@@ -47,30 +47,140 @@ This allows the baseline to gradually follow long-term changes, such as driving 
 
 ---
 
-## v3.0 – Production Firmware
+## v3.0 – Mode Cleanup
 
-The production firmware simplifies the user interface and improves the overall visual experience.
+The firmware was simplified following validation of the accelerometer axis orientation and reactive lighting behaviour.
 
 ### Changes
 
-- Removed all diagnostic operating modes.
-- Added animated startup sequence.
-- Added idle breathing effect while stationary.
-- Added selectable solid colour ambient modes.
+- Removed X/Y/Z diagnostic modes.
+- Removed one-off Left/Right test modes.
+- Removed the White/current test mode.
+- Removed the software Off mode.
+- Power control is now handled by the physical master toggle switch.
+
+The removal of diagnostic and test modes simplified the user interface and prepared the firmware for use in the final vehicle installation.
+
+---
+
+## v3.1 – New Modes and Effects
+
+The firmware was updated with improved startup behaviour, idle lighting effects, and additional ambient lighting modes.
+
+### Changes
+
+- Added a startup sweep animation.
+- Added idle breathing effect to the main reactive mode.
+- Replaced the removed software Off mode with four static theme colours.
+- Increased the total number of user-selectable modes to five.
+
+### Startup Sweep
+
+A one-off fading chase animation runs across both LED strips when the system powers on.
+
+The startup animation completes before normal MPU6050 accelerometer-based reactive lighting begins.
+
+### Idle Breathing
+
+When the vehicle is stationary or experiencing minimal movement, the reactive lighting mode now produces a gentle breathing effect with an approximately four-second cycle.
+
+The breathing effect is automatically overridden when genuine acceleration, braking, or cornering movement is detected.
+
+### Theme Modes
+
+Four selectable static colour themes were added:
+
+- Purple
+- Red
+- Blue
+- Green
+
+These provide ambient lighting options when reactive vehicle-dynamics lighting is not required.
+
+The firmware now provides five selectable modes in total.
+
+---
+
+## v3.2 – Colour and Reactivity Refinement
+
+The firmware was refined to improve colour transitions and extend reactive behaviour across all lighting modes.
+
+### Changes
+
+- Tuned the acceleration fade target colour to reduce the green channel from 80 to 40.
+- Reduced the yellow tint previously visible during the blue-to-orange acceleration transition.
+- Extended movement-reactive brightness behaviour to all four theme modes.
+- Extended cornering brightness shifts to all four theme modes.
+- Extended idle breathing effects to all four theme modes.
+- Hand-tuned final purple and green RGB colour values.
+
+### Improvements
+
+The four theme modes are no longer completely static.
+
+They now respond to overall vehicle movement and left/right cornering in the same way as the main reactive mode, while retaining their selected base colour.
+
+This provides consistent reactive behaviour across all five available lighting modes.
+
+---
+
+## v3.3 – Rotary Encoder Reliability Fix
+
+The rotary encoder brightness control was updated to improve reliability and eliminate erratic brightness adjustments.
+
+### Changes
+
+The previous single-edge CLK detection method was replaced with full quadrature decoding.
+
+The new implementation tracks both the CLK and DT signals simultaneously using a state-transition table.
+
+### Improvements
+
+The previous implementation could occasionally detect encoder transitions incorrectly.
+
+This was particularly noticeable when the firmware was busy updating the LED strips, as the large LED update operation could cause the encoder to be sampled during a transition or contact bounce.
+
+This could result in:
+
+- Erratic brightness changes.
+- Incorrect direction detection.
+- Difficulty reliably reaching minimum brightness.
+- Inconsistent encoder behaviour during rapid rotation.
+
+The new full quadrature decoding method tracks valid CLK/DT state transitions and provides more reliable direction detection.
+
+### Result
+
+- Improved rotary encoder reliability.
+- Reduced sensitivity to contact bounce.
+- More consistent clockwise and counter-clockwise detection.
+- Reliable brightness adjustment across the full brightness range.
+- Improved ability to reach minimum brightness.
+
+---
+
+# Current Firmware – v3.3
+
+The current firmware version is **v3.3**.
+
+The production firmware currently provides:
+
+- Reactive acceleration lighting.
+- Reactive braking lighting.
+- Independent left/right cornering effects.
+- Dynamic baseline filtering for hill compensation.
+- Startup sweep animation.
+- Idle breathing animation.
+- Four selectable solid colour theme modes.
+- Reactive movement behaviour across all theme modes.
+- Reactive left/right cornering brightness shifts across all theme modes.
+- Rotary encoder brightness adjustment.
+- Rotary encoder mode selection.
+- Full quadrature rotary encoder decoding.
+- Automatic MPU6050 sensor calibration.
 - Improved colour transitions.
-- Improved brightness scaling.
-- Improved responsiveness and smoothing.
-- General code clean-up and optimisation.
+- Smoothed brightness and movement response.
 
-### Current Features
+The firmware is now ready for vehicle testing on the completed PCB and control box assembly.
 
-- Reactive acceleration lighting
-- Reactive braking lighting
-- Independent left/right cornering effects
-- Dynamic baseline filtering
-- Startup animation
-- Idle breathing animation
-- Solid colour modes
-- Rotary encoder brightness adjustment
-- Rotary encoder mode selection
-- Automatic sensor calibration
+Further firmware changes may be made following real-world vehicle testing if sensitivity, filtering, brightness response, or reactive behaviour require additional refinement.
