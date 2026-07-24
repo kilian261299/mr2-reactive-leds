@@ -253,11 +253,16 @@
   POWER
   ==================================================
 
-  - LED strips powered from 5V converter.
-  - ESP32 powered appropriately.
+  - LED strips and ESP32 are both powered from the same
+    12V-to-5V buck converter output (shared 5V rail) —
+    not separate supplies.
   - All grounds common.
   - Use fuse on 12V input.
-  - Do not power LED strips from ESP32.
+  - Keep brightness/current draw in mind: both LED strips
+    and the ESP32 share this one 5V source, so total
+    current draw (LEDs at high brightness especially)
+    needs to stay within what the buck converter can
+    actually supply.
 */
 
 
@@ -380,16 +385,33 @@ const float baselineDriftRate = 0.05;
 // STABILITY THRESHOLDS
 // ==================================================
 
-// Movement must fall below this level before
+// These now measure RATE OF CHANGE (how much the
+// smoothed gating signal moved since last loop), not
+// absolute magnitude — see previousGatingMovementG's
+// comment for why. A large-but-steady reading (e.g. a
+// stale offset) should NOT count as "dynamic"; only an
+// actively changing one should.
+//
+// Starting values are a reasonable guess, not measured
+// on real driving data — same caveat as every other
+// threshold/sign in this firmware. If genuine cornering
+// isn't reliably freezing the baseline, try lowering
+// baselineDynamicReentryThreshold. If it feels twitchy
+// or won't settle to STABLE even when genuinely calm,
+// try raising baselineStableThreshold slightly.
+
+// Rate of change must fall below this level before
 // settling can complete.
 
-const float baselineStableThreshold = 0.045;
+const float baselineStableThreshold = 0.008;
 
 
-// Once stable, dynamic movement must exceed this
-// level to return to DYNAMIC.
+// Once stable, rate of change must exceed this level to
+// return to DYNAMIC. Higher than baselineStableThreshold
+// so the two don't flicker back and forth right at the
+// boundary (same hysteresis idea as before).
 
-const float baselineDynamicReentryThreshold = 0.075;
+const float baselineDynamicReentryThreshold = 0.02;
 
 
 // ==================================================
@@ -454,14 +476,27 @@ float smoothedMovementG = 0.0;
 // Separate from smoothedMovementG above (which is for
 // LED output and computed later in the loop). This one
 // feeds the STABLE/DYNAMIC/SETTLING gating and needs to
-// exist earlier, before driftBaseY/Z get used. Smoothing
-// a signal before comparing it to a fairly tight
-// threshold (0.075g) is important — a single noisy raw
-// sample can spike past that threshold even at rest,
-// which was likely why the state machine could get stuck
-// in DYNAMIC permanently.
+// exist earlier, before driftBaseY/Z get used. Smoothed
+// before use to avoid single-sample noise spikes.
 
 float smoothedGatingMovementG = 0.0;
+
+
+// The gating decision is based on RATE OF CHANGE of the
+// above, not its raw size — see the ACCELEROMETER
+// RELIABILITY GATING-style reasoning in
+// updateSmartBaseline(). A genuine, sustained offset
+// (e.g. the sensor disturbed after calibration) can be
+// large but essentially unchanging, and a magnitude-only
+// check couldn't tell that apart from real ongoing
+// movement, which could get the state machine stuck in
+// DYNAMIC permanently. Comparing this loop's smoothed
+// value against the previous loop's tells the difference:
+// genuine movement keeps changing throughout the event;
+// a stale offset settles and stops changing, however
+// large it is.
+
+float previousGatingMovementG = 0.0;
 
 
 // ==================================================
@@ -852,7 +887,7 @@ void updatePitchEstimate(
 void updateSmartBaseline(
   float rawY,
   float rawZ,
-  float dynamicMovementG
+  float movementChangeG
 ) {
 
 #if HILL_COMPENSATION
@@ -862,7 +897,7 @@ void updateSmartBaseline(
 
 
   bool dynamicMovement =
-    dynamicMovementG >
+    movementChangeG >
     baselineDynamicReentryThreshold;
 
 
@@ -905,7 +940,7 @@ void updateSmartBaseline(
   ) {
 
     if (
-      dynamicMovementG >
+      movementChangeG >
       baselineDynamicReentryThreshold
     ) {
 
@@ -922,7 +957,7 @@ void updateSmartBaseline(
 
 
     if (
-      dynamicMovementG >
+      movementChangeG >
       baselineStableThreshold
     ) {
 
@@ -955,7 +990,7 @@ void updateSmartBaseline(
   ) {
 
     if (
-      dynamicMovementG <
+      movementChangeG <
       baselineStableThreshold
     ) {
 
@@ -964,6 +999,14 @@ void updateSmartBaseline(
       // tracking instead — see updatePitchEstimate()
       // and readAcceleration(). Only Y/Z (side/vertical)
       // still use this slow adaptive baseline.
+      //
+      // Also note: this now only runs when the gating
+      // signal has genuinely STOPPED CHANGING (rate of
+      // change below threshold), not just when it's
+      // small — so a stale/large-but-steady offset can
+      // still correctly reach here and get adapted away,
+      // rather than being permanently mistaken for
+      // ongoing movement.
 
       driftBaseY =
         driftBaseY *
@@ -1637,10 +1680,24 @@ void readAcceleration() {
     );
 
 
+  // How much the gating signal moved since last loop —
+  // see previousGatingMovementG's comment for why this,
+  // not the raw magnitude, is what actually gets gated on.
+
+  float movementChangeG =
+    fabs(
+      smoothedGatingMovementG -
+      previousGatingMovementG
+    );
+
+  previousGatingMovementG =
+    smoothedGatingMovementG;
+
+
   updateSmartBaseline(
     rawY,
     rawZ,
-    smoothedGatingMovementG
+    movementChangeG
   );
 
 
@@ -1895,6 +1952,10 @@ void calibrateMPU6050() {
 
 
   smoothedGatingMovementG =
+    0.0;
+
+
+  previousGatingMovementG =
     0.0;
 
 

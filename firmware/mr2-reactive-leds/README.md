@@ -467,19 +467,21 @@ LEDs react normally
 - Renamed `baseX` to `calibrationAccelX` to reflect what it actually does now — a one-time input used to seed the pitch estimate, not an ongoing baseline like `baseY`/`baseZ` still are.
 - Serial debug output now reports pitch two ways: absolute angle (what the compensation math actually uses, since gravity's real component depends on true tilt including any fixed mounting offset) and pitch relative to the last calibration (a more human-readable "degrees of hill" figure for reading the debug output).
 
-### Known Limitation (Not Fixed in v3.7)
+### Side-Axis Gating: Rate of Change, Not Magnitude
 
-The side-axis (Y/Z) state machine only checks the *size* of the movement reading against a threshold, not whether it's actually changing. This means a genuine, sustained offset (e.g. the sensor being disturbed after calibration without being recalibrated in its new resting position) can look identical to active movement, and the state machine can get permanently stuck in `DYNAMIC` — unable to adapt the side-axis baseline back to reality, since adaptation only happens in `STABLE`, and `STABLE` is never reached.
+Found during bench testing: the side-axis (Y/Z) state machine only checked the *size* of the movement reading against a threshold, not whether it was actually changing. A genuine, sustained offset (e.g. the sensor disturbed after calibration, then left in its new resting position without being recalibrated) looked identical to active movement — large — and the state machine could get permanently stuck in `DYNAMIC`, unable to ever adapt the side-axis baseline back to reality, since adaptation only happens in `STABLE`, and `STABLE` was never reached.
 
-This only affects the side/cornering baseline, not the forward-axis pitch compensation, which was confirmed working correctly (including recovering cleanly from a 60°+ reorientation during bench testing). In practice, this is expected to be low-impact — calibration normally happens immediately before driving, in the sensor's actual final resting position — but it's a real design gap, deliberately deferred rather than fixed for this round, to avoid introducing an untested state-machine change right before the first real car test.
+Fixed by gating on the *rate of change* of the movement signal instead of its raw size. Genuine cornering keeps changing throughout the event and is still correctly caught; a stale offset settles and stops changing, however large it is, and is now correctly allowed through to `STABLE` so the baseline can adapt itself back to reality.
 
-Possible future fix: gate on *rate of change* of the movement signal, not just magnitude, so a large-but-steady reading is treated differently from a large-and-actively-changing one.
+This required rescaling the two threshold constants (`baselineStableThreshold`, `baselineDynamicReentryThreshold`), since a per-loop rate-of-change value is naturally much smaller than the magnitude value they used to compare against. Starting values are a reasonable guess, not yet verified against real driving data.
+
+In practice this fix is expected to be low-impact on normal driving — a freshly calibrated car experiences genuine cornering as both large *and* changing, so the old and new gating logic should behave the same in that case. The difference only shows up in the narrower scenarios the bug affected: a long stop on a slope without power-cycling, or the sensor being disturbed mid-drive.
 
 ### Result
 
 v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly using a second, independent sensor. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
 
-The side-axis (cornering) baseline system from v3.6 is functionally unaffected, though it inherits the known limitation described above.
+The side-axis (cornering) baseline system from v3.6 is retained and has been fixed to correctly distinguish genuine ongoing movement from a stale, unchanging offset.
 
-Firmware is installed for real-world car testing as of this version. Further refinement — including whether the Y/Z limitation above needs addressing, and whether `pitchComplementaryAlpha` or the dead zones need retuning based on real driving data — will follow from that testing.
+Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change thresholds need retuning — will follow from that testing.
 
