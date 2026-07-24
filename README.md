@@ -12,21 +12,21 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Project Status
 
-**Current Stage:** PCB assembly and vehicle testing preparation.
+**Current Stage:** Control box built and bench-tested. Preparing for real-world vehicle testing.
 
 Completed:
 
 - Hardware selection
 - Breadboard prototype
-- Firmware development
+- Firmware development (through v3.7 — gyroscope + accelerometer sensor fusion for hill compensation)
 - Custom PCB design
-- PCB manufacturing submission
+- PCB manufacturing
+- PCB assembly (including a GPIO fault investigation and replacement board)
+- Control box construction
 - Hardware documentation
 
 Upcoming:
 
-- PCB assembly
-- Control box construction
 - Vehicle testing
 - Final installation
 
@@ -34,6 +34,7 @@ Upcoming:
 
 - Reactive LED brightness based on vehicle acceleration
 - Smooth blue ↔ orange colour blending
+- Gyroscope + accelerometer sensor fusion for hill compensation, so genuine acceleration/braking is distinguished from the vehicle simply pitching on a slope
 - Independent left and right LED outputs
 - Cornering effects using lateral acceleration
 - User-adjustable maximum brightness
@@ -84,24 +85,25 @@ Detailed hardware documentation, PCB design information, and manufacturing files
 
 | Mode | Purpose |
 |---|---|
-| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, braking and cornering effects. Idle breathing effect. |
-| **Mode 1** | Purple colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
-| **Mode 2** | Red colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
-| **Mode 3** | Blue colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
-| **Mode 4** | Green colour mode. With acceleration, braking and cornering effects. user controls overall brightness. |
+| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, plus a separate red braking colour and cornering brightness effects. Idle breathing effect. |
+| **Mode 1** | Purple theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 2** | Red theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 3** | Blue theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 4** | Green theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
 
 ## System Behaviour
 
 | Driving State | LED Behaviour |
 |---|---|
-| Stationary / steady driving | Blue ambient lighting at the selected brightness |
+| Stationary / steady driving | Blue ambient lighting at the selected brightness, gently breathing |
 | Acceleration | LEDs smoothly shift towards orange while increasing brightness |
 | Braking | LEDs glow red, stronger braking = brighter red |
+| Steady hill or gradient | LEDs settle back to calm blue once speed is steady, rather than staying reactive for the length of the hill |
 | Left corner | Left strip brightens, right strip dims |
 | Right corner | Right strip brightens, left strip dims |
 | Rotary encoder rotation | Adjust maximum LED brightness |
 | Rotary encoder short press | Cycle through firmware modes |
-| Rotary encoder long press | Recalibrate the accelerometer baseline. Flashes LEDs green to confrim |
+| Rotary encoder long press | Recalibrate the accelerometer baseline. Flashes LEDs green to confirm |
 | Gebildet toggle switch | Completely powers the controller on or off |
 
 ## Wiring Summary
@@ -118,6 +120,6 @@ Full wiring details are available in [`docs/wiring-plan.md`](docs/wiring-plan.md
 
 - [Wiring Plan](docs/wiring-plan.md) - Complete wiring diagram, connector pinouts and ESP32 pin assignments.
 - [Build Log](docs/build-log.md) - Project progress, PCB revisions, testing and installation notes.
-- [Firmware Notes](firmware/README.md) - Test sketches, firmware behaviour and final Arduino implementation.
+- [Firmware Notes](firmware/README.md) - Test sketches, firmware behaviour and version history.
 - [PCB Design Documentation](docs/pcb-design.md)
 - [Hardware Files](hardware/README.md)
