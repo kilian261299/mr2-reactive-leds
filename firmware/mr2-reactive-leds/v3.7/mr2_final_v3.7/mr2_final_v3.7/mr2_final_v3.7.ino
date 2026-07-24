@@ -44,13 +44,30 @@
   hill lasts.
 
   This is implemented as a complementary filter: the
-  gyro's angle estimate (integrated over time) is fast
-  and unaffected by acceleration, but drifts slowly over
-  time. The accelerometer's angle estimate doesn't drift
-  long-term, but is wrong during real acceleration. Each
-  covers the other's weakness — mostly trust the gyro,
-  nudged continuously toward the accelerometer's estimate
-  so long-term drift can't accumulate.
+  gyro provides fast pitch tracking, continuously nudged
+  toward an independent accelerometer-based estimate so
+  long-term gyro drift can't accumulate. That
+  accelerometer estimate is only reliable when the
+  accelerometer is measuring gravity alone — during
+  strong acceleration/braking/cornering it's measuring
+  gravity PLUS the vehicle's own motion, so it's
+  temporarily wrong, and the filter reduces how much it's
+  trusted during those moments (see ACCELEROMETER
+  RELIABILITY GATING in updatePitchEstimate()) rather
+  than blending it in unconditionally.
+
+  Two issues found during code review after the initial
+  V3.7 implementation, both fixed here:
+
+  - Gyro zero-rate bias (a small constant sensor offset
+    present even at rest) was being integrated directly,
+    which could cause continuous phantom pitch drift and
+    get the state machine stuck in DYNAMIC permanently.
+    Now measured once per calibration and subtracted from
+    every gyro reading (gyroYBiasRadPerSec).
+  - The accelerometer correction had no protection against
+    being trusted during genuine acceleration — added the
+    magnitude-based gating described above.
 
   Specific changes:
 
@@ -58,7 +75,12 @@
     (updatePitchEstimate(), pitchAngleRad).
   - Complementary filter blends gyro (fast, drifts) with
     accelerometer (stable, but confused by real
-    acceleration) — see pitchComplementaryAlpha.
+    acceleration) — see pitchComplementaryAlpha, and the
+    reliability gating that scales the accelerometer's
+    influence based on how far total accelerometer
+    magnitude is from 1g.
+  - Gyro bias is measured during calibration and removed
+    from every reading (gyroYBiasRadPerSec).
   - Forward axis reading now has gravity's calculated
     pitch component subtracted directly, rather than
     relying on the old slow-adapting baseline.
@@ -80,6 +102,18 @@
     baselineBrakingThreshold, baselineCorneringThreshold)
     that were declared but never actually referenced
     anywhere in the V3.6 logic.
+  - Renamed baseX to calibrationAccelX to reflect what it
+    actually does now (a one-time input to seed the pitch
+    estimate) rather than implying it's still a baseline
+    like baseY/baseZ are.
+  - Serial debug now reports pitch two ways: absolute
+    angle (what the gravity-compensation math actually
+    uses — deliberately includes any fixed mounting
+    offset, since that's physically correct for computing
+    gravity's real component) and pitch relative to the
+    last calibration (a more human-readable "degrees of
+    hill" number for watching the debug output, display
+    only — not used in the compensation math itself).
 
   IMPORTANT — this pitch compensation is written
   specifically for FORWARD_AXIS = AXIS_X with pitch read
@@ -303,7 +337,14 @@ const int SIDE_SIGN = -1;
 // CALIBRATION BASELINE
 // ==================================================
 
-float baseX = 0.0;
+// baseY/baseZ are genuine baselines — driftBaseY/Z
+// start from them and continue adapting. baseX is
+// different: it's not a baseline anymore, just the raw
+// calibration-time X reading used once, to seed
+// pitchAngleRad (see calibrateMPU6050()). Named
+// calibrationAccelX to make that distinction clear.
+
+float calibrationAccelX = 0.0;
 float baseY = 0.0;
 float baseZ = 0.0;
 
@@ -425,6 +466,17 @@ float smoothedMovementG = 0.0;
 float pitchAngleRad = 0.0;
 
 
+// The absolute pitch angle at the moment of the last
+// calibration. Used only for a more human-readable debug
+// display ("pitch relative to calibration" rather than
+// raw absolute angle) — never used in the actual gravity
+// compensation math, which correctly needs the absolute
+// angle instead. See calibrateMPU6050() and the serial
+// debug output.
+
+float calibrationPitchRad = 0.0;
+
+
 // Complementary filter blend factor.
 //
 // Closer to 1.0 = trust the gyro more (responds fast,
@@ -443,6 +495,18 @@ const float pitchComplementaryAlpha = 0.98;
 // integrating against a stale/zero timestamp.
 
 unsigned long lastPitchUpdateMicros = 0;
+
+
+// Every real gyro reads a small nonzero rate even at
+// rest — a manufacturing quirk called bias. Left
+// uncorrected, this integrates into a slow, continuous,
+// phantom pitch drift even when the vehicle never moves,
+// which can easily masquerade as constant "acceleration"
+// and get the smart baseline stuck in DYNAMIC forever.
+// Measured once per calibration (see calibrateMPU6050())
+// and subtracted from every gyro reading afterward.
+
+float gyroYBiasRadPerSec = 0.0;
 
 
 // ==================================================
@@ -623,6 +687,16 @@ void updatePitchEstimate(
     nowMicros;
 
 
+  // Remove the measured zero-rate bias before
+  // integrating — otherwise a constant sensor offset
+  // integrates into continuous phantom pitch drift even
+  // while genuinely stationary.
+
+  float correctedGyroYRadPerSec =
+    gyroYRadPerSec -
+    gyroYBiasRadPerSec;
+
+
   // Accelerometer-only pitch estimate — accurate at
   // rest, unreliable during genuine acceleration. Only
   // ever blended in gently, never trusted outright.
@@ -644,24 +718,95 @@ void updatePitchEstimate(
     );
 
 
+  // =================================================
+  // ACCELEROMETER RELIABILITY GATING
+  // =================================================
+
+  // The accelerometer only measures gravity's direction
+  // correctly when it ISN'T also measuring real
+  // acceleration. At rest (or steady speed), total
+  // accelerometer magnitude reads ~1g regardless of
+  // orientation — that's just gravity. Under real
+  // acceleration/braking/cornering, the vehicle's own
+  // acceleration adds to that, so total magnitude moves
+  // away from 1g. The further away it is, the less the
+  // accelerometer's pitch estimate can be trusted, so
+  // its influence on the filter is scaled down to match
+  // — down to fully ignored during a hard event, leaving
+  // the filter running on gyro alone until things settle.
+
+  float totalAccelMagG =
+    sqrt(
+      (
+        rawX *
+        rawX
+      )
+      +
+      (
+        rawY *
+        rawY
+      )
+      +
+      (
+        rawZ *
+        rawZ
+      )
+    )
+    /
+    9.81;
+
+
+  float accelMagDeviation =
+    fabs(
+      totalAccelMagG -
+      1.0
+    );
+
+
+  // How far from 1g before the accelerometer correction
+  // is fully distrusted. 0.3g is a reasonable starting
+  // point — noticeably harder than normal driving, but
+  // not an extreme event.
+
+  const float accelTrustFadeRangeG = 0.3;
+
+  float accelReliability =
+    1.0 -
+    constrain(
+      accelMagDeviation /
+      accelTrustFadeRangeG,
+      0.0,
+      1.0
+    );
+
+
+  float effectiveAccelWeight =
+    (
+      1.0 -
+      pitchComplementaryAlpha
+    )
+    *
+    accelReliability;
+
+  float effectiveGyroWeight =
+    1.0 -
+    effectiveAccelWeight;
+
+
   pitchAngleRad =
     (
-      pitchComplementaryAlpha *
+      effectiveGyroWeight *
       (
         pitchAngleRad +
         (
-          gyroYRadPerSec *
+          correctedGyroYRadPerSec *
           dt
         )
       )
     )
     +
     (
-      (
-        1.0 -
-        pitchComplementaryAlpha
-      )
-      *
+      effectiveAccelWeight *
       accelPitchRad
     );
 }
@@ -1552,6 +1697,13 @@ void calibrateMPU6050() {
   float totalZ = 0.0;
 
 
+  // Accumulates gyro Y readings while the board is held
+  // still, to measure its zero-rate bias (see
+  // gyroYBiasRadPerSec above).
+
+  float totalGyroY = 0.0;
+
+
   for (
     int i = 0;
     i < samples;
@@ -1584,11 +1736,15 @@ void calibrateMPU6050() {
       accel.acceleration.z;
 
 
+    totalGyroY +=
+      gyro.gyro.y;
+
+
     delay(10);
   }
 
 
-  baseX =
+  calibrationAccelX =
     totalX /
     samples;
 
@@ -1600,6 +1756,15 @@ void calibrateMPU6050() {
 
   baseZ =
     totalZ /
+    samples;
+
+
+  // Whatever the gyro read on average while genuinely
+  // still IS the bias — real rotation should average to
+  // ~0 over 120 samples if the board didn't move.
+
+  gyroYBiasRadPerSec =
+    totalGyroY /
     samples;
 
 
@@ -1618,10 +1783,20 @@ void calibrateMPU6050() {
   // "perfectly level" even if the sensor is actually
   // mounted at a slight angle, and would take a while
   // to converge via the complementary filter alone.
+  //
+  // This is the TRUE absolute tilt angle (mounting
+  // offset included), which is deliberately what the
+  // gravity-compensation math needs — see the header
+  // comment on pitchAngleRad for why. calibrationPitchRad
+  // stores this same value separately, purely so the
+  // debug output can also show pitch RELATIVE to this
+  // calibration position (e.g. "10 degrees of hill"
+  // instead of "17 degrees absolute, which includes
+  // whatever angle the sensor happens to be bolted at").
 
   pitchAngleRad =
     atan2(
-      -baseX,
+      -calibrationAccelX,
       sqrt(
         (
           baseY *
@@ -1634,6 +1809,10 @@ void calibrateMPU6050() {
         )
       )
     );
+
+
+  calibrationPitchRad =
+    pitchAngleRad;
 
 
   // Reset so the next pitch update seeds its own
@@ -1675,7 +1854,7 @@ void calibrateMPU6050() {
 
 
   Serial.println(
-    baseX
+    calibrationAccelX
   );
 
 
@@ -1696,6 +1875,22 @@ void calibrateMPU6050() {
 
   Serial.println(
     baseZ
+  );
+
+
+  Serial.print(
+    "Gyro Y bias: "
+  );
+
+  Serial.print(
+    gyroYBiasRadPerSec *
+    180.0 /
+    PI,
+    3
+  );
+
+  Serial.println(
+    " deg/s"
   );
 
 
@@ -2362,11 +2557,26 @@ void updateLEDs() {
 
 
     Serial.print(
-      " | Pitch: "
+      " | Pitch (abs): "
     );
 
     Serial.print(
       pitchAngleRad *
+      180.0 /
+      PI,
+      1
+    );
+
+    Serial.print(
+      " deg | Pitch (vs cal): "
+    );
+
+    Serial.print(
+      (
+        pitchAngleRad -
+        calibrationPitchRad
+      )
+      *
       180.0 /
       PI,
       1
