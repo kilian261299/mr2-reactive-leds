@@ -490,6 +490,21 @@ This required rescaling the two threshold constants (`baselineStableThreshold`, 
 
 In practice this fix is expected to be low-impact on normal driving — a freshly calibrated car experiences genuine cornering as both large *and* changing, so the old and new gating logic should behave the same in that case. The difference only shows up in the narrower scenarios the bug affected: a long stop on a slope without power-cycling, or the sensor being disturbed mid-drive.
 
+### Side-Axis Gating: Sustained Cornering Washout (Follow-on Fix)
+
+A direct consequence of the rate-of-change fix above, found by reasoning through it rather than on the bench: a **sustained** corner — a roundabout, a long motorway sweeper, anything held at roughly constant lateral G for a few seconds — looks identical to a settled stale offset from a rate-of-change perspective. Both are "large, but not currently changing." The state machine couldn't tell "this stopped changing because nothing's happening" apart from "this stopped changing because the car is mid-corner at constant radius," so a long enough corner could reach `STABLE` and start adapting the baseline toward the current cornering G — fading the cornering LED effect to neutral while the car was still actively turning.
+
+Mitigated (not eliminated) by slowing down two constants:
+
+- `baselineDriftRate`: `0.05 → 0.003`. Even once `STABLE` is reached, adaptation now takes many seconds rather than well under one.
+- `baselineSettleTime`: `750ms → 4000ms`. The state machine won't consider itself settled until a reading has been steady for a full 4 seconds, longer than most ordinary corners.
+
+Together, a normal-length corner shouldn't get far enough through this pipeline to visibly fade; a genuinely stale offset (the sensor bumped and left, a long stop on an incline) still eventually self-corrects, just gradually.
+
+**This is the third fix applied to this state machine without any real driving data to verify any of them against** (stuck-in-DYNAMIC → rate-of-change gating → this washout fix). That pattern was discussed directly: the system's only remaining genuine benefit is self-correcting *within a single drive* if the sensor is disturbed mid-journey, since parking on a slope is already handled by calibrating fresh on every boot, and cornering itself doesn't need it at all. Weighed against three rounds of speculative, unverified fixes, removing the whole system (calibrate `driftBaseY`/`driftBaseZ` once, never adapt, delete the state machine entirely) was seriously considered as the more robust option for the first real car test.
+
+**Decision: keeping it for now**, with this explicitly flagged as a candidate for removal or simplification once real driving data comes in — either confirming it now works correctly, or showing it's not worth the complexity relative to the narrow benefit it provides.
+
 ### Untested Consideration: Road Bumps / Surface Noise
 
 Not yet validated on real roads: whether potholes, expansion joints, or general road surface roughness (a real factor on UK roads) could trigger brief false colour reactions.
@@ -508,6 +523,6 @@ This is one of the specific things to watch for during real-world driving. If it
 
 v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly by using the MPU6050's gyroscope — a sensor that was physically present on the chip all along (the MPU6050 is a combined accelerometer + gyroscope), but whose readings earlier versions requested and then discarded without using. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
 
-The side-axis (cornering) baseline system from v3.6 is retained and has been fixed to correctly distinguish genuine ongoing movement from a stale, unchanging offset.
+The side-axis (cornering) baseline system from v3.6 is retained, kept deliberately despite three rounds of unverified fixes during this version (see above) — its narrow remaining benefit (self-correcting mid-drive without a manual recalibration) was judged worth one more real-world test before deciding whether to simplify or remove it.
 
-Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change thresholds need retuning, and whether road bumps/surface noise cause false reactions — will follow from that testing.
+Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change/settle-time/drift-rate thresholds need retuning, whether sustained corners now hold their brightness correctly, and whether road bumps/surface noise cause false reactions — will follow from that testing.

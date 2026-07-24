@@ -372,13 +372,28 @@ float driftBaseZ = 0.0;
 
 // Slow adaptation.
 //
-// This controls how quickly a new hill orientation
-// becomes the new baseline.
+// This controls how quickly a new orientation becomes
+// the new baseline, once in STABLE.
 //
 // Lower = slower adaptation.
 // Higher = faster adaptation.
+//
+// Deliberately much slower than it first was (0.05). At
+// ~50 loop updates/second, 0.05 gave a time constant of
+// well under a second — meaning once the rate-of-change
+// gating (see baselineStableThreshold/
+// baselineDynamicReentryThreshold below) let a SUSTAINED
+// corner through to STABLE (a roundabout, a long
+// motorway sweeper — anything held at fairly constant
+// lateral G for a few seconds), the baseline would race
+// to match it almost immediately, fading the cornering
+// effect to neutral mid-corner. 0.003 gives a much longer
+// time constant (many seconds), so a normal-length corner
+// doesn't get meaningfully cancelled, while a genuinely
+// stale offset (minutes, not seconds) still eventually
+// corrects.
 
-const float baselineDriftRate = 0.05;
+const float baselineDriftRate = 0.003;
 
 
 // ==================================================
@@ -418,14 +433,24 @@ const float baselineDynamicReentryThreshold = 0.02;
 // SETTLING
 // ==================================================
 
-// Short protection period after dynamic movement.
+// Protection period after dynamic movement, before
+// STABLE (and adaptation) can resume.
 //
 // During this period the baseline remains frozen.
 //
-// This prevents the end of acceleration from being
-// immediately absorbed as a new hill baseline.
+// Extended from 750ms to 4000ms. The original short
+// value was fine for its intended purpose (don't
+// immediately absorb the tail end of a quick
+// acceleration/braking event as a new baseline), but a
+// sustained corner — a roundabout, a long motorway
+// sweeper — could settle within 750ms of the steering
+// stabilising and start adapting away almost immediately,
+// even mid-corner. 4000ms means only genuinely long holds
+// (well beyond a typical corner) start the adaptation
+// process at all, on top of baselineDriftRate above now
+// making that adaptation slow even once it does start.
 
-const unsigned long baselineSettleTime = 750;
+const unsigned long baselineSettleTime = 4000;
 
 
 // ==================================================
