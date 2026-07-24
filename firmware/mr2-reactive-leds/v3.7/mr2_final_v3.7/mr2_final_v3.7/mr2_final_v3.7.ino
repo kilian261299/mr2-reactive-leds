@@ -451,6 +451,19 @@ float smoothedSideG = 0.0;
 float smoothedMovementG = 0.0;
 
 
+// Separate from smoothedMovementG above (which is for
+// LED output and computed later in the loop). This one
+// feeds the STABLE/DYNAMIC/SETTLING gating and needs to
+// exist earlier, before driftBaseY/Z get used. Smoothing
+// a signal before comparing it to a fairly tight
+// threshold (0.075g) is important — a single noisy raw
+// sample can spike past that threshold even at rest,
+// which was likely why the state machine could get stuck
+// in DYNAMIC permanently.
+
+float smoothedGatingMovementG = 0.0;
+
+
 // ==================================================
 // GYRO PITCH TRACKING (V3.7)
 // ==================================================
@@ -487,6 +500,20 @@ float calibrationPitchRad = 0.0;
 // 0.98 is a common, reasonable starting point.
 
 const float pitchComplementaryAlpha = 0.98;
+
+
+// If the gyro's sign convention doesn't match the
+// accelerometer-based pitch formula's convention, the
+// gyro-integrated estimate can momentarily track pitch
+// in the WRONG direction during a fast tilt — even
+// though it's correct once things settle and the
+// accelerometer correction pulls it back. This can show
+// up as a brief, wrong-looking colour flash regardless
+// of which way you tilt. If that happens, flip this to
+// -1 and retest — same empirical-tuning approach as
+// FORWARD_SIGN/SIDE_SIGN elsewhere in this codebase.
+
+const int PITCH_GYRO_SIGN = 1;
 
 
 // Used to compute dt between pitch updates. 0 means
@@ -690,11 +717,17 @@ void updatePitchEstimate(
   // Remove the measured zero-rate bias before
   // integrating — otherwise a constant sensor offset
   // integrates into continuous phantom pitch drift even
-  // while genuinely stationary.
+  // while genuinely stationary. Sign correction applied
+  // after bias removal, since the bias itself was
+  // measured in raw (unflipped) units during calibration.
 
   float correctedGyroYRadPerSec =
-    gyroYRadPerSec -
-    gyroYBiasRadPerSec;
+    (
+      gyroYRadPerSec -
+      gyroYBiasRadPerSec
+    )
+    *
+    PITCH_GYRO_SIGN;
 
 
   // Accelerometer-only pitch estimate — accurate at
@@ -1586,10 +1619,28 @@ void readAcceleration() {
     );
 
 
+  // Smoothed before gating — see the comment on
+  // smoothedGatingMovementG's declaration for why.
+
+  smoothedGatingMovementG =
+    (
+      smoothedGatingMovementG *
+      (
+        1.0 -
+        accelerationSmoothing
+      )
+    )
+    +
+    (
+      rawMovementG *
+      accelerationSmoothing
+    );
+
+
   updateSmartBaseline(
     rawY,
     rawZ,
-    rawMovementG
+    smoothedGatingMovementG
   );
 
 
@@ -1840,6 +1891,10 @@ void calibrateMPU6050() {
 
 
   smoothedMovementG =
+    0.0;
+
+
+  smoothedGatingMovementG =
     0.0;
 
 
