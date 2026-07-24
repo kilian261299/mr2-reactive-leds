@@ -22,11 +22,7 @@ The first complete version of the firmware implementing the reactive lighting sy
 
 ### Notes
 
-This version used the raw accelerometer readings directly.
-
-While effective during normal driving, sustained gradients such as hills could cause the LEDs to remain in an acceleration or braking state.
-
-The system could therefore interpret changes in vehicle pitch caused by a hill as genuine vehicle acceleration or braking.
+This version used the raw accelerometer readings directly. While effective during normal driving, sustained gradients (such as hills) could cause the LEDs to remain in an acceleration or braking state.
 
 ---
 
@@ -40,23 +36,14 @@ Instead of using the raw longitudinal acceleration value directly, the firmware 
 
 Acceleration effects are then calculated from the difference between the current reading and this moving baseline.
 
-This allows the baseline to gradually follow long-term changes, such as driving uphill or downhill, while still responding to genuine acceleration and braking events.
+This allows the baseline to gradually follow long-term changes, such as driving uphill or downhill, while still responding quickly to genuine acceleration and braking events.
 
 ### Benefits
 
-- Reduced false acceleration detection on hills.
-- Reduced false braking detection on downhill sections.
-- Smoother and more realistic vehicle response.
-- Improved behaviour during sustained gradients.
-- Reduced dependence on the absolute accelerometer reading.
-
-### Limitation
-
-The continuously adapting baseline could still gradually absorb genuine acceleration or braking if the dynamic movement was sustained for long enough.
-
-This meant that the system could eventually interpret genuine vehicle movement as a new baseline.
-
-Further development was therefore required to distinguish genuine dynamic movement from long-term changes in vehicle orientation.
+- Eliminates false acceleration detection on hills.
+- Eliminates false braking detection on downhill sections.
+- Produces smoother and more realistic vehicle response.
+- Greatly improves real-world driving behaviour.
 
 ---
 
@@ -95,7 +82,7 @@ The startup animation completes before normal MPU6050 accelerometer-based reacti
 
 ### Idle Breathing
 
-When the vehicle is stationary or experiencing minimal movement, the reactive lighting mode produces a gentle breathing effect with an approximately four-second cycle.
+When the vehicle is stationary or experiencing minimal movement, the reactive lighting mode now produces a gentle breathing effect with an approximately four-second cycle.
 
 The breathing effect is automatically overridden when genuine acceleration, braking, or cornering movement is detected.
 
@@ -253,50 +240,38 @@ The firmware was now ready for further refinement of the accelerometer baseline 
 
 ## v3.6 – Smart Dynamic Baseline and Final Robust Firmware
 
-v3.6 is currently the final planned firmware version for the MR2 Reactive LEDs project.
+v3.6 is the final planned firmware version for the MR2 Reactive LEDs project.
 
 This version builds directly on the established v3.5 LED output, colour handling, reactive behaviour, and rotary encoder system.
 
-The primary improvement in v3.6 is a redesigned accelerometer processing system intended to better distinguish genuine vehicle acceleration and braking from long-term changes in vehicle orientation caused by hills and gradients.
+The primary improvement in v3.6 is a more robust smart hill-compensation system designed to distinguish between long-term vehicle orientation changes and genuine dynamic vehicle movement.
 
 ### Smart Hill Compensation
 
-The MPU6050 measures the total acceleration acting on the sensor.
+The MPU6050 measures both gravity and dynamic acceleration.
 
-Because the accelerometer is mounted to the vehicle, a change in vehicle pitch can alter the measured acceleration on the forward axis even when the vehicle is travelling at a relatively constant speed.
+Because the accelerometer is mounted to the vehicle, changes in vehicle pitch can alter the measured forward-axis acceleration even when the vehicle is travelling at a constant speed.
 
 For example:
 
-- Driving onto an uphill gradient can produce an apparent forward acceleration component.
-- Driving onto a downhill gradient can produce an apparent braking component.
-- A sustained gradient can therefore resemble a continuous acceleration or braking event if the raw accelerometer values are used directly.
+- Driving uphill can produce an apparent forward acceleration change.
+- Driving downhill can produce an apparent braking change.
 
-v3.6 addresses this by separating the accelerometer signal into:
+The hill-compensation system therefore maintains a slowly adapting accelerometer baseline representing the vehicle's current orientation.
 
-- A **slow-changing gravity/orientation component**, representing long-term changes in vehicle pitch and gradient.
-- A **fast-changing dynamic component**, representing genuine changes in vehicle motion.
+Reactive acceleration and braking behaviour is calculated relative to this baseline.
 
-The slow component is used to allow the system to gradually adapt to changes in vehicle orientation, while the dynamic component is used to determine whether the vehicle is currently undergoing genuine movement.
+### Smart Baseline Gating
 
-This allows the system to gradually compensate for sustained hills without immediately absorbing genuine acceleration or braking into the baseline.
+Unlike the previous continuously adapting baseline system, v3.6 prevents the baseline from adapting during meaningful dynamic vehicle movement.
 
----
+The baseline is frozen when the system detects:
 
-### Dynamic Baseline Protection
+- Significant forward acceleration.
+- Significant braking.
+- Significant lateral cornering movement.
 
-The baseline is not continuously updated regardless of vehicle movement.
-
-Instead, the firmware monitors the dynamic component of the accelerometer signal and uses this to control whether the baseline is allowed to adapt.
-
-When genuine dynamic movement is detected:
-
-- The baseline is frozen.
-- The current acceleration and braking response remains available to the reactive lighting system.
-- The system does not immediately learn the dynamic movement as a new vehicle orientation.
-
-This prevents a sustained acceleration or braking event from gradually becoming the new baseline.
-
----
+This prevents genuine acceleration or braking events from being gradually absorbed into the baseline.
 
 ### Baseline State Machine
 
@@ -304,87 +279,207 @@ The smart baseline system operates using three states:
 
 #### STABLE
 
-The vehicle is considered sufficiently stable.
+The vehicle is considered sufficiently calm.
 
-The baseline is allowed to adapt slowly.
+The baseline is allowed to adapt slowly to long-term changes in vehicle orientation.
 
-This allows the system to gradually follow long-term changes in vehicle orientation, such as:
+This allows the system to gradually compensate for sustained gradients such as:
 
-- Driving onto an uphill gradient.
-- Driving onto a downhill gradient.
-- Sustained changes in vehicle pitch.
-
-The purpose of this state is to allow the system to distinguish a long-term change in orientation from a temporary acceleration or braking event.
-
----
+- Uphill driving.
+- Downhill driving.
+- Long-term changes in vehicle pitch.
 
 #### DYNAMIC
 
-The system has detected genuine dynamic movement.
+Meaningful vehicle movement has been detected.
 
-The adaptive baseline is frozen.
+The baseline is completely frozen.
 
-This prevents the system from immediately absorbing genuine acceleration, braking, or other dynamic movement into the long-term baseline.
+This includes:
 
-The system remains in this state while meaningful dynamic movement is present.
+- Acceleration.
+- Braking.
+- Cornering.
 
-During this state:
+The baseline remains frozen for as long as meaningful dynamic movement continues.
 
-- The adaptive baseline does not follow the dynamic acceleration.
-- The reactive LED system continues to respond to the detected vehicle dynamics.
-- The system waits for the dynamic movement to end before considering baseline adaptation again.
-
----
+This prevents genuine vehicle dynamics from being mistaken for a change in vehicle orientation.
 
 #### SETTLING
 
-The dynamic movement has ended.
+Dynamic movement has stopped.
 
-The system does not immediately return to baseline adaptation.
+The baseline remains frozen temporarily while the vehicle settles.
 
-Instead, it enters a temporary settling period during which the baseline remains frozen.
+A settling delay prevents the system from immediately adapting to the end of an acceleration, braking, or cornering event.
 
-This prevents the end of an acceleration or braking event from immediately becoming part of the adaptive baseline.
-
-If significant dynamic movement resumes during the settling period, the system returns to the DYNAMIC state.
+If dynamic movement resumes during this period, the system immediately returns to the DYNAMIC state.
 
 Once the settling period has completed and the vehicle remains sufficiently stable, the system returns to STABLE and slow baseline adaptation resumes.
 
----
+### Dynamic Movement Detection
 
-### State Transition Behaviour
+v3.6 uses a separate dynamic acceleration estimate to determine whether the vehicle is genuinely moving dynamically.
+
+The dynamic component is derived by comparing the raw accelerometer measurement against a slowly filtered gravity estimate.
+
+This separates:
+
+- Fast changes caused by acceleration, braking and cornering.
+- Slow changes caused by vehicle pitch and long-term orientation.
+
+The dynamic movement estimate is used to control the baseline state machine, while the baseline-corrected forward and lateral values are used for the reactive LED effects.
+
+This allows the system to distinguish between a sustained hill and genuine vehicle acceleration more reliably than the previous continuously adapting baseline approach.
+
+### Baseline Protection
+
+The baseline is protected from adapting during genuine dynamic movement.
 
 The intended behaviour is:
 
-```text
-                 Vehicle stable
-                      |
-                      v
-                   STABLE
-                      |
-                      | Slow baseline adaptation
-                      |
-          Genuine dynamic movement detected
-                      |
-                      v
-                   DYNAMIC
-                      |
-                      | Baseline frozen
-                      |
-          Dynamic movement stops
-                      |
-                      v
-                  SETTLING
-                      |
-                      | Baseline remains frozen
-                      |
-              +-------+-------+
-              |               |
-     Movement resumes     Vehicle remains calm
-              |               |
-              v               v
-           DYNAMIC          STABLE
-                              |
-                              | Slow baseline adaptation
-                              v
-                           Continue
+    Vehicle stable
+          |
+          v
+    STABLE
+    Baseline slowly adapts
+    to long-term orientation
+          |
+          v
+    Genuine dynamic movement detected
+          |
+          v
+    DYNAMIC
+    Baseline FREEZES
+          |
+          v
+    Acceleration / braking / cornering continues
+          |
+          v
+    Baseline remains FROZEN
+          |
+          v
+    Dynamic movement stops
+          |
+          v
+    SETTLING
+    Baseline remains FROZEN
+          |
+          v
+    Vehicle remains calm
+    for settling period
+          |
+          v
+    STABLE
+    Baseline slowly adapts again
+
+### Reactive Behaviour During State Changes
+
+The baseline state machine is used internally to control hill compensation and does not directly determine whether the LEDs are visually reactive.
+
+The LEDs continue to respond to the baseline-corrected acceleration, braking, and cornering values.
+
+This means that:
+
+- Entering `DYNAMIC` freezes the baseline so genuine acceleration or braking is preserved.
+- Remaining in `DYNAMIC` keeps the baseline protected while the event continues.
+- Entering `SETTLING` prevents the baseline from immediately absorbing the end of the event.
+- Returning to `STABLE` allows slow baseline adaptation to resume.
+- The LED effects can therefore return gradually toward the normal blue idle state rather than relying solely on the baseline state itself.
+
+The purpose of the state machine is to control how the accelerometer baseline behaves, not to act as a direct LED on/off trigger.
+
+### v3.6 Improvements Over v3.5
+
+Compared with v3.5, the main improvements are:
+
+- More reliable distinction between genuine acceleration and vehicle pitch changes.
+- More reliable distinction between genuine braking and downhill gradients.
+- Baseline protection during genuine dynamic movement.
+- Temporary settling period after dynamic movement ends.
+- Reduced risk of genuine acceleration being absorbed into the baseline.
+- Improved long-term hill compensation.
+- More controlled return to stable baseline tracking after acceleration, braking, or cornering.
+
+### Result
+
+v3.6 provides a more robust foundation for real-world vehicle use.
+
+The firmware now separates the concepts of:
+
+- Long-term vehicle orientation.
+- Short-term dynamic acceleration.
+- Baseline adaptation.
+- Dynamic movement detection.
+- Baseline settling.
+
+This allows the system to compensate for hills while preserving genuine acceleration, braking, and cornering events for the reactive LED effects.
+
+The result is intended to provide more natural and reliable reactive lighting during normal road driving, including sustained uphill and downhill sections.
+
+---
+
+# Firmware Architecture Summary
+
+The firmware is now structured around four primary systems:
+
+1. **MPU6050 Accelerometer**
+   - Measures vehicle motion and orientation.
+   - Provides forward and lateral acceleration information.
+   - Supplies the data used for dynamic movement detection and reactive lighting.
+
+2. **Smart Dynamic Baseline**
+   - Tracks long-term changes in vehicle orientation.
+   - Compensates for sustained gradients.
+   - Freezes during genuine dynamic movement.
+   - Uses STABLE, DYNAMIC, and SETTLING states.
+
+3. **Reactive LED Engine**
+   - Converts baseline-corrected acceleration, braking, and cornering values into lighting effects.
+   - Controls colour transitions and brightness responses.
+   - Provides idle breathing when movement is minimal.
+
+4. **User Interface and Control**
+   - Rotary encoder controls brightness.
+   - Rotary encoder selects between the five lighting modes.
+   - Physical master toggle switch controls system power.
+   - LED strips provide the final visual output.
+
+---
+
+# Current Firmware Status
+
+**Current Version:** v3.6
+
+**Status:** Final planned firmware version
+
+### Current Features
+
+- Smart hill compensation
+- Dynamic baseline filtering
+- Baseline state machine
+- STABLE / DYNAMIC / SETTLING states
+- Baseline protection during dynamic movement
+- Dynamic acceleration detection
+- Acceleration lighting
+- Braking lighting
+- Left and right cornering effects
+- Progressive reactive lighting
+- Idle breathing effect
+- Five selectable lighting modes
+- Four ambient colour themes
+- Startup sweep animation
+- Manual RGB brightness scaling
+- Rotary encoder brightness control
+- Responsive quadrature encoder handling
+- MPU6050 calibration
+- Adjustable sensitivity
+- Physical master power control
+
+### Development Objective
+
+The firmware development process has progressively refined the system from direct raw accelerometer readings into a more robust vehicle-dynamics detection system.
+
+The primary objective of v3.6 is to ensure that the reactive lighting responds to genuine changes in vehicle dynamics while remaining stable during long-term changes in vehicle orientation, such as sustained uphill and downhill driving.
+
+The firmware is now considered ready for final hardware integration and real-world vehicle testing.
