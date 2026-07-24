@@ -26,7 +26,7 @@ This version used the raw accelerometer readings directly. While effective durin
 
 ---
 
-## v2.0 – Dynamic Baseline Filtering
+## v1.1 – Dynamic Baseline Filtering
 
 Improved acceleration detection by reacting to changes in acceleration rather than absolute sensor readings.
 
@@ -47,7 +47,7 @@ This allows the baseline to gradually follow long-term changes, such as driving 
 
 ---
 
-## v3.0 – Mode Cleanup
+## v1.2 – Mode Cleanup
 
 The firmware was simplified following validation of the accelerometer axis orientation and reactive lighting behaviour.
 
@@ -63,7 +63,7 @@ The removal of diagnostic and test modes simplified the user interface and prepa
 
 ---
 
-## v3.1 – New Modes and Effects
+## v1.3 – New Modes and Effects
 
 The firmware was updated with improved startup behaviour, idle lighting effects, and additional ambient lighting modes.
 
@@ -101,7 +101,7 @@ The firmware now provides five selectable modes in total.
 
 ---
 
-## v3.2 – Colour and Reactivity Refinement
+## v1.4 – Colour and Reactivity Refinement
 
 The firmware was refined to improve colour transitions and extend reactive behaviour across all lighting modes.
 
@@ -124,7 +124,7 @@ This provides consistent reactive behaviour across all five available lighting m
 
 ---
 
-## v3.3 – Rotary Encoder Reliability Fix
+## v1.5 – Rotary Encoder Reliability Fix
 
 The rotary encoder brightness control was updated to improve reliability and eliminate erratic brightness adjustments.
 
@@ -159,21 +159,21 @@ The new full quadrature decoding method tracks valid CLK/DT state transitions an
 
 ---
 
-## v3.4 – Interrupt-Driven Encoder and Responsiveness Tuning
+## v1.6 – Interrupt-Driven Encoder and Responsiveness Tuning
 
-Following testing of v3.3, the rotary encoder brightness control was further refined.
+Following testing of v1.5, the rotary encoder brightness control was further refined.
 
-Although the full quadrature decoding introduced in v3.3 improved direction reliability, brightness adjustment could still become less responsive during rapid encoder rotation.
+Although the full quadrature decoding introduced in v1.5 improved direction reliability, brightness adjustment could still become less responsive during rapid encoder rotation.
 
 This was caused by the main firmware loop performing large LED update operations. The two 160-LED strips are updated repeatedly, and these operations can temporarily prevent the encoder from being sampled frequently enough during fast rotation — a rotation could complete, several detents' worth of movement, entirely between two consecutive checks of the encoder pins.
 
 ### Moving to Interrupts
 
-Polling (checking the encoder pins once per loop, however good the decoding logic) is fundamentally limited by how often the loop actually gets back around to checking. v3.4 removes that limitation by moving encoder reading onto **hardware interrupts** instead: `attachInterrupt()` is used on both the CLK and DT pins, configured to fire on `CHANGE` (any transition, either direction). This means an encoder transition is captured **the instant it happens**, regardless of what the main loop is doing at that moment — including in the middle of a slow LED strip update.
+Polling (checking the encoder pins once per loop, however good the decoding logic) is fundamentally limited by how often the loop actually gets back around to checking. v1.6 removes that limitation by moving encoder reading onto **hardware interrupts** instead: `attachInterrupt()` is used on both the CLK and DT pins, configured to fire on `CHANGE` (any transition, either direction). This means an encoder transition is captured **the instant it happens**, regardless of what the main loop is doing at that moment — including in the middle of a slow LED strip update.
 
 ### Keeping the Interrupt Handler Minimal
 
-The interrupt service routine (`encoderISR()`) does the same quadrature decoding as v3.3 — reading CLK/DT, looking up the transition in the same state-transition table, and accumulating valid movement — but deliberately does **nothing else**. No `Serial` printing, no LED updates, no `delay()`, no floating-point math. This matters because code running inside an interrupt handler blocks everything else on the microcontroller for its duration; keeping it to a few integer operations means it returns almost instantly, so it can't itself become a new source of timing problems. The accumulated movement is stored in a `volatile` counter, which the main loop reads separately.
+The interrupt service routine (`encoderISR()`) does the same quadrature decoding as v1.5 — reading CLK/DT, looking up the transition in the same state-transition table, and accumulating valid movement — but deliberately does **nothing else**. No `Serial` printing, no LED updates, no `delay()`, no floating-point math. This matters because code running inside an interrupt handler blocks everything else on the microcontroller for its duration; keeping it to a few integer operations means it returns almost instantly, so it can't itself become a new source of timing problems. The accumulated movement is stored in a `volatile` counter, which the main loop reads separately.
 
 ### Draining Accumulated Movement in the Main Loop
 
@@ -183,7 +183,7 @@ Draining uses a loop, not a single check — if several detents' worth of moveme
 
 ### Detent Tuning
 
-`stepsPerDetent` — how many valid quadrature transitions count as one physical "click" of the knob — was reduced from 4 (v3.3) to 2, so the brightness responds more directly to physical movement rather than needing two clicks to register a change.
+`stepsPerDetent` — how many valid quadrature transitions count as one physical "click" of the knob — was reduced from 4 (v1.5) to 2, so the brightness responds more directly to physical movement rather than needing two clicks to register a change.
 
 ### Improvements
 
@@ -199,13 +199,13 @@ Draining uses a loop, not a single check — if several detents' worth of moveme
 
 ### Result
 
-The rotary encoder now provides a more responsive and usable brightness adjustment experience while maintaining the reliability improvements introduced in v3.3.
+The rotary encoder now provides a more responsive and usable brightness adjustment experience while maintaining the reliability improvements introduced in v1.5.
 
 The encoder can be rotated more quickly without losing as many brightness adjustments, making it easier to move rapidly through the full brightness range. Because encoder transitions are captured by interrupts rather than relying solely on the timing of the main firmware loop, brightness control remains responsive even while the LED strips are being updated.
 
 ---
 
-## v3.5 – LED Output and Colour Refinement
+## v1.7 – LED Output and Colour Refinement
 
 The firmware was refined following continued development of the LED output and lighting behaviour.
 
@@ -245,17 +245,17 @@ The purple theme was also hand-tuned to use a controlled RGB value rather than a
 
 ### Result
 
-v3.5 provided a more consistent and visually controlled LED output while maintaining the established reactive lighting behaviour.
+v1.7 provided a more consistent and visually controlled LED output while maintaining the established reactive lighting behaviour.
 
 The firmware was now ready for further refinement of the accelerometer baseline system and real-world hill compensation behaviour.
 
 ---
 
-## v3.6 – Smart Dynamic Baseline
+## v2.0 – Smart Dynamic Baseline
 
-v3.6 builds directly on the established v3.5 LED output, colour handling, reactive behaviour, and rotary encoder system.
+v2.0 builds directly on the established v1.7 LED output, colour handling, reactive behaviour, and rotary encoder system.
 
-The primary improvement in v3.6 is a more robust smart hill-compensation system designed to distinguish between long-term vehicle orientation changes and genuine dynamic vehicle movement.
+The primary improvement in v2.0 is a more robust smart hill-compensation system designed to distinguish between long-term vehicle orientation changes and genuine dynamic vehicle movement.
 
 ### Smart Hill Compensation
 
@@ -274,7 +274,7 @@ Reactive acceleration and braking behaviour is calculated relative to this basel
 
 ### Smart Baseline Gating
 
-Unlike the previous continuously adapting baseline system, v3.6 prevents the baseline from adapting during meaningful dynamic vehicle movement.
+Unlike the previous continuously adapting baseline system, v2.0 prevents the baseline from adapting during meaningful dynamic vehicle movement.
 
 The baseline is frozen when the system detects:
 
@@ -369,7 +369,7 @@ Vehicle becomes stable
 Baseline slowly adapts again
 ```
 
-### Also Included in v3.6
+### Also Included in v2.0
 
 Carried over and retained unchanged from earlier versions, alongside the new baseline system:
 
@@ -385,19 +385,19 @@ Carried over and retained unchanged from earlier versions, alongside the new bas
 
 ### Result
 
-v3.6 substantially improved real-world hill behaviour compared to v2.0's always-adapting baseline: genuine acceleration and braking events are protected from being gradually absorbed into the baseline, while sustained gradients are still eventually recognised as the new normal once the vehicle settles.
+v2.0 substantially improved real-world hill behaviour compared to v1.1's always-adapting baseline: genuine acceleration and braking events are protected from being gradually absorbed into the baseline, while sustained gradients are still eventually recognised as the new normal once the vehicle settles.
 
-The remaining limitation was that this entire system relied on the accelerometer alone. An accelerometer physically cannot distinguish "the sensor is tilted" from "the sensor is accelerating" — both produce an identical reading. v3.6's state machine and dead zones manage that ambiguity carefully, but can't fully resolve it. This became the focus of v3.7.
+The remaining limitation was that this entire system relied on the accelerometer alone. An accelerometer physically cannot distinguish "the sensor is tilted" from "the sensor is accelerating" — both produce an identical reading. v2.0's state machine and dead zones manage that ambiguity carefully, but can't fully resolve it. This became the focus of v3.0.
 
 ---
 
-## v3.7 – Gyroscope + Accelerometer Sensor Fusion
+## v3.0 – Gyroscope + Accelerometer Sensor Fusion
 
-v3.7 changes the fundamental approach to hill compensation: from accelerometer-only baseline tracking to gyroscope + accelerometer sensor fusion.
+v3.0 changes the fundamental approach to hill compensation: from accelerometer-only baseline tracking to gyroscope + accelerometer sensor fusion.
 
-The motivation is the limitation identified at the end of v3.6 — an accelerometer alone cannot tell "tilted" apart from "accelerating." A gyroscope resolves this directly: a hill causes the vehicle to physically pitch (a rotation, which the gyro measures), while genuine forward acceleration does not. Tracking that rotation gives a real estimate of the vehicle's pitch angle, which can be used to calculate exactly how much of the raw forward reading is caused by gravity at that angle — and remove only that.
+The motivation is the limitation identified at the end of v2.0 — an accelerometer alone cannot tell "tilted" apart from "accelerating." A gyroscope resolves this directly: a hill causes the vehicle to physically pitch (a rotation, which the gyro measures), while genuine forward acceleration does not. Tracking that rotation gives a real estimate of the vehicle's pitch angle, which can be used to calculate exactly how much of the raw forward reading is caused by gravity at that angle — and remove only that.
 
-This section covers the full v3.7 development, including issues found and fixed during bench testing rather than a separate version bump — these were fixes to the intended v3.7 design, not new features.
+This section covers the full v3.0 development, including issues found and fixed during bench testing rather than a separate version bump — these were fixes to the intended v3.0 design, not new features.
 
 ### Gyroscope Pitch Tracking
 
@@ -440,8 +440,8 @@ Added a `PITCH_GYRO_SIGN` constant for this, flipped from `1` to `-1` based on t
 ### Changes to the Smart Baseline System
 
 - The forward/longitudinal axis no longer uses an adaptive baseline at all. Pitch compensation replaces that role directly and more accurately.
-- The side/lateral axis (cornering) is unchanged — it still uses the v3.6 adaptive baseline, gated by the same state machine.
-- The STABLE / DYNAMIC / SETTLING state machine from v3.6 is retained, but now only governs the side-axis baseline. It continues to provide the same protection against transient movement being misread as a change in vehicle orientation.
+- The side/lateral axis (cornering) is unchanged — it still uses the v2.0 adaptive baseline, gated by the same state machine.
+- The STABLE / DYNAMIC / SETTLING state machine from v2.0 is retained, but now only governs the side-axis baseline. It continues to provide the same protection against transient movement being misread as a change in vehicle orientation.
 
 ### Gating Signal Smoothing
 
@@ -521,8 +521,8 @@ This is one of the specific things to watch for during real-world driving. If it
 
 ### Result
 
-v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly by using the MPU6050's gyroscope — a sensor that was physically present on the chip all along (the MPU6050 is a combined accelerometer + gyroscope), but whose readings earlier versions requested and then discarded without using. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
+v3.0 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly by using the MPU6050's gyroscope — a sensor that was physically present on the chip all along (the MPU6050 is a combined accelerometer + gyroscope), but whose readings earlier versions requested and then discarded without using. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
 
-The side-axis (cornering) baseline system from v3.6 is retained, kept deliberately despite three rounds of unverified fixes during this version (see above) — its narrow remaining benefit (self-correcting mid-drive without a manual recalibration) was judged worth one more real-world test before deciding whether to simplify or remove it.
+The side-axis (cornering) baseline system from v2.0 is retained, kept deliberately despite three rounds of unverified fixes during this version (see above) — its narrow remaining benefit (self-correcting mid-drive without a manual recalibration) was judged worth one more real-world test before deciding whether to simplify or remove it.
 
 Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change/settle-time/drift-rate thresholds need retuning, whether sustained corners now hold their brightness correctly, and whether road bumps/surface noise cause false reactions — will follow from that testing.

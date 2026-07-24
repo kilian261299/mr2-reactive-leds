@@ -10,7 +10,6 @@ The firmware consists of standalone hardware test sketches and the main producti
 
 ```text
 firmware/
-
 ├── tests/
 │   ├── 01_encoder_led_test/
 │   ├── 02_accelerometer_test/
@@ -19,6 +18,13 @@ firmware/
 └── mr2-reactive-leds/
     ├── README.md
     ├── v1.0/
+    ├── v1.1/
+    ├── v1.2/
+    ├── v1.3/
+    ├── v1.4/
+    ├── v1.5/
+    ├── v1.6/
+    ├── v1.7/
     ├── v2.0/
     └── v3.0/
 ```
@@ -82,11 +88,11 @@ The production firmware is located in:
 
 [mr2-reactive-leds/](mr2-reactive-leds/)
 
-The firmware was developed through three major versions.
+The firmware was developed through ten versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
 
 ---
 
-## v1.0 - Initial Reactive Lighting
+## v1.0 – Initial Reactive Lighting
 
 First complete implementation of the reactive lighting system.
 
@@ -100,36 +106,37 @@ Implemented:
 
 ---
 
-## v2.0 - Dynamic Baseline Filtering
+## v1.1 – v1.7 — Incremental Refinement
 
-Improved acceleration detection by reacting to changes in acceleration rather than absolute readings.
+A series of smaller, focused improvements built on top of v1.0, each addressing one specific area:
 
-Added:
-
-- Dynamic acceleration baseline
-- Improved filtering
-- Reduced false triggers caused by hills and vehicle angle
+- **v1.1** — Dynamic acceleration baseline, reducing false triggers caused by hills and vehicle angle.
+- **v1.2** — Removed diagnostic/test modes ahead of final vehicle use.
+- **v1.3** — Startup sweep animation, idle breathing effect, four static colour theme modes.
+- **v1.4** — Colour transition refinement; theme modes made reactive to movement and cornering.
+- **v1.5** — Rotary encoder reliability fix (full quadrature decoding).
+- **v1.6** — Rotary encoder moved to interrupt-driven handling for better responsiveness during rapid rotation.
+- **v1.7** — LED brightness reworked to manual RGB channel scaling for more consistent colour at all brightness levels.
 
 ---
 
-## v3.0 - Production Firmware
+## v2.0 – Smart Dynamic Baseline
 
-Final production version.
+A more robust accelerometer-only hill-compensation system, using a STABLE/DYNAMIC/SETTLING state machine to distinguish long-term vehicle orientation changes (hills) from genuine dynamic movement (acceleration, braking, cornering), and freeze the baseline during the latter.
 
-Added:
+---
 
-- Refined reactive lighting behaviour
-- Startup animation
-- Idle breathing effect
-- Ambient colour modes
-- Improved smoothing
-- Improved brightness scaling
-- Improved user interaction
+## v3.0 – Gyroscope + Accelerometer Sensor Fusion
+
+**Current production version.**
+
+Replaces the accelerometer-only hill compensation with gyroscope + accelerometer sensor fusion: the gyro tracks the vehicle's actual pitch angle (a hill causes rotation; genuine acceleration doesn't), letting gravity's contribution to the forward-axis reading be calculated and removed directly, rather than inferred from a slowly adapting baseline.
+
+Includes several fixes found during bench testing (gyro bias correction, accelerometer reliability gating, sign tuning, side-axis gating rework) — see the full changelog for details, including what's still flagged as unverified pending real-world driving data.
 
 For detailed version history and development notes, see:
 
 [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md)
-
 
 ---
 

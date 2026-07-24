@@ -18,7 +18,7 @@ Completed:
 
 - Hardware selection
 - Breadboard prototype
-- Firmware development (through v3.7 — gyroscope + accelerometer sensor fusion for hill compensation)
+- Firmware development (through v3.0 — gyroscope + accelerometer sensor fusion for hill compensation)
 - Custom PCB design
 - PCB manufacturing
 - PCB assembly (including a GPIO fault investigation and replacement board)
@@ -88,11 +88,11 @@ Detailed hardware documentation, PCB design information, and manufacturing files
 
 | Mode | Purpose |
 |---|---|
-| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, plus a separate red braking colour and cornering brightness effects. User controls MAX brightness. Idle breathing effect |
-| **Mode 1** | Purple theme. Fixed colour; brightness reacts to overall movement and cornering. User controls MAX brightness. Idle breathing effect|
-| **Mode 2** | Red theme. Fixed colour; brightness reacts to overall movement and cornering. User controls MAX brightness. Idle breathing effect |
-| **Mode 3** | Blue theme. Fixed colour; brightness reacts to overall movement and cornering. User controls MAX brightness. Idle breathing effect |
-| **Mode 4** | Green theme. Fixed colour; brightness reacts to overall movement and cornering. User controls MAX brightness. Idle breathing effect |
+| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, plus a separate red braking colour and cornering brightness effects. Idle breathing effect. |
+| **Mode 1** | Purple theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 2** | Red theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 3** | Blue theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 4** | Green theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
 
 ## System Behaviour
 
