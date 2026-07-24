@@ -513,7 +513,7 @@ const float pitchComplementaryAlpha = 0.98;
 // -1 and retest — same empirical-tuning approach as
 // FORWARD_SIGN/SIDE_SIGN elsewhere in this codebase.
 
-const int PITCH_GYRO_SIGN = 1;
+const int PITCH_GYRO_SIGN = -1;
 
 
 // Used to compute dt between pitch updates. 0 means

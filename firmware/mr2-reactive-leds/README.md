@@ -384,6 +384,8 @@ v3.7 changes the fundamental approach to hill compensation: from accelerometer-o
 
 The motivation is the limitation identified at the end of v3.6 — an accelerometer alone cannot tell "tilted" apart from "accelerating." A gyroscope resolves this directly: a hill causes the vehicle to physically pitch (a rotation, which the gyro measures), while genuine forward acceleration does not. Tracking that rotation gives a real estimate of the vehicle's pitch angle, which can be used to calculate exactly how much of the raw forward reading is caused by gravity at that angle — and remove only that.
 
+This section covers the full v3.7 development, including issues found and fixed during bench testing rather than a separate version bump — these were fixes to the intended v3.7 design, not new features.
+
 ### Gyroscope Pitch Tracking
 
 The MPU6050's gyroscope measures rotation rate. For this vehicle's mounting orientation, pitch (the car's nose rising or dipping) is read from the gyro's Y-axis.
@@ -396,7 +398,19 @@ A pure gyro-integrated angle would drift slowly over time, since small measureme
 
 The accelerometer-only estimate has the opposite trade-off: no long-term drift, but it's wrong whenever the vehicle is genuinely accelerating, since real acceleration adds to the reading in a way that looks like additional tilt.
 
-The complementary filter blends the two, weighted mostly toward the gyro (98%) with a small continuous correction from the accelerometer (2%) — fast and responsive, but unable to drift over the course of a drive.
+The complementary filter blends the two, weighted mostly toward the gyro (98%) with a small continuous correction from the accelerometer (2%) — fast and responsive, but resistant to drift over the course of a drive.
+
+### Accelerometer Reliability Gating
+
+Found during code review: the original implementation always trusted the accelerometer's pitch estimate a little, even during strong acceleration or braking, when it's actively measuring gravity *plus* the vehicle's own motion rather than gravity alone.
+
+The filter now calculates total accelerometer magnitude and compares it to 1g. The further that reading drifts from 1g, the less the accelerometer's pitch estimate is trusted — fading to fully ignored during a hard event, so the filter runs on the gyro alone until things settle back down.
+
+### Gyro Zero-Rate Bias Correction
+
+Found during bench testing: every real gyro reads a small nonzero rotation rate even sitting perfectly still (a manufacturing quirk called bias). Left uncorrected, integrating that constant offset produced continuous phantom pitch drift even when the sensor never moved — enough to get the state machine stuck in `DYNAMIC` permanently.
+
+Fixed by measuring the gyro's average reading during calibration (while the board is genuinely still) and subtracting that measured bias from every subsequent gyro reading.
 
 ### Gravity Component Removal
 
@@ -404,11 +418,23 @@ Once the current pitch angle is known, the firmware calculates how much of the r
 
 What remains is the genuine dynamic (non-gravity) component of the forward reading — real acceleration or braking — regardless of how long the vehicle has been on a slope.
 
+### Gyro Sign Tuning
+
+Same principle as `FORWARD_SIGN`/`SIDE_SIGN` elsewhere in this firmware: the correct sign for the gyro term can't be known in advance, only confirmed empirically. Bench testing showed a clear, consistent asymmetry — tilting nose-down produced the correct colour cleanly, but tilting nose-up briefly flashed the wrong colour before correcting itself. This is the signature of the gyro-integrated estimate momentarily tracking the wrong direction during fast rotation, before the accelerometer correction pulls it back.
+
+Added a `PITCH_GYRO_SIGN` constant for this, flipped from `1` to `-1` based on that test result.
+
 ### Changes to the Smart Baseline System
 
 - The forward/longitudinal axis no longer uses an adaptive baseline at all. Pitch compensation replaces that role directly and more accurately.
 - The side/lateral axis (cornering) is unchanged — it still uses the v3.6 adaptive baseline, gated by the same state machine.
 - The STABLE / DYNAMIC / SETTLING state machine from v3.6 is retained, but now only governs the side-axis baseline. It continues to provide the same protection against transient movement being misread as a change in vehicle orientation.
+
+### Gating Signal Smoothing
+
+Found during bench testing: the state machine's DYNAMIC/STABLE decision compared a raw, unsmoothed movement reading against a fairly tight threshold (0.075g). A single noisy sample could spike past that even at rest, contributing to the state machine getting stuck.
+
+Added a dedicated smoothing pass for this gating signal, separate from the smoothing already used for LED output, applied before the threshold comparison.
 
 ### Behaviour
 
@@ -436,10 +462,24 @@ Remains in the compensated signal
 LEDs react normally
 ```
 
+### Also Changed
+
+- Renamed `baseX` to `calibrationAccelX` to reflect what it actually does now — a one-time input used to seed the pitch estimate, not an ongoing baseline like `baseY`/`baseZ` still are.
+- Serial debug output now reports pitch two ways: absolute angle (what the compensation math actually uses, since gravity's real component depends on true tilt including any fixed mounting offset) and pitch relative to the last calibration (a more human-readable "degrees of hill" figure for reading the debug output).
+
+### Known Limitation (Not Fixed in v3.7)
+
+The side-axis (Y/Z) state machine only checks the *size* of the movement reading against a threshold, not whether it's actually changing. This means a genuine, sustained offset (e.g. the sensor being disturbed after calibration without being recalibrated in its new resting position) can look identical to active movement, and the state machine can get permanently stuck in `DYNAMIC` — unable to adapt the side-axis baseline back to reality, since adaptation only happens in `STABLE`, and `STABLE` is never reached.
+
+This only affects the side/cornering baseline, not the forward-axis pitch compensation, which was confirmed working correctly (including recovering cleanly from a 60°+ reorientation during bench testing). In practice, this is expected to be low-impact — calibration normally happens immediately before driving, in the sensor's actual final resting position — but it's a real design gap, deliberately deferred rather than fixed for this round, to avoid introducing an untested state-machine change right before the first real car test.
+
+Possible future fix: gate on *rate of change* of the movement signal, not just magnitude, so a large-but-steady reading is treated differently from a large-and-actively-changing one.
+
 ### Result
 
-v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly using a second, independent sensor.
+v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly using a second, independent sensor. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
 
-The side-axis (cornering) baseline system from v3.6 is unaffected and continues to behave the same way it always has.
+The side-axis (cornering) baseline system from v3.6 is functionally unaffected, though it inherits the known limitation described above.
 
-As with every axis-orientation setting in this firmware, the exact sign of the gravity compensation depends on the physical mounting and may need empirical adjustment once tested in the vehicle, in the same way `FORWARD_SIGN` and `SIDE_SIGN` have been tuned throughout this project.
+Firmware is installed for real-world car testing as of this version. Further refinement — including whether the Y/Z limitation above needs addressing, and whether `pitchComplementaryAlpha` or the dead zones need retuning based on real driving data — will follow from that testing.
+
