@@ -171,15 +171,20 @@ This was caused by the main firmware loop performing large LED update operations
 
 The rotary encoder handling was redesigned to improve responsiveness during rapid rotation.
 
-The encoder is now handled using a more responsive quadrature decoding approach that is better suited to the high-frequency LED update loop.
+The encoder was moved to an **interrupt-driven quadrature decoding system**. Both the CLK and DT encoder signals are monitored using hardware interrupts, allowing encoder transitions to be detected independently of the main firmware loop and LED update operations.
+
+The interrupt service routine records encoder transitions using a quadrature transition table, while the main loop processes the accumulated encoder movement and applies the corresponding brightness changes.
 
 The brightness control was also tuned to provide a more direct response to physical encoder movement.
 
 ### Improvements
 
+- Added interrupt-driven rotary encoder handling.
+- Both CLK and DT encoder signals are monitored using interrupts.
 - Improved brightness adjustment responsiveness.
 - Improved encoder performance during rapid rotation.
 - Reduced missed encoder transitions when turning the knob quickly.
+- Improved reliability during high-frequency LED update operations.
 - Maintained reliable clockwise and counter-clockwise direction detection.
 - Maintained stable minimum brightness control.
 - Improved overall feel of the brightness control during normal use.
@@ -188,7 +193,7 @@ The brightness control was also tuned to provide a more direct response to physi
 
 The rotary encoder now provides a more responsive and usable brightness adjustment experience while maintaining the reliability improvements introduced in v3.3.
 
-The encoder can be rotated more quickly without losing as many brightness adjustments, making it easier to move rapidly through the full brightness range.
+The encoder can be rotated more quickly without losing as many brightness adjustments, making it easier to move rapidly through the full brightness range. Because encoder transitions are captured by interrupts rather than relying solely on the timing of the main firmware loop, brightness control remains responsive even while the LED strips are being updated.
 
 ---
 
@@ -238,7 +243,7 @@ The firmware was now ready for further refinement of the accelerometer baseline 
 
 ---
 
-## v3.6 – Smart Dynamic Baseline and Final Robust Firmware
+## v3.6 – Smart Dynamic Baseline
 
 v3.6 builds directly on the established v3.5 LED output, colour handling, reactive behaviour, and rotary encoder system.
 
