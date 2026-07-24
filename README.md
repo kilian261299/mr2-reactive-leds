@@ -48,6 +48,8 @@ Upcoming:
 
 The system is built around an ESP32-C3 microcontroller with custom PCB hardware designed for integration into the Toyota MR2.
 
+The table below covers the major functional components. For the complete parts list — including fasteners, passives, connectors, and sourcing/supplier notes — see the [System BOM](hardware/bom/MR2_Reactive_LEDs_System_BOM.xlsx), which is the definitive source for exact quantities and part numbers.
+
 | Component | Purpose |
 |---|---|
 | ESP32-C3 Super Mini | Main microcontroller running the reactive lighting firmware |
@@ -65,6 +67,7 @@ The system is built around an ESP32-C3 microcontroller with custom PCB hardware 
 
 Detailed hardware documentation, PCB design information, and manufacturing files:
 
+- [System BOM](hardware/bom/MR2_Reactive_LEDs_System_BOM.xlsx) — complete parts list
 - [PCB Design Documentation](docs/pcb-design.md)
 - [Hardware Files](hardware/README.md)
 
