@@ -1,3 +1,4 @@
+```cpp
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_MPU6050.h>
@@ -5,52 +6,10 @@
 
 /*
   ==================================================
-  MR2 REACTIVE LEDs — FINAL FIRMWARE V3.6
+  MR2 REACTIVE LEDs — FINAL FIRMWARE V3.6.1
   ==================================================
 
-  V3.6 — FAST DYNAMIC DETECTION + SLOW HILL COMPENSATION
-
-  Core principle:
-
-    FAST SIGNAL
-      Detects genuine vehicle movement.
-
-    SLOW GRAVITY ESTIMATE
-      Tracks long-term vehicle pitch / roll caused
-      by hills and slopes.
-
-  The two systems are deliberately separated.
-
-  Dynamic acceleration / braking / cornering:
-    - Detected from the fast acceleration component.
-    - Freezes adaptive hill baseline.
-
-  Hills / vehicle pitch:
-    - Slowly absorbed by gravity estimate.
-    - Does not trigger DYNAMIC indefinitely.
-
-  State machine:
-
-    STABLE
-      Vehicle is considered settled.
-      Hill baseline is allowed to slowly adapt.
-
-    DYNAMIC
-      Genuine dynamic movement detected.
-      Adaptive hill baseline is frozen.
-
-    SETTLING
-      Dynamic movement has stopped.
-      Baseline remains frozen for a delay.
-
-    After settling:
-      Return to STABLE.
-      Slow baseline adaptation resumes.
-
-
-  ==================================================
-  HARDWARE
-  ==================================================
+  Hardware:
 
   - ESP32-C3 Super Mini
   - MPU6050 / GY-521
@@ -61,17 +20,19 @@
 
 
   ==================================================
-  FEATURES
+  V3.6.1 FEATURES
   ==================================================
 
+  - Smart hill compensation
   - Fast dynamic acceleration detection
-  - Fast braking detection
-  - Fast cornering detection
-  - Slow hill / pitch compensation
-  - Adaptive gravity baseline
-  - Dynamic movement freezes hill baseline
-  - Settling period after movement
-  - Hysteresis
+  - Slow hill / gravity baseline tracking
+  - Baseline freezes during genuine dynamic movement
+  - Baseline freezes briefly after movement stops
+  - Short 750 ms settling period
+  - Baseline then resumes slow adaptation
+  - Genuine acceleration is not immediately absorbed
+  - Hills are gradually absorbed into the baseline
+  - Hysteresis prevents state chatter
   - Accelerometer low-pass filtering
   - Acceleration dead zone
   - Braking dead zone
@@ -88,6 +49,140 @@
   - Long press recalibrates MPU6050
   - Startup sweep
   - Calibration confirmation flash
+
+
+  ==================================================
+  V3.6.1 HILL COMPENSATION
+  ==================================================
+
+  The MPU6050 measures both gravity and dynamic
+  acceleration.
+
+  A vehicle travelling up or down a hill changes the
+  orientation of the gravity vector relative to the
+  sensor.
+
+  This can appear as forward or backward acceleration.
+
+  The system therefore separates:
+
+    SLOW BASELINE
+      Represents the long-term gravity / hill
+      orientation.
+
+    DYNAMIC COMPONENT
+      Represents rapid changes from actual
+      acceleration, braking and cornering.
+
+  During genuine dynamic movement:
+
+    Baseline FREEZES.
+
+  When dynamic movement stops:
+
+    SETTLING begins.
+
+  After a short settling period:
+
+    Baseline slowly adapts again.
+
+  This means:
+
+    REAL ACCELERATION
+      -> LED reaction
+
+    STEADY HILL
+      -> Gradually becomes normal / blue
+
+
+  ==================================================
+  BASELINE STATES
+  ==================================================
+
+  STABLE
+
+    Vehicle is calm.
+
+    Baseline is allowed to slowly adapt.
+
+  DYNAMIC
+
+    Genuine dynamic movement detected.
+
+    Baseline is frozen.
+
+  SETTLING
+
+    Dynamic movement has stopped.
+
+    Baseline remains frozen temporarily.
+
+    After 750 ms of calm, the system returns to
+    STABLE and baseline adaptation resumes.
+
+
+  ==================================================
+  MODES
+  ==================================================
+
+  Mode 0 — Main Reactive
+
+    Calm:
+      Dim blue breathing.
+
+    Acceleration:
+      Blue -> violet -> orange.
+
+    Braking:
+      Red.
+
+    Cornering:
+      Left/right brightness shift.
+
+
+  Mode 1 — Purple
+
+  Mode 2 — Red
+
+  Mode 3 — Blue
+
+  Mode 4 — Green
+
+
+  ==================================================
+  ENCODER
+  ==================================================
+
+  Rotate:
+    Adjust maximum brightness.
+
+  Short press:
+    Change mode.
+
+  Long press:
+    Recalibrate accelerometer.
+
+
+  ==================================================
+  INSTALLATION
+  ==================================================
+
+  1. Mount MPU6050 securely.
+  2. Keep sensor orientation consistent.
+  3. Turn car on.
+  4. Keep car stationary during calibration.
+  5. Long press encoder to recalibrate if required.
+
+
+  ==================================================
+  POWER
+  ==================================================
+
+  - LED strips powered from 5V converter.
+  - ESP32 powered appropriately.
+  - All grounds common.
+  - Use fuse on 12V input.
+  - Do not power LED strips from ESP32.
 */
 
 
@@ -100,7 +195,7 @@
 
 #define ENCODER_CLK 4
 #define ENCODER_DT  5
-#define ENCODER_SW  6
+#define ENCODER_SW 6
 
 #define I2C_SDA 8
 #define I2C_SCL 9
@@ -173,28 +268,10 @@ float baseZ = 0.0;
 
 
 // ==================================================
-// ADAPTIVE HILL BASELINE
+// SMART BASELINE
 // ==================================================
 
-/*
-  This represents the long-term gravity orientation.
-
-  It is allowed to move very slowly.
-
-  This means:
-
-    Short acceleration:
-      NOT absorbed.
-
-    Short braking:
-      NOT absorbed.
-
-    Short cornering:
-      NOT absorbed.
-
-    Long-term hill angle:
-      Slowly absorbed.
-*/
+// Slowly changing gravity / hill orientation.
 
 float driftBaseX = 0.0;
 float driftBaseY = 0.0;
@@ -202,103 +279,67 @@ float driftBaseZ = 0.0;
 
 
 // ==================================================
-// SLOW HILL ADAPTATION
+// BASELINE ADAPTATION
 // ==================================================
 
-/*
-  Lower value:
-    Slower hill adaptation.
-    Better protection against absorbing real movement.
-
-  Higher value:
-    Faster hill adaptation.
-    Better response to changing slopes.
-
-  0.0008 is intentionally slow.
-*/
+// Slow adaptation.
+//
+// This controls how quickly a new hill orientation
+// becomes the new baseline.
+//
+// Lower = slower adaptation.
+// Higher = faster adaptation.
 
 const float baselineDriftRate = 0.0008;
 
 
 // ==================================================
-// FAST DYNAMIC DETECTION
+// DYNAMIC MOVEMENT THRESHOLDS
 // ==================================================
 
-/*
-  These thresholds operate on the FAST dynamic
-  acceleration component.
+// Forward acceleration threshold.
 
-  They are NOT based on the hill-compensated
-  forward/side values.
-
-  This is important.
-
-  A vehicle sitting still on a hill can have:
-
-    Forward = -0.5g
-
-  but:
-
-    Dynamic = approximately 0g
-
-  Therefore it should eventually become STABLE.
-*/
+const float baselineAccelerationThreshold = 0.08;
 
 
-// Forward acceleration detection.
+// Forward braking threshold.
 
-const float dynamicAccelerationThreshold = 0.08;
-
-
-// Braking detection.
-
-const float dynamicBrakingThreshold = 0.10;
+const float baselineBrakingThreshold = 0.10;
 
 
-// Cornering detection.
+// Sideways cornering threshold.
 
-const float dynamicCorneringThreshold = 0.08;
+const float baselineCorneringThreshold = 0.08;
 
 
 // ==================================================
-// DYNAMIC STATE THRESHOLDS
+// STABILITY THRESHOLDS
 // ==================================================
 
-/*
-  Overall fast dynamic acceleration magnitude.
+// Movement must fall below this level before
+// settling can complete.
 
-  Below this:
-    Considered calm.
+const float baselineStableThreshold = 0.045;
 
-  Above this:
-    Considered dynamic.
 
-  These values include hysteresis.
-*/
+// Once stable, dynamic movement must exceed this
+// level to return to DYNAMIC.
 
-const float dynamicStableThreshold = 0.045;
-
-const float dynamicReentryThreshold = 0.075;
+const float baselineDynamicReentryThreshold = 0.075;
 
 
 // ==================================================
 // SETTLING
 // ==================================================
 
-/*
-  After dynamic movement stops:
+// Short protection period after dynamic movement.
+//
+// During this period the baseline remains frozen.
+//
+// This prevents the end of acceleration from being
+// immediately absorbed as a new hill baseline.
 
-    DYNAMIC
-       |
-       v
-    SETTLING
-       |
-       | 2 seconds of calm
-       v
-    STABLE
-*/
-
-const unsigned long baselineSettleTime = 2000;
+const unsigned long baselineSettleTime = 750;
 
 
 // ==================================================
@@ -330,57 +371,12 @@ unsigned long dynamicMovementEndedTime = 0;
 // ACCELEROMETER FILTERING
 // ==================================================
 
-/*
-  Main reactive filtering.
-
-  Higher:
-    Faster response.
-
-  Lower:
-    Smoother response.
-*/
+// Main reactive smoothing.
 
 const float accelerationSmoothing = 0.15;
 
 
-// ==================================================
-// FAST DYNAMIC FILTER
-// ==================================================
-
-/*
-  This filter tracks the fast dynamic component.
-
-  It is deliberately much faster than the hill
-  baseline.
-
-  This allows:
-
-    Real acceleration -> detected quickly.
-
-    Real braking -> detected quickly.
-
-    Real cornering -> detected quickly.
-
-    Hill angle -> ignored as dynamic once settled.
-*/
-
-const float dynamicSmoothing = 0.15;
-
-
-// ==================================================
-// GRAVITY / HILL FILTER
-// ==================================================
-
-/*
-  Very slow gravity tracking.
-
-  This is the key hill compensation filter.
-
-  It must be significantly slower than the dynamic
-  filter.
-
-  At 0.008, the gravity estimate changes slowly.
-*/
+// Slow gravity / hill tracking.
 
 const float gravitySmoothing = 0.008;
 
@@ -394,17 +390,6 @@ float smoothedForwardG = 0.0;
 float smoothedSideG = 0.0;
 
 float smoothedMovementG = 0.0;
-
-
-// ==================================================
-// FAST DYNAMIC COMPONENT
-// ==================================================
-
-float dynamicForwardG = 0.0;
-
-float dynamicSideG = 0.0;
-
-float dynamicMovementG = 0.0;
 
 
 // ==================================================
@@ -434,7 +419,7 @@ const int numberOfModes = 5;
 
 
 // ==================================================
-// LED RESPONSE
+// ACCELEROMETER RESPONSE
 // ==================================================
 
 const float accelerationDeadZone = 0.04;
@@ -547,7 +532,8 @@ float getSelectedAxis(
 void updateSmartBaseline(
   float rawX,
   float rawY,
-  float rawZ
+  float rawZ,
+  float dynamicMovementG
 ) {
 
 #if HILL_COMPENSATION
@@ -557,40 +543,25 @@ void updateSmartBaseline(
 
 
   // =================================================
-  // DYNAMIC MOVEMENT DETECTION
+  // DETECT DYNAMIC MOVEMENT
   // =================================================
 
-  /*
-    IMPORTANT:
+  // Dynamic movement is based on the magnitude of
+  // the fast-vs-slow accelerometer component.
+  //
+  // This is deliberately independent of the slowly
+  // changing hill baseline.
+  //
+  // This allows the system to distinguish:
+  //
+  //   Fast acceleration
+  //       from
+  //   Slow hill orientation
+  //
 
-    Dynamic detection uses the FAST dynamic
-    acceleration signal.
-
-    It does NOT use forwardG or sideG.
-
-    Therefore a static hill orientation cannot
-    permanently hold the system in DYNAMIC.
-  */
-
-  bool accelerating =
-    dynamicForwardG >
-    dynamicAccelerationThreshold;
-
-
-  bool braking =
-    dynamicForwardG <
-    -dynamicBrakingThreshold;
-
-
-  bool cornering =
-    abs(dynamicSideG) >
-    dynamicCorneringThreshold;
-
-
-  bool dynamicMovementDetected =
-    accelerating ||
-    braking ||
-    cornering;
+  bool dynamicMovement =
+    dynamicMovementG >
+    baselineDynamicReentryThreshold;
 
 
   // =================================================
@@ -598,14 +569,8 @@ void updateSmartBaseline(
   // =================================================
 
   if (
-    dynamicMovementDetected
+    dynamicMovement
   ) {
-
-    /*
-      Genuine movement detected.
-
-      Freeze adaptive hill baseline.
-    */
 
     baselineState =
       BASELINE_DYNAMIC;
@@ -614,6 +579,13 @@ void updateSmartBaseline(
     dynamicMovementEndedTime =
       now;
 
+
+    // IMPORTANT:
+    //
+    // Do not update driftBase here.
+    //
+    // The baseline is completely frozen while
+    // genuine dynamic movement is detected.
 
     return;
   }
@@ -628,14 +600,6 @@ void updateSmartBaseline(
     BASELINE_DYNAMIC
   ) {
 
-    /*
-      Dynamic movement has stopped.
-
-      Do NOT immediately adapt the baseline.
-
-      Enter settling period.
-    */
-
     baselineState =
       BASELINE_SETTLING;
 
@@ -649,7 +613,7 @@ void updateSmartBaseline(
 
 
   // =================================================
-  // SETTLING
+  // SETTLING STATE
   // =================================================
 
   if (
@@ -657,14 +621,12 @@ void updateSmartBaseline(
     BASELINE_SETTLING
   ) {
 
-    /*
-      If meaningful dynamic movement starts again,
-      return immediately to DYNAMIC.
-    */
+    // If meaningful movement starts again,
+    // immediately return to DYNAMIC.
 
     if (
       dynamicMovementG >
-      dynamicReentryThreshold
+      baselineDynamicReentryThreshold
     ) {
 
       baselineState =
@@ -679,16 +641,12 @@ void updateSmartBaseline(
     }
 
 
-    /*
-      If movement is still above the stable threshold,
-      restart the settling timer.
-
-      This ensures the vehicle must genuinely settle.
-    */
+    // If movement is still above the calm threshold,
+    // restart the settling timer.
 
     if (
       dynamicMovementG >
-      dynamicStableThreshold
+      baselineStableThreshold
     ) {
 
       dynamicMovementEndedTime =
@@ -699,9 +657,7 @@ void updateSmartBaseline(
     }
 
 
-    /*
-      Require a full settling period.
-    */
+    // Wait for the short settling period.
 
     if (
       now -
@@ -713,9 +669,9 @@ void updateSmartBaseline(
     }
 
 
-    /*
-      Settling complete.
-    */
+    // =================================================
+    // SETTLING COMPLETE
+    // =================================================
 
     baselineState =
       BASELINE_STABLE;
@@ -723,7 +679,7 @@ void updateSmartBaseline(
 
 
   // =================================================
-  // STABLE
+  // STABLE STATE
   // =================================================
 
   if (
@@ -731,17 +687,11 @@ void updateSmartBaseline(
     BASELINE_STABLE
   ) {
 
-    /*
-      Only slowly adapt the hill baseline when the
-      FAST dynamic signal is genuinely calm.
-
-      This slowly learns a new hill angle without
-      learning short acceleration/braking events.
-    */
+    // Only adapt when the vehicle is genuinely calm.
 
     if (
       dynamicMovementG <
-      dynamicStableThreshold
+      baselineStableThreshold
     ) {
 
       driftBaseX =
@@ -807,7 +757,7 @@ uint32_t blueToOrange(
 
 
   // =================================================
-  // BLUE -> VIOLET-BLUE
+  // BLUE -> CONTROLLED VIOLET-BLUE
   // =================================================
 
   if (
@@ -1335,29 +1285,8 @@ void readAcceleration() {
 
 
   // =================================================
-  // SLOW GRAVITY / HILL TRACKING
+  // SLOW GRAVITY / HILL FILTER
   // =================================================
-
-  /*
-    This follows the long-term gravity vector.
-
-    It deliberately moves much slower than the dynamic
-    signal.
-
-    Therefore:
-
-      Hill:
-        Slowly tracked.
-
-      Acceleration:
-        Appears as a fast difference.
-
-      Braking:
-        Appears as a fast difference.
-
-      Cornering:
-        Appears as a fast difference.
-  */
 
   gravityX =
     gravityX *
@@ -1396,139 +1325,56 @@ void readAcceleration() {
   // FAST DYNAMIC COMPONENT
   // =================================================
 
-  float fastDynamicX =
+  float dynamicX =
     rawX -
     gravityX;
 
 
-  float fastDynamicY =
+  float dynamicY =
     rawY -
     gravityY;
 
 
-  float fastDynamicZ =
+  float dynamicZ =
     rawZ -
     gravityZ;
 
 
   // =================================================
-  // CONVERT TO G
+  // DYNAMIC COMPONENT IN G
   // =================================================
 
-  float fastDynamicXG =
-    fastDynamicX /
+  float dynamicXG =
+    dynamicX /
     9.81;
 
 
-  float fastDynamicYG =
-    fastDynamicY /
+  float dynamicYG =
+    dynamicY /
     9.81;
 
 
-  float fastDynamicZG =
-    fastDynamicZ /
+  float dynamicZG =
+    dynamicZ /
     9.81;
 
 
-  // =================================================
-  // FAST FORWARD DYNAMIC COMPONENT
-  // =================================================
-
-  float rawDynamicForwardG =
-    getSelectedAxis(
-      fastDynamicXG,
-      fastDynamicYG,
-      fastDynamicZG,
-      FORWARD_AXIS
-    )
-    *
-    FORWARD_SIGN;
-
-
-  // =================================================
-  // FAST SIDE DYNAMIC COMPONENT
-  // =================================================
-
-  float rawDynamicSideG =
-    getSelectedAxis(
-      fastDynamicXG,
-      fastDynamicYG,
-      fastDynamicZG,
-      SIDE_AXIS
-    )
-    *
-    SIDE_SIGN;
-
-
-  // =================================================
-  // FAST DYNAMIC MAGNITUDE
-  // =================================================
-
-  float rawDynamicMovementG =
+  float rawMovementG =
     sqrt(
       (
-        fastDynamicXG *
-        fastDynamicXG
+        dynamicXG *
+        dynamicXG
       )
       +
       (
-        fastDynamicYG *
-        fastDynamicYG
+        dynamicYG *
+        dynamicYG
       )
       +
       (
-        fastDynamicZG *
-        fastDynamicZG
+        dynamicZG *
+        dynamicZG
       )
-    );
-
-
-  // =================================================
-  // FAST DYNAMIC FILTER
-  // =================================================
-
-  dynamicForwardG =
-    (
-      dynamicForwardG *
-      (
-        1.0 -
-        dynamicSmoothing
-      )
-    )
-    +
-    (
-      rawDynamicForwardG *
-      dynamicSmoothing
-    );
-
-
-  dynamicSideG =
-    (
-      dynamicSideG *
-      (
-        1.0 -
-        dynamicSmoothing
-      )
-    )
-    +
-    (
-      rawDynamicSideG *
-      dynamicSmoothing
-    );
-
-
-  dynamicMovementG =
-    (
-      dynamicMovementG *
-      (
-        1.0 -
-        dynamicSmoothing
-      )
-    )
-    +
-    (
-      rawDynamicMovementG *
-      dynamicSmoothing
     );
 
 
@@ -1539,12 +1385,13 @@ void readAcceleration() {
   updateSmartBaseline(
     rawX,
     rawY,
-    rawZ
+    rawZ,
+    rawMovementG
   );
 
 
   // =================================================
-  // HILL-COMPENSATED REACTIVE VALUES
+  // BASELINE-CORRECTED VALUES
   // =================================================
 
   float currentXG =
@@ -1605,7 +1452,7 @@ void readAcceleration() {
 
 
   // =================================================
-  // MAIN REACTIVE FILTER
+  // LOW-PASS FILTER
   // =================================================
 
   smoothedForwardG =
@@ -1638,14 +1485,19 @@ void readAcceleration() {
     );
 
 
-  /*
-    The LED system still uses the hill-compensated
-    forward/side values.
-
-    The STATE MACHINE uses the fast dynamic values.
-
-    This separation is the key V3.6 improvement.
-  */
+  smoothedMovementG =
+    (
+      smoothedMovementG *
+      (
+        1.0 -
+        accelerationSmoothing
+      )
+    )
+    +
+    (
+      rawMovementG *
+      accelerationSmoothing
+    );
 }
 
 
@@ -1732,7 +1584,7 @@ void calibrateMPU6050() {
     samples;
 
 
-  // Initialise adaptive hill baseline.
+  // Initialise adaptive baseline.
 
   driftBaseX =
     baseX;
@@ -1770,7 +1622,7 @@ void calibrateMPU6050() {
     millis();
 
 
-  // Reset reactive filters.
+  // Reset filters.
 
   smoothedForwardG =
     0.0;
@@ -1781,20 +1633,6 @@ void calibrateMPU6050() {
 
 
   smoothedMovementG =
-    0.0;
-
-
-  // Reset dynamic filters.
-
-  dynamicForwardG =
-    0.0;
-
-
-  dynamicSideG =
-    0.0;
-
-
-  dynamicMovementG =
     0.0;
 
 
@@ -1882,6 +1720,7 @@ void applyCorneringBrightness(
     effectiveSideG =
       sideG -
       corneringDeadZone;
+
   }
 
   else {
@@ -2365,7 +2204,7 @@ void updateLEDs() {
 
 
   float movementG =
-    dynamicMovementG;
+    smoothedMovementG;
 
 
   // =================================================
@@ -2492,7 +2331,7 @@ void updateLEDs() {
     );
 
     Serial.print(
-      dynamicMovementG,
+      movementG,
       2
     );
 
@@ -2855,7 +2694,7 @@ void setup() {
 
 
   Serial.println(
-    "MR2 Reactive LEDs — FINAL FIRMWARE V3.6"
+    "MR2 Reactive LEDs — FINAL FIRMWARE V3.6.1"
   );
 
 
@@ -2872,6 +2711,19 @@ void setup() {
   );
 
 #endif
+
+
+  Serial.print(
+    "Baseline settling time: "
+  );
+
+  Serial.print(
+    baselineSettleTime
+  );
+
+  Serial.println(
+    " ms"
+  );
 
 
   // =================================================
@@ -2896,8 +2748,6 @@ void setup() {
   );
 
 
-  // Seed encoder state.
-
   encoderState =
     (
       (
@@ -2913,8 +2763,6 @@ void setup() {
       )
     );
 
-
-  // Attach interrupts.
 
   attachInterrupt(
     digitalPinToInterrupt(
@@ -2962,8 +2810,6 @@ void setup() {
 
   rightStrip.show();
 
-
-  // Startup animation.
 
   startupSweep();
 
@@ -3072,17 +2918,12 @@ void setup() {
 
 void loop() {
 
-  // Encoder rotation.
-
   processEncoderRotation();
 
-
-  // Encoder button.
 
   readEncoderButton();
 
 
-  // Accelerometer and LEDs.
-
   updateLEDs();
 }
+```
