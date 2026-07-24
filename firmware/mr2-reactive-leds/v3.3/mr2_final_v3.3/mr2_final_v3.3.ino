@@ -791,7 +791,7 @@ int8_t encoderAccumulatedSteps = 0;
 // "click" of the knob. If your knob feels like it needs two clicks
 // per brightness change (or changes brightness twice per click),
 // try 2 or 1 here instead.
-const int8_t stepsPerDetent = 2;
+const int8_t stepsPerDetent = 4;
 
 void readEncoderRotation() {
   int clk = digitalRead(ENCODER_CLK);
