@@ -86,13 +86,15 @@ Detailed hardware documentation, PCB design information, and manufacturing files
 
 ## Firmware Modes
 
-| Mode | Purpose |
+All modes share the same brightness and cornering behaviour: the rotary encoder sets a **maximum** brightness ceiling — actual output stays at or below that, reacting to vehicle movement and cornering, and gently breathing when the car is calm. The difference between modes is purely which colour(s) are used.
+
+| Mode | Colour behaviour |
 |---|---|
-| **Mode 0** | Final driving mode. Blue ↔ orange colour blending with acceleration, plus a separate red braking colour and cornering brightness effects. Idle breathing effect. |
-| **Mode 1** | Purple theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
-| **Mode 2** | Red theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
-| **Mode 3** | Blue theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
-| **Mode 4** | Green theme. Fixed colour; brightness reacts to overall movement and cornering. User controls overall brightness. |
+| **Mode 0** | Main driving mode. Colour reacts to what the car is doing: blue at rest, shifting toward orange under acceleration, red under braking. |
+| **Mode 1** | Fixed purple. |
+| **Mode 2** | Fixed red. |
+| **Mode 3** | Fixed blue. |
+| **Mode 4** | Fixed green. |
 
 ## System Behaviour
 
