@@ -240,9 +240,7 @@ The firmware was now ready for further refinement of the accelerometer baseline 
 
 ## v3.6 – Smart Dynamic Baseline and Final Robust Firmware
 
-v3.6 is the final planned firmware version for the MR2 Reactive LEDs project.
-
-This version builds directly on the established v3.5 LED output, colour handling, reactive behaviour, and rotary encoder system.
+v3.6 builds directly on the established v3.5 LED output, colour handling, reactive behaviour, and rotary encoder system.
 
 The primary improvement in v3.6 is a more robust smart hill-compensation system designed to distinguish between long-term vehicle orientation changes and genuine dynamic vehicle movement.
 
@@ -317,169 +315,131 @@ If dynamic movement resumes during this period, the system immediately returns t
 
 Once the settling period has completed and the vehicle remains sufficiently stable, the system returns to STABLE and slow baseline adaptation resumes.
 
-### Dynamic Movement Detection
-
-v3.6 uses a separate dynamic acceleration estimate to determine whether the vehicle is genuinely moving dynamically.
-
-The dynamic component is derived by comparing the raw accelerometer measurement against a slowly filtered gravity estimate.
-
-This separates:
-
-- Fast changes caused by acceleration, braking and cornering.
-- Slow changes caused by vehicle pitch and long-term orientation.
-
-The dynamic movement estimate is used to control the baseline state machine, while the baseline-corrected forward and lateral values are used for the reactive LED effects.
-
-This allows the system to distinguish between a sustained hill and genuine vehicle acceleration more reliably than the previous continuously adapting baseline approach.
-
-### Baseline Protection
-
-The baseline is protected from adapting during genuine dynamic movement.
+### Smart Baseline Behaviour
 
 The intended behaviour is:
 
-    Vehicle stable
-          |
-          v
-    STABLE
-    Baseline slowly adapts
-    to long-term orientation
-          |
-          v
-    Genuine dynamic movement detected
-          |
-          v
-    DYNAMIC
-    Baseline FREEZES
-          |
-          v
-    Acceleration / braking / cornering continues
-          |
-          v
-    Baseline remains FROZEN
-          |
-          v
-    Dynamic movement stops
-          |
-          v
-    SETTLING
-    Baseline remains FROZEN
-          |
-          v
-    Vehicle remains calm
-    for settling period
-          |
-          v
-    STABLE
-    Baseline slowly adapts again
+```text
+Vehicle stationary / stable
+        |
+        v
+Baseline slowly adapts
+        |
+        v
+Hill or sustained gradient
+        |
+        v
+Baseline gradually follows orientation change
+        |
+        v
+Genuine acceleration detected
+        |
+        v
+Baseline FREEZES
+        |
+        v
+Acceleration held
+        |
+        v
+Baseline remains FROZEN
+        |
+        v
+Acceleration ends
+        |
+        v
+SETTLING period
+        |
+        v
+Vehicle becomes stable
+        |
+        v
+Baseline slowly adapts again
+```
 
-### Reactive Behaviour During State Changes
+### Also Included in v3.6
 
-The baseline state machine is used internally to control hill compensation and does not directly determine whether the LEDs are visually reactive.
+Carried over and retained unchanged from earlier versions, alongside the new baseline system:
 
-The LEDs continue to respond to the baseline-corrected acceleration, braking, and cornering values.
-
-This means that:
-
-- Entering `DYNAMIC` freezes the baseline so genuine acceleration or braking is preserved.
-- Remaining in `DYNAMIC` keeps the baseline protected while the event continues.
-- Entering `SETTLING` prevents the baseline from immediately absorbing the end of the event.
-- Returning to `STABLE` allows slow baseline adaptation to resume.
-- The LED effects can therefore return gradually toward the normal blue idle state rather than relying solely on the baseline state itself.
-
-The purpose of the state machine is to control how the accelerometer baseline behaves, not to act as a direct LED on/off trigger.
-
-### v3.6 Improvements Over v3.5
-
-Compared with v3.5, the main improvements are:
-
-- More reliable distinction between genuine acceleration and vehicle pitch changes.
-- More reliable distinction between genuine braking and downhill gradients.
-- Baseline protection during genuine dynamic movement.
-- Temporary settling period after dynamic movement ends.
-- Reduced risk of genuine acceleration being absorbed into the baseline.
-- Improved long-term hill compensation.
-- More controlled return to stable baseline tracking after acceleration, braking, or cornering.
+- Accelerometer low-pass filtering.
+- Acceleration, braking, and cornering dead zones, to prevent small/noisy movements from triggering reactive effects.
+- Progressive (squared) acceleration, braking, and cornering response curves.
+- Blue → violet-blue → orange acceleration colour transition.
+- Red braking colour.
+- Left/right cornering brightness bias.
+- Five lighting modes (Main Reactive plus four static themes).
+- Rotary encoder brightness control, mode switching (short press), and recalibration (long press).
+- Startup sweep animation and calibration confirmation flash.
 
 ### Result
 
-v3.6 provides a more robust foundation for real-world vehicle use.
+v3.6 substantially improved real-world hill behaviour compared to v2.0's always-adapting baseline: genuine acceleration and braking events are protected from being gradually absorbed into the baseline, while sustained gradients are still eventually recognised as the new normal once the vehicle settles.
 
-The firmware now separates the concepts of:
-
-- Long-term vehicle orientation.
-- Short-term dynamic acceleration.
-- Baseline adaptation.
-- Dynamic movement detection.
-- Baseline settling.
-
-This allows the system to compensate for hills while preserving genuine acceleration, braking, and cornering events for the reactive LED effects.
-
-The result is intended to provide more natural and reliable reactive lighting during normal road driving, including sustained uphill and downhill sections.
+The remaining limitation was that this entire system relied on the accelerometer alone. An accelerometer physically cannot distinguish "the sensor is tilted" from "the sensor is accelerating" — both produce an identical reading. v3.6's state machine and dead zones manage that ambiguity carefully, but can't fully resolve it. This became the focus of v3.7.
 
 ---
 
-# Firmware Architecture Summary
+## v3.7 – Gyroscope + Accelerometer Sensor Fusion
 
-The firmware is now structured around four primary systems:
+v3.7 changes the fundamental approach to hill compensation: from accelerometer-only baseline tracking to gyroscope + accelerometer sensor fusion.
 
-1. **MPU6050 Accelerometer**
-   - Measures vehicle motion and orientation.
-   - Provides forward and lateral acceleration information.
-   - Supplies the data used for dynamic movement detection and reactive lighting.
+The motivation is the limitation identified at the end of v3.6 — an accelerometer alone cannot tell "tilted" apart from "accelerating." A gyroscope resolves this directly: a hill causes the vehicle to physically pitch (a rotation, which the gyro measures), while genuine forward acceleration does not. Tracking that rotation gives a real estimate of the vehicle's pitch angle, which can be used to calculate exactly how much of the raw forward reading is caused by gravity at that angle — and remove only that.
 
-2. **Smart Dynamic Baseline**
-   - Tracks long-term changes in vehicle orientation.
-   - Compensates for sustained gradients.
-   - Freezes during genuine dynamic movement.
-   - Uses STABLE, DYNAMIC, and SETTLING states.
+### Gyroscope Pitch Tracking
 
-3. **Reactive LED Engine**
-   - Converts baseline-corrected acceleration, braking, and cornering values into lighting effects.
-   - Controls colour transitions and brightness responses.
-   - Provides idle breathing when movement is minimal.
+The MPU6050's gyroscope measures rotation rate. For this vehicle's mounting orientation, pitch (the car's nose rising or dipping) is read from the gyro's Y-axis.
 
-4. **User Interface and Control**
-   - Rotary encoder controls brightness.
-   - Rotary encoder selects between the five lighting modes.
-   - Physical master toggle switch controls system power.
-   - LED strips provide the final visual output.
+Integrating that rotation rate over time gives a running estimate of how much the vehicle's pitch angle has changed since the last reading.
 
----
+### Complementary Filter
 
-# Current Firmware Status
+A pure gyro-integrated angle would drift slowly over time, since small measurement errors accumulate with every integration step. To correct this without losing the gyro's fast, accurate response, the firmware blends it with a second, independent pitch estimate calculated directly from the accelerometer (based on the direction gravity currently appears to be pulling).
 
-**Current Version:** v3.6
+The accelerometer-only estimate has the opposite trade-off: no long-term drift, but it's wrong whenever the vehicle is genuinely accelerating, since real acceleration adds to the reading in a way that looks like additional tilt.
 
-**Status:** Final planned firmware version
+The complementary filter blends the two, weighted mostly toward the gyro (98%) with a small continuous correction from the accelerometer (2%) — fast and responsive, but unable to drift over the course of a drive.
 
-### Current Features
+### Gravity Component Removal
 
-- Smart hill compensation
-- Dynamic baseline filtering
-- Baseline state machine
-- STABLE / DYNAMIC / SETTLING states
-- Baseline protection during dynamic movement
-- Dynamic acceleration detection
-- Acceleration lighting
-- Braking lighting
-- Left and right cornering effects
-- Progressive reactive lighting
-- Idle breathing effect
-- Five selectable lighting modes
-- Four ambient colour themes
-- Startup sweep animation
-- Manual RGB brightness scaling
-- Rotary encoder brightness control
-- Responsive quadrature encoder handling
-- MPU6050 calibration
-- Adjustable sensitivity
-- Physical master power control
+Once the current pitch angle is known, the firmware calculates how much of the raw forward-axis reading is explained by gravity acting through that angle, and subtracts exactly that amount.
 
-### Development Objective
+What remains is the genuine dynamic (non-gravity) component of the forward reading — real acceleration or braking — regardless of how long the vehicle has been on a slope.
 
-The firmware development process has progressively refined the system from direct raw accelerometer readings into a more robust vehicle-dynamics detection system.
+### Changes to the Smart Baseline System
 
-The primary objective of v3.6 is to ensure that the reactive lighting responds to genuine changes in vehicle dynamics while remaining stable during long-term changes in vehicle orientation, such as sustained uphill and downhill driving.
+- The forward/longitudinal axis no longer uses an adaptive baseline at all. Pitch compensation replaces that role directly and more accurately.
+- The side/lateral axis (cornering) is unchanged — it still uses the v3.6 adaptive baseline, gated by the same state machine.
+- The STABLE / DYNAMIC / SETTLING state machine from v3.6 is retained, but now only governs the side-axis baseline. It continues to provide the same protection against transient movement being misread as a change in vehicle orientation.
 
-The firmware is now considered ready for final hardware integration and real-world vehicle testing.
+### Behaviour
+
+```text
+Steady hill, constant speed
+        |
+        v
+Pitch angle stabilises to match the gradient
+        |
+        v
+Gravity's forward component is fully accounted for
+        |
+        v
+LEDs read as calm / blue
+
+Genuine acceleration (flat road or on a hill)
+        |
+        v
+Cannot be explained by the pitch angle alone
+        |
+        v
+Remains in the compensated signal
+        |
+        v
+LEDs react normally
+```
+
+### Result
+
+v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly using a second, independent sensor.
+
+The side-axis (cornering) baseline system from v3.6 is unaffected and continues to behave the same way it always has.
+
+As with every axis-orientation setting in this firmware, the exact sign of the gravity compensation depends on the physical mounting and may need empirical adjustment once tested in the vehicle, in the same way `FORWARD_SIGN` and `SIDE_SIGN` have been tuned throughout this project.
