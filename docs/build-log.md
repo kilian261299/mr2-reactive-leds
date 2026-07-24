@@ -265,7 +265,7 @@ Detailed PCB documentation, including schematics, PCB layout, and 3D renders:
 
 Following successful hardware validation, the firmware underwent several major revisions to improve driving behaviour and user experience.
 
-Key improvements included:
+Early key improvements (v1.0–v3.2), completed before PCB assembly:
 
 - Dynamic baseline filtering for hill compensation.
 - Improved colour blending.
@@ -274,11 +274,18 @@ Key improvements included:
 - Solid colour modes.
 - Removal of diagnostic operating modes.
 
-See [firmware/README.md](../firmware/README.md) for the complete firmware version history.
+**Firmware development did not stop once the PCB and control box were built.** Versions v3.3 through v3.7 were developed and refined *after* Stage 7 (PCB assembly and control box construction) was already complete, running in parallel with — and continuing past — the hardware build. This section originally implied firmware was finished before PCB work began; that wasn't the case in practice, and is corrected here for an accurate build timeline.
 
-**Status:** Complete
+That later work, in brief (full detail in the firmware changelog):
 
-The final production firmware will be validated on the manufactured PCB during assembly testing.
+- v3.3–v3.4: rotary encoder reliability and responsiveness fixes, moving to interrupt-driven quadrature decoding.
+- v3.5: LED brightness/colour handling reworked to manual RGB channel scaling for more consistent colour at all brightness levels.
+- v3.6: accelerometer-only "smart" hill-compensation baseline with a STABLE/DYNAMIC/SETTLING state machine.
+- v3.7: hill compensation redesigned around gyroscope + accelerometer sensor fusion, replacing the accelerometer-only approach for the forward axis; multiple bench-testing fixes (gyro bias correction, accelerometer reliability gating, sign tuning, side-axis gating rework) refined during this stage.
+
+See [firmware/README.md](../firmware/README.md) for the complete, detailed firmware version history.
+
+**Status:** Complete for the version currently installed for vehicle testing (v3.7) — see Stage 8. Further firmware refinement is expected following real-world driving data, and will be added here and in the firmware changelog as it happens.
 
 ## Stage 7 — PCB Assembly and Control Box Development
 
@@ -483,6 +490,8 @@ The control box is now ready for temporary vehicle installation and real-world t
 
 Photos documenting the control box construction, PCB installation, buck converter installation, wiring, and completed enclosure are included below.
 
+*(Photo links below are placeholders — images not yet uploaded to the repository.)*
+
 ![Control Box](../images/control-box/control_box.jpg)
 
 ![PCB Mounted Inside Control Box](../images/control-box/pcb_mounted.jpg)
@@ -510,6 +519,8 @@ The validated PCB was installed into the completed control box alongside the 12V
 
 The control box is now ready for temporary vehicle installation. The buck converter will be tested using the vehicle's 12V supply during Stage 8, followed by real-world testing of the reactive lighting system.
 
+**Note:** firmware development continued after this stage was completed — see Stage 6 above. The firmware installed for Stage 8 testing (v3.7) was developed after the control box shown here was already built.
+
 **Status:** Complete — PCB validated, control box completed and functionally tested. Ready for Stage 8 vehicle testing.
   
 ## Stage 8 — Vehicle Testing
@@ -517,6 +528,8 @@ The control box is now ready for temporary vehicle installation. The buck conver
 Goal: validate the completed system in the MR2 before permanently mounting the control box and LED components.
 
 The completed control box will be temporarily installed in the MR2 to verify the buck converter, vehicle power connection, accelerometer orientation, and reactive lighting behaviour under real driving conditions.
+
+**Firmware version under test:** v3.7 (gyroscope + accelerometer sensor fusion hill compensation). Developed and bench-tested after the control box (Stage 7) was already built — see Stage 6 and [firmware/README.md](../firmware/README.md) for full details of what changed and what's still unverified pending this real-world test.
 
 Planned work:
 
@@ -533,6 +546,7 @@ Planned work:
 - Verify LED strip operation
 - Adjust sensitivity and filtering if required
 - Verify behaviour during real driving conditions
+- Specifically check: hill/gradient behaviour (v3.7's main change), sustained cornering brightness (recently patched, unverified), and road bump/surface noise sensitivity (untested, flagged as a risk in the firmware changelog)
 
 **Status:** Pending
 
