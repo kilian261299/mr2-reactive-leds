@@ -159,23 +159,31 @@ The new full quadrature decoding method tracks valid CLK/DT state transitions an
 
 ---
 
-## v3.4 – Improved Rotary Encoder Responsiveness
+## v3.4 – Interrupt-Driven Encoder and Responsiveness Tuning
 
 Following testing of v3.3, the rotary encoder brightness control was further refined.
 
 Although the full quadrature decoding introduced in v3.3 improved direction reliability, brightness adjustment could still become less responsive during rapid encoder rotation.
 
-This was caused by the main firmware loop performing large LED update operations. The two 160-LED strips are updated repeatedly, and these operations can temporarily prevent the encoder from being sampled frequently enough during fast rotation.
+This was caused by the main firmware loop performing large LED update operations. The two 160-LED strips are updated repeatedly, and these operations can temporarily prevent the encoder from being sampled frequently enough during fast rotation — a rotation could complete, several detents' worth of movement, entirely between two consecutive checks of the encoder pins.
 
-### Changes
+### Moving to Interrupts
 
-The rotary encoder handling was redesigned to improve responsiveness during rapid rotation.
+Polling (checking the encoder pins once per loop, however good the decoding logic) is fundamentally limited by how often the loop actually gets back around to checking. v3.4 removes that limitation by moving encoder reading onto **hardware interrupts** instead: `attachInterrupt()` is used on both the CLK and DT pins, configured to fire on `CHANGE` (any transition, either direction). This means an encoder transition is captured **the instant it happens**, regardless of what the main loop is doing at that moment — including in the middle of a slow LED strip update.
 
-The encoder was moved to an **interrupt-driven quadrature decoding system**. Both the CLK and DT encoder signals are monitored using hardware interrupts, allowing encoder transitions to be detected independently of the main firmware loop and LED update operations.
+### Keeping the Interrupt Handler Minimal
 
-The interrupt service routine records encoder transitions using a quadrature transition table, while the main loop processes the accumulated encoder movement and applies the corresponding brightness changes.
+The interrupt service routine (`encoderISR()`) does the same quadrature decoding as v3.3 — reading CLK/DT, looking up the transition in the same state-transition table, and accumulating valid movement — but deliberately does **nothing else**. No `Serial` printing, no LED updates, no `delay()`, no floating-point math. This matters because code running inside an interrupt handler blocks everything else on the microcontroller for its duration; keeping it to a few integer operations means it returns almost instantly, so it can't itself become a new source of timing problems. The accumulated movement is stored in a `volatile` counter, which the main loop reads separately.
 
-The brightness control was also tuned to provide a more direct response to physical encoder movement.
+### Draining Accumulated Movement in the Main Loop
+
+The main loop doesn't do the decoding itself anymore — it just periodically drains whatever the ISR has accumulated (`processEncoderRotation()`). This copy-and-clear step is wrapped in `noInterrupts()`/`interrupts()` to make it atomic, so a transition can't be captured half-read if the ISR fires at the exact moment the main loop is checking it.
+
+Draining uses a loop, not a single check — if several detents' worth of movement built up while the main loop was busy (e.g. during a slow LED update), all of it is applied at once, rather than only the most recent detent and the rest silently dropped. Any leftover partial movement (less than one full detent) is carried over to next time rather than discarded, so a rotation that happens to straddle two loop iterations doesn't lose precision.
+
+### Detent Tuning
+
+`stepsPerDetent` — how many valid quadrature transitions count as one physical "click" of the knob — was reduced from 4 (v3.3) to 2, so the brightness responds more directly to physical movement rather than needing two clicks to register a change.
 
 ### Improvements
 
@@ -498,9 +506,8 @@ This is one of the specific things to watch for during real-world driving. If it
 
 ### Result
 
-v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly using a second, independent sensor. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
+v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly by using the MPU6050's gyroscope — a sensor that was physically present on the chip all along (the MPU6050 is a combined accelerometer + gyroscope), but whose readings earlier versions requested and then discarded without using. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
 
 The side-axis (cornering) baseline system from v3.6 is retained and has been fixed to correctly distinguish genuine ongoing movement from a stale, unchanging offset.
 
 Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change thresholds need retuning, and whether road bumps/surface noise cause false reactions — will follow from that testing.
-
