@@ -477,11 +477,25 @@ This required rescaling the two threshold constants (`baselineStableThreshold`, 
 
 In practice this fix is expected to be low-impact on normal driving — a freshly calibrated car experiences genuine cornering as both large *and* changing, so the old and new gating logic should behave the same in that case. The difference only shows up in the narrower scenarios the bug affected: a long stop on a slope without power-cycling, or the sensor being disturbed mid-drive.
 
+### Untested Consideration: Road Bumps / Surface Noise
+
+Not yet validated on real roads: whether potholes, expansion joints, or general road surface roughness (a real factor on UK roads) could trigger brief false colour reactions.
+
+The two existing defences — dead zones (ignoring anything below `0.04g`/`0.12g`/`0.08g`) and smoothing — are tuned to reject small/gradual noise, but a sharp bump can produce a spike well above those thresholds in a single instant, and the smoothing is deliberately responsive (so genuine hard braking doesn't feel laggy), which limits how much it can reject a brief jolt too. A bump and the start of genuine hard braking look mathematically similar in that first instant — both are a sudden spike — so the system can't yet fully distinguish them by shape, only by size.
+
+Some reason for optimism: the car's suspension sits physically between the road and the sensor, and already mechanically filters out a lot of sharp impact before it reaches the chassis — a bench test shaking the board by hand produces a sharper, higher-frequency jolt than most real bumps transmitted through a sprung, damped suspension, so it's likely a worse-case preview rather than a representative one.
+
+This is one of the specific things to watch for during real-world driving. If it turns out to be a real problem, possible fixes (not yet implemented, each with a trade-off against responsiveness to genuine events):
+
+- Heavier smoothing.
+- Wider dead zones.
+- A minimum-duration requirement — only react once a spike has been sustained for some threshold (e.g. ~100ms+), since bumps are typically much shorter-lived than genuine acceleration/braking events.
+
 ### Result
 
 v3.7 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly using a second, independent sensor. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
 
 The side-axis (cornering) baseline system from v3.6 is retained and has been fixed to correctly distinguish genuine ongoing movement from a stale, unchanging offset.
 
-Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change thresholds need retuning — will follow from that testing.
+Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change thresholds need retuning, and whether road bumps/surface noise cause false reactions — will follow from that testing.
 
