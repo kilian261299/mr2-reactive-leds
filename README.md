@@ -86,15 +86,15 @@ Detailed hardware documentation, PCB design information, and manufacturing files
 
 ## Firmware Modes
 
-All modes share the same brightness and cornering behaviour: the rotary encoder sets a **maximum** brightness ceiling — actual output stays at or below that, reacting to vehicle movement and cornering, and gently breathing when the car is calm. The difference between modes is purely which colour(s) are used.
+All modes share the same underlying sensor processing — including the gyroscope-based hill compensation described above — so a steady hill is correctly ignored in every mode's brightness, not just Mode 0's colour. The rotary encoder sets a **maximum** brightness ceiling in every mode too — actual output stays at or below that, reacting to vehicle movement and cornering, and gently breathing when the car is calm. The only real difference between modes is which colour(s) are shown.
 
 | Mode | Colour behaviour |
 |---|---|
 | **Mode 0** | Main driving mode. Colour reacts to what the car is doing: blue at rest, shifting toward orange under acceleration, red under braking. |
-| **Mode 1** | Fixed purple. |
-| **Mode 2** | Fixed red. |
-| **Mode 3** | Fixed blue. |
-| **Mode 4** | Fixed green. |
+| **Mode 1** | Fixed purple. Brightness still reacts to movement/cornering, but colour doesn't change with acceleration vs braking the way Mode 0's does. |
+| **Mode 2** | Fixed red. Same brightness behaviour as Mode 1. |
+| **Mode 3** | Fixed blue. Same brightness behaviour as Mode 1. |
+| **Mode 4** | Fixed green. Same brightness behaviour as Mode 1. |
 
 ## System Behaviour
 
