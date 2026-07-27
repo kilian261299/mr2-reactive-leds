@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V3.5
+  MR2 Reactive LEDs — Final Firmware V1.7
   ==================================================
 
   Hardware:
@@ -18,15 +18,15 @@
   - 12V to 5V converter
 
   --------------------------------------------------
-  V3.5 CHANGES
+  V1.7 CHANGES
   --------------------------------------------------
 
-  V3.5 is based directly on V3.4.
+  V1.7 is based directly on V1.6.
 
-  The V3.4 interrupt-driven rotary encoder system has
+  The V1.6 interrupt-driven rotary encoder system has
   been retained.
 
-  Improvements in V3.5:
+  Improvements in V1.7:
 
   - Accelerometer response smoothing.
   - Forward acceleration dead zone.
@@ -2196,7 +2196,7 @@ void setup() {
 
 
   Serial.println(
-    "MR2 Reactive LEDs — Final Firmware V3.5"
+    "MR2 Reactive LEDs — Final Firmware V1.7"
   );
 
 

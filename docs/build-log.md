@@ -490,17 +490,7 @@ The control box is now ready for temporary vehicle installation and real-world t
 
 ### Control Box Photos
 
-Photos documenting the control box construction, PCB installation, buck converter installation, wiring, and completed enclosure are included below.
-
-*(Photo links below are placeholders — images not yet uploaded to the repository.)*
-
-![Control Box](../images/control-box/control_box.jpg)
-
-![PCB Mounted Inside Control Box](../images/control-box/pcb_mounted.jpg)
-
-![Buck Converter and Control Box Wiring](../images/control-box/control_box_wiring.jpg)
-
-![Completed Control Box](../images/control-box/control_box_complete.jpg)
+![Control Box](../images/control-box/control_box.jpeg)
 
 **Notes:**
 

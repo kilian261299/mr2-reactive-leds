@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V3.4
+  MR2 Reactive LEDs — Final Firmware V1.6
   ==================================================
 
   Hardware used:
@@ -18,12 +18,12 @@
   - 12V to 5V converter
 
   --------------------------------------------------
-  WHAT'S NEW IN V3.4
+  WHAT'S NEW IN V1.6
   --------------------------------------------------
 
   Improved rotary encoder responsiveness.
 
-  V3.3 used full quadrature decoding, which fixed the
+  V1.5 used full quadrature decoding, which fixed the
   previous brightness jitter and incorrect direction
   behaviour. However, the encoder was still being
   polled from the main loop.
@@ -35,7 +35,7 @@
   the processor busy, rapid encoder movements could
   still result in missed transitions.
 
-  V3.4 moves rotary encoder quadrature detection onto
+  V1.6 moves rotary encoder quadrature detection onto
   GPIO interrupts.
 
   The encoder CLK and DT signals are now monitored
@@ -68,7 +68,7 @@
   enough, adjust stepsPerDetent below.
 
   --------------------------------------------------
-  WHAT'S NEW IN V3.3
+  WHAT'S NEW IN V1.5
   --------------------------------------------------
 
   Fixed a jittery/unreliable brightness knob.
@@ -373,7 +373,7 @@ volatile int32_t encoderAccumulatedSteps = 0;
 // Most KY-040 encoders produce 4 transitions per
 // physical detent, but some modules behave differently.
 //
-// V3.3 used 2 and this is retained for V3.4.
+// V1.5 used 2 and this is retained for V1.6.
 
 const int8_t stepsPerDetent = 2;
 
@@ -1404,7 +1404,7 @@ void setup() {
   delay(500);
 
   Serial.println(
-    "MR2 Reactive LEDs — Final Firmware V3.4"
+    "MR2 Reactive LEDs — Final Firmware V1.6"
   );
 
 

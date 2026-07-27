@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V2
+  MR2 Reactive LEDs — Final Firmware V1.2
   ==================================================
 
   Hardware used:
@@ -18,7 +18,45 @@
   - 12V to 5V converter
 
   --------------------------------------------------
-  WHAT'S NEW IN V2
+  WHAT'S NEW IN V1.2
+  --------------------------------------------------
+
+  Axis orientation is confirmed working (forward/back and left/right
+  both checked), so the diagnostic modes and one-off test modes have
+  been removed.
+
+  Power is now handled by a physical switch, so the old "Off" mode
+  has been removed too. Modes are now:
+
+    Mode 0 — Reactive (main driving mode, with idle breathing)
+    Mode 1 — Static: Purple
+    Mode 2 — Static: Red
+    Mode 3 — Static: Blue
+    Mode 4 — Static: Green
+
+  Short-press cycles through all five. Long-press still recalibrates
+  the baseline, same as before. The brightness knob still sets the
+  ceiling on all modes, including the static colours.
+
+  Two new effects have been added:
+
+  - Startup sweep: a one-off chase animation that plays down both
+    strips as soon as they're powered on, before anything else runs
+    (MPU detection, calibration, etc). Purely a "waking up" flourish —
+    it doesn't depend on the accelerometer at all.
+
+  - Idle breathing: while Mode 0 (Reactive) is calm — no meaningful
+    acceleration, braking, or cornering — the ambient brightness now
+    slowly pulses instead of sitting at a flat level. As soon as a
+    real driving event happens, the reactive brightness takes over
+    and the breathing effect is naturally overridden.
+
+  If axes ever need re-checking in the future (e.g. after remounting
+  or resoldering), the previous version (V2) still has the X/Y/Z
+  diagnostic modes and can be reflashed temporarily for that.
+
+  --------------------------------------------------
+  WHAT'S IN HILL COMPENSATION (carried over from V2)
   --------------------------------------------------
 
   Added HILL_COMPENSATION: a slowly-drifting accelerometer baseline.
@@ -92,10 +130,10 @@
   MODES
   --------------------------------------------------
 
-  Mode 0 — Main reactive driving mode
+  Mode 0 — Reactive (main driving mode)
 
-    Smooth driving:
-      dim blue
+    Calm / idle:
+      dim blue, slowly breathing
 
     Acceleration:
       blue fades toward orange and gets brighter
@@ -114,64 +152,16 @@
 
   --------------------------------------------------
 
-  Mode 1 — X-axis diagnostic
+  Mode 1 — Purple, themed reactive
+  Mode 2 — Red, themed reactive
+  Mode 3 — Blue, themed reactive
+  Mode 4 — Green, themed reactive
 
-    Shows X-axis movement using red.
-
-    Bright red:
-      X positive
-
-    Dim/dark red:
-      X negative
-
-  --------------------------------------------------
-
-  Mode 2 — Y-axis diagnostic
-
-    Shows Y-axis movement using green.
-
-    Bright green:
-      Y positive
-
-    Dim/dark green:
-      Y negative
-
-  --------------------------------------------------
-
-  Mode 3 — Z-axis diagnostic
-
-    Shows Z-axis movement using blue.
-
-    Bright blue:
-      Z positive
-
-    Dim/dark blue:
-      Z negative
-
-  --------------------------------------------------
-
-  Mode 4 — Left/right output test
-
-    Left strip:
-      blue
-
-    Right strip:
-      orange
-
-  --------------------------------------------------
-
-  Mode 5 — White brightness/current test
-
-    Both strips turn white.
-
-    Be careful:
-    white uses the most current.
-
-  --------------------------------------------------
-
-  Mode 6 — Off
-
-    Turns both strips off.
+    Colour stays fixed, but brightness reacts to overall movement
+    (not direction — just "moving" vs "calm") and cornering (left/
+    right brightness shift, same as Mode 0), and gently breathes
+    when the car is still. Knob still sets the overall brightness
+    ceiling.
 
   --------------------------------------------------
   HOW TO SET UP AFTER INSTALLING
@@ -180,23 +170,13 @@
   1. Mount the MPU6050 flat and straight if possible.
   2. Turn the car on.
   3. Keep the car still, on flat/level ground.
-  4. Long press the encoder.
+  4. Long press the encoder to calibrate.
   5. Wait for green confirmation flash.
-  6. Use Mode 1, 2, and 3 to confirm axes.
 
-  If X reacts most to acceleration/braking:
-
-      FORWARD_AXIS = AXIS_X
-
-  If Y reacts most to acceleration/braking:
-
-      FORWARD_AXIS = AXIS_Y
-
-  If Y reacts most to left/right cornering:
-
-      SIDE_AXIS = AXIS_Y
-
-  If the behaviour is backwards, change the sign from 1 to -1.
+  Axis orientation (FORWARD_AXIS/SIGN, SIDE_AXIS/SIGN below) was
+  confirmed during bench + tilt testing. If the car is remounted or
+  resoldered later, reflash V2 temporarily to re-check axes using its
+  diagnostic modes, then come back to this version.
 
   --------------------------------------------------
   POWER NOTES
@@ -311,7 +291,7 @@ const int minBrightness = 0;
 const int maxBrightness = 220;
 
 int mode = 0;
-const int numberOfModes = 7;
+const int numberOfModes = 5;
 
 
 // ==================================================
@@ -356,50 +336,21 @@ float getSelectedAxis(float xG, float yG, float zG, int axis) {
 uint32_t blueToOrange(float amount, Adafruit_NeoPixel &strip) {
   amount = constrain(amount, 0.0, 1.0);
 
-  int r = 0 + (255 - 0) * amount;
-  int g = 0 + (80 - 0) * amount;
-  int b = 255 + (0 - 255) * amount;
+  // Orange target colour. WS2812 green LEDs tend to look
+  // disproportionately bright to the eye compared to their numeric
+  // value, so even a fairly low green value here can visually read
+  // as yellow. Lower orangeG further for a deeper/more red-leaning
+  // orange, raise it for a warmer amber.
+  const int orangeR = 255;
+  const int orangeG = 40;
+  const int orangeB = 0;
+
+  int r = 0 + (orangeR - 0) * amount;
+  int g = 0 + (orangeG - 0) * amount;
+  int b = 255 + (orangeB - 255) * amount;
 
   return strip.Color(r, g, b);
 }
-
-uint32_t diagnosticColour(float value, Adafruit_NeoPixel &strip, char axisName) {
-  // Diagnostic mode behaviour:
-  //
-  // value near 0:
-  //   medium brightness
-  //
-  // positive value:
-  //   brighter than baseline
-  //
-  // negative value:
-  //   dimmer than baseline
-  //
-  // This makes it easier to see both directions while driving.
-
-  float limitedValue = constrain(value, -0.50, 0.50);
-
-  // Convert -0.50g to +0.50g into brightness range.
-  //
-  // -0.50g = low brightness
-  //  0.00g = medium brightness
-  // +0.50g = high brightness
-  int scaledValue = limitedValue * 100;
-  int level = map(scaledValue, -50, 50, 10, 255);
-
-  level = constrain(level, 10, 255);
-
-  if (axisName == 'X') {
-    return strip.Color(level, 0, 0);
-  }
-
-  if (axisName == 'Y') {
-    return strip.Color(0, level, 0);
-  }
-
-  return strip.Color(0, 0, level);
-}
-
 
 // ==================================================
 // LED OUTPUT HELPERS
@@ -438,6 +389,58 @@ void flashConfirmation(uint32_t colour) {
     allOff();
     delay(150);
   }
+}
+
+
+// ==================================================
+// STARTUP SWEEP ANIMATION
+// ==================================================
+
+// Plays once at power-on, before the MPU6050 or accelerometer logic
+// is touched. A short fading "comet" runs down both strips together,
+// then clears. Purely a visual flourish — change sweepR/G/B to pick
+// a different accent colour, or sweepDelay to change the speed
+// (smaller = faster).
+void startupSweep() {
+  const int sweepR = 0;
+  const int sweepG = 120;
+  const int sweepB = 255;
+
+  const int tailLength = 14;
+  const int sweepDelay = 3; // ms between steps — lower is faster
+
+  leftStrip.setBrightness(userBrightness);
+  rightStrip.setBrightness(userBrightness);
+
+  for (int head = 0; head < NUM_LEDS_LEFT + tailLength; head++) {
+    for (int i = 0; i < NUM_LEDS_LEFT; i++) {
+      int distanceBehindHead = head - i;
+
+      if (distanceBehindHead >= 0 && distanceBehindHead < tailLength) {
+        int fade = map(distanceBehindHead, 0, tailLength, 255, 0);
+
+        uint32_t colour = leftStrip.Color(
+          (sweepR * fade) / 255,
+          (sweepG * fade) / 255,
+          (sweepB * fade) / 255
+        );
+
+        leftStrip.setPixelColor(i, colour);
+        rightStrip.setPixelColor(i, colour);
+      } else {
+        leftStrip.setPixelColor(i, 0);
+        rightStrip.setPixelColor(i, 0);
+      }
+    }
+
+    leftStrip.show();
+    rightStrip.show();
+
+    delay(sweepDelay);
+  }
+
+  allOff();
+  delay(200);
 }
 
 
@@ -550,6 +553,51 @@ void applyCorneringBrightness(int baseBrightness, float sideG, int &leftBrightne
 // MAIN LED BEHAVIOUR
 // ==================================================
 
+// ==================================================
+// IDLE BREATHING EFFECT
+// ==================================================
+
+// Returns a value that slowly oscillates between 0.6 and 1.0 over a
+// ~4 second cycle, used to gently pulse the ambient brightness when
+// Mode 0 is calm. Purely cosmetic — has no effect once real
+// acceleration/braking/cornering pushes brightness up, since that
+// quickly outweighs this small pulse.
+float breathingMultiplier() {
+  float phase = (millis() % 4000) / 4000.0 * 2.0 * PI;
+  float wave = (sin(phase) + 1.0) / 2.0; // 0.0 to 1.0
+  return 0.6 + (0.4 * wave); // 0.6 to 1.0
+}
+
+// Used by the four static theme modes (Purple/Red/Blue/Green).
+// Colour stays fixed, but brightness reacts to overall movement and
+// cornering, and breathes gently when the car is still — same
+// breathing floor and cornering shift as Mode 0, just without any
+// hue change. Uses movementG (overall G) for the base reactive level
+// since these modes don't need to distinguish forward/back, only
+// "moving" vs "calm" — but sideG still drives the left/right shift
+// so cornering is visible here too.
+void updateStaticThemeMode(int r, int g, int b, float movementG, float sideG) {
+  int ambientBrightness = userBrightness * 0.25 * breathingMultiplier();
+
+  float intensity = movementG / 0.50;
+  intensity = constrain(intensity, 0.0, 1.0);
+
+  int themeBrightness = ambientBrightness + ((userBrightness - ambientBrightness) * intensity);
+  themeBrightness = constrain(themeBrightness, 0, userBrightness);
+
+  int leftBrightness;
+  int rightBrightness;
+
+  applyCorneringBrightness(themeBrightness, sideG, leftBrightness, rightBrightness);
+
+  setBothStrips(
+    leftStrip.Color(r, g, b),
+    rightStrip.Color(r, g, b),
+    leftBrightness,
+    rightBrightness
+  );
+}
+
 void updateMainReactiveMode(float forwardG, float sideG, float movementG) {
   // Positive forwardG = acceleration.
   // Negative forwardG = braking.
@@ -559,7 +607,7 @@ void updateMainReactiveMode(float forwardG, float sideG, float movementG) {
   // - accelerating around a corner = orange + side brightness shift
   // - braking around a corner = red + side brightness shift
 
-  int ambientBrightness = userBrightness * 0.25;
+  int ambientBrightness = userBrightness * 0.25 * breathingMultiplier();
 
   // --------------------------------------------------
   // BRAKING
@@ -627,60 +675,29 @@ void updateLEDs() {
   float forwardG = getSelectedAxis(xG, yG, zG, FORWARD_AXIS) * FORWARD_SIGN;
   float sideG = getSelectedAxis(xG, yG, zG, SIDE_AXIS) * SIDE_SIGN;
 
-  int calmBrightness = userBrightness * 0.35;
-
   switch (mode) {
     case 0:
       updateMainReactiveMode(forwardG, sideG, movementG);
       break;
 
     case 1:
-      setBothStrips(
-        diagnosticColour(xG, leftStrip, 'X'),
-        diagnosticColour(xG, rightStrip, 'X'),
-        calmBrightness,
-        calmBrightness
-      );
+      // Purple, brightness reacts to movement, breathes when calm
+      updateStaticThemeMode(54, 1, 63, movementG, sideG);
       break;
 
     case 2:
-      setBothStrips(
-        diagnosticColour(yG, leftStrip, 'Y'),
-        diagnosticColour(yG, rightStrip, 'Y'),
-        calmBrightness,
-        calmBrightness
-      );
+      // Red, brightness reacts to movement, breathes when calm
+      updateStaticThemeMode(255, 0, 0, movementG, sideG);
       break;
 
     case 3:
-      setBothStrips(
-        diagnosticColour(zG, leftStrip, 'Z'),
-        diagnosticColour(zG, rightStrip, 'Z'),
-        calmBrightness,
-        calmBrightness
-      );
+      // Blue, brightness reacts to movement, breathes when calm
+      updateStaticThemeMode(0, 0, 255, movementG, sideG);
       break;
 
     case 4:
-      setBothStrips(
-        leftStrip.Color(0, 0, 255),
-        rightStrip.Color(255, 80, 0),
-        userBrightness,
-        userBrightness
-      );
-      break;
-
-    case 5:
-      setBothStrips(
-        leftStrip.Color(255, 255, 255),
-        rightStrip.Color(255, 255, 255),
-        userBrightness,
-        userBrightness
-      );
-      break;
-
-    case 6:
-      allOff();
+      // Green, brightness reacts to movement, breathes when calm
+      updateStaticThemeMode(0, 255, 10, movementG, sideG);
       break;
   }
 
@@ -785,7 +802,7 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  Serial.println("MR2 Reactive LEDs — Final Firmware V2");
+  Serial.println("MR2 Reactive LEDs — Final Firmware V1.2");
 
 #if HILL_COMPENSATION
   Serial.println("Hill compensation: ENABLED (drifting baseline)");
@@ -807,6 +824,10 @@ void setup() {
 
   leftStrip.show();
   rightStrip.show();
+
+  // Play the startup sweep as soon as the strips are ready, before
+  // anything accelerometer-related happens.
+  startupSweep();
 
   Wire.begin(I2C_SDA, I2C_SCL);
 

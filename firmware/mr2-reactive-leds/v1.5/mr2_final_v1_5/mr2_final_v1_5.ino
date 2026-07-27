@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V3.3
+  MR2 Reactive LEDs — Final Firmware V1.5
   ==================================================
 
   Hardware used:
@@ -18,7 +18,7 @@
   - 12V to 5V converter
 
   --------------------------------------------------
-  WHAT'S NEW IN V3.3
+  WHAT'S NEW IN V1.5
   --------------------------------------------------
 
   Fixed a jittery/unreliable brightness knob (would drift up and down
@@ -869,7 +869,7 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  Serial.println("MR2 Reactive LEDs — Final Firmware V3.3");
+  Serial.println("MR2 Reactive LEDs — Final Firmware V1.5");
 
 #if HILL_COMPENSATION
   Serial.println("Hill compensation: ENABLED (drifting baseline)");

@@ -1,3 +1,4 @@
+
 #include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_MPU6050.h>
@@ -5,7 +6,7 @@
 
 /*
   ==================================================
-  MR2 REACTIVE LEDs — FINAL FIRMWARE V3.7
+  MR2 REACTIVE LEDs — FINAL FIRMWARE V2.0
   ==================================================
 
   Hardware:
@@ -19,181 +20,105 @@
 
 
   ==================================================
-  V3.7 CHANGES
+  V2.0 FEATURES
   ==================================================
 
-  V3.6's hill compensation used the accelerometer only:
-  a slow low-pass filter tried to guess "gravity" by
-  averaging recent readings, gated by a STABLE/DYNAMIC/
-  SETTLING state machine so genuine acceleration didn't
-  get absorbed into it. This worked, but an accelerometer
-  fundamentally cannot tell "tilted" apart from
-  "accelerating" — both produce an identical reading.
-  Every accelerometer-only approach is ultimately just
-  managing that ambiguity, not resolving it.
-
-  V3.7 adds the MPU6050's gyroscope to actually resolve
-  it. The gyro measures rotation rate, which a hill
-  produces (the car pitches as it goes up/down) but
-  genuine forward acceleration does not. Tracking that
-  rotation gives an estimate of the car's actual pitch
-  angle, which lets the firmware calculate exactly how
-  much of the raw forward reading is caused by gravity
-  at that angle, and subtract only that — leaving genuine
-  acceleration in the signal regardless of how long the
-  hill lasts.
-
-  This is implemented as a complementary filter: the
-  gyro provides fast pitch tracking, continuously nudged
-  toward an independent accelerometer-based estimate so
-  long-term gyro drift can't accumulate. That
-  accelerometer estimate is only reliable when the
-  accelerometer is measuring gravity alone — during
-  strong acceleration/braking/cornering it's measuring
-  gravity PLUS the vehicle's own motion, so it's
-  temporarily wrong, and the filter reduces how much it's
-  trusted during those moments (see ACCELEROMETER
-  RELIABILITY GATING in updatePitchEstimate()) rather
-  than blending it in unconditionally.
-
-  Two issues found during code review after the initial
-  V3.7 implementation, both fixed here:
-
-  - Gyro zero-rate bias (a small constant sensor offset
-    present even at rest) was being integrated directly,
-    which could cause continuous phantom pitch drift and
-    get the state machine stuck in DYNAMIC permanently.
-    Now measured once per calibration and subtracted from
-    every gyro reading (gyroYBiasRadPerSec).
-  - The accelerometer correction had no protection against
-    being trusted during genuine acceleration — added the
-    magnitude-based gating described above.
-
-  Specific changes:
-
-  - Added gyroscope-based pitch angle tracking
-    (updatePitchEstimate(), pitchAngleRad).
-  - Complementary filter blends gyro (fast, drifts) with
-    accelerometer (stable, but confused by real
-    acceleration) — see pitchComplementaryAlpha, and the
-    reliability gating that scales the accelerometer's
-    influence based on how far total accelerometer
-    magnitude is from 1g.
-  - Gyro bias is measured during calibration and removed
-    from every reading (gyroYBiasRadPerSec).
-  - Forward axis reading now has gravity's calculated
-    pitch component subtracted directly, rather than
-    relying on the old slow-adapting baseline.
-  - The old accelerometer-only "gravity" low-pass tracker
-    (gravityX/Y/Z, gravitySmoothing) has been removed —
-    the pitch estimate replaces it, and does the same job
-    more accurately.
-  - driftBaseX has been removed. The forward axis no
-    longer needs an adaptive baseline at all, since pitch
-    compensation handles hills directly. driftBaseY and
-    driftBaseZ are retained unchanged, since cornering
-    (side axis) wasn't part of this change.
-  - The STABLE/DYNAMIC/SETTLING state machine is
-    retained, gating driftBaseY/Z adaptation exactly as
-    in V3.6, and still provides protection against
-    transient movement being misread.
-  - Removed three unused threshold constants left over
-    from V3.6 (baselineAccelerationThreshold,
-    baselineBrakingThreshold, baselineCorneringThreshold)
-    that were declared but never actually referenced
-    anywhere in the V3.6 logic.
-  - Renamed baseX to calibrationAccelX to reflect what it
-    actually does now (a one-time input to seed the pitch
-    estimate) rather than implying it's still a baseline
-    like baseY/baseZ are.
-  - Serial debug now reports pitch two ways: absolute
-    angle (what the gravity-compensation math actually
-    uses — deliberately includes any fixed mounting
-    offset, since that's physically correct for computing
-    gravity's real component) and pitch relative to the
-    last calibration (a more human-readable "degrees of
-    hill" number for watching the debug output, display
-    only — not used in the compensation math itself).
-
-  IMPORTANT — this pitch compensation is written
-  specifically for FORWARD_AXIS = AXIS_X with pitch read
-  from the gyro's Y-axis, matching this vehicle's actual
-  mounting. If FORWARD_AXIS is ever changed, or the
-  sensor is remounted in a different orientation, the
-  gyro axis used in updatePitchEstimate() (currently
-  gyro.gyro.y) needs to be revisited to match.
-
-  Everything else — LED colour/brightness handling,
-  encoder, modes, breathing, startup sweep — is
-  unchanged from V3.6.
+  - Smart hill compensation
+  - Fast dynamic acceleration detection
+  - Slow hill / gravity baseline tracking
+  - Baseline freezes during genuine dynamic movement
+  - Baseline freezes briefly after movement stops
+  - Short 750 ms settling period
+  - Baseline then resumes slow adaptation
+  - Genuine acceleration is not immediately absorbed
+  - Hills are gradually absorbed into the baseline
+  - Hysteresis prevents state chatter
+  - Accelerometer low-pass filtering
+  - Acceleration dead zone
+  - Braking dead zone
+  - Cornering dead zone
+  - Progressive acceleration response
+  - Progressive braking response
+  - Progressive cornering response
+  - Blue -> violet-blue -> orange acceleration colour
+  - Red braking
+  - Left/right cornering brightness bias
+  - Five lighting modes
+  - Rotary encoder brightness control
+  - Short press changes mode
+  - Long press recalibrates MPU6050
+  - Startup sweep
+  - Calibration confirmation flash
 
 
   ==================================================
-  V3.7 HILL COMPENSATION (GYRO + ACCELEROMETER FUSION)
+  V2.0 HILL COMPENSATION
   ==================================================
 
-  1. The gyro's Y-axis rotation rate is integrated over
-     time to track how much the car has pitched since
-     the last reading.
+  The MPU6050 measures both gravity and dynamic
+  acceleration.
 
-  2. The accelerometer independently estimates pitch
-     from the direction gravity currently appears to be
-     pulling — accurate at rest, unreliable during real
-     acceleration.
+  A vehicle travelling up or down a hill changes the
+  orientation of the gravity vector relative to the
+  sensor.
 
-  3. A complementary filter blends these two estimates
-     (pitchComplementaryAlpha, default 0.98): mostly the
-     gyro, continuously nudged toward the accelerometer's
-     estimate so gyro drift can't build up over a long
-     drive.
+  This can appear as forward or backward acceleration.
 
-  4. From the resulting pitch angle, the expected gravity
-     component along the forward axis is calculated
-     (9.81 * sin(pitchAngleRad)) and subtracted from the
-     raw forward reading.
+  The system therefore separates:
 
-  5. What remains is the genuine dynamic (non-gravity)
-     component — real acceleration or braking — regardless
-     of how long the vehicle has been on a slope.
+    SLOW BASELINE
+      Represents the long-term gravity / hill
+      orientation.
+
+    DYNAMIC COMPONENT
+      Represents rapid changes from actual
+      acceleration, braking and cornering.
+
+  During genuine dynamic movement:
+
+    Baseline FREEZES.
+
+  When dynamic movement stops:
+
+    SETTLING begins.
+
+  After a short settling period:
+
+    Baseline slowly adapts again.
 
   This means:
 
-    STEADY HILL, CONSTANT SPEED
-      -> Pitch angle stabilises, gravity component is
-         fully subtracted, LEDs read as calm/blue.
+    REAL ACCELERATION
+      -> LED reaction
 
-    GENUINE ACCELERATION (on a hill or flat road)
-      -> Cannot be explained by the pitch angle, remains
-         in the compensated signal, LEDs react normally.
+    STEADY HILL
+      -> Gradually becomes normal / blue
 
 
   ==================================================
-  BASELINE STATES (RETAINED FROM V3.6, Y/Z ONLY)
+  BASELINE STATES
   ==================================================
 
   STABLE
 
     Vehicle is calm.
 
-    driftBaseY/Z are allowed to slowly adapt.
+    Baseline is allowed to slowly adapt.
 
   DYNAMIC
 
     Genuine dynamic movement detected.
 
-    driftBaseY/Z are frozen.
+    Baseline is frozen.
 
   SETTLING
 
     Dynamic movement has stopped.
 
-    driftBaseY/Z remain frozen temporarily.
+    Baseline remains frozen temporarily.
 
     After 750 ms of calm, the system returns to
-    STABLE and adaptation resumes.
-
-  (The forward/X axis is no longer part of this system —
-  see V3.7 CHANGES above.)
+    STABLE and baseline adaptation resumes.
 
 
   ==================================================
@@ -235,7 +160,7 @@
     Change mode.
 
   Long press:
-    Recalibrate accelerometer + gyro pitch reference.
+    Recalibrate accelerometer.
 
 
   ==================================================
@@ -253,16 +178,11 @@
   POWER
   ==================================================
 
-  - LED strips and ESP32 are both powered from the same
-    12V-to-5V buck converter output (shared 5V rail) —
-    not separate supplies.
+  - LED strips powered from 5V converter.
+  - ESP32 powered appropriately.
   - All grounds common.
   - Use fuse on 12V input.
-  - Keep brightness/current draw in mind: both LED strips
-    and the ESP32 share this one 5V source, so total
-    current draw (LEDs at high brightness especially)
-    needs to stay within what the buck converter can
-    actually supply.
+  - Do not power LED strips from ESP32.
 */
 
 
@@ -342,26 +262,18 @@ const int SIDE_SIGN = -1;
 // CALIBRATION BASELINE
 // ==================================================
 
-// baseY/baseZ are genuine baselines — driftBaseY/Z
-// start from them and continue adapting. baseX is
-// different: it's not a baseline anymore, just the raw
-// calibration-time X reading used once, to seed
-// pitchAngleRad (see calibrateMPU6050()). Named
-// calibrationAccelX to make that distinction clear.
-
-float calibrationAccelX = 0.0;
+float baseX = 0.0;
 float baseY = 0.0;
 float baseZ = 0.0;
 
 
 // ==================================================
-// SMART BASELINE (SIDE AXIS ONLY — SEE V3.7 CHANGES)
+// SMART BASELINE
 // ==================================================
 
-// Slowly changing lateral/vertical baseline. The
-// forward/X axis no longer uses this — see the gyro
-// pitch compensation system further down instead.
+// Slowly changing gravity / hill orientation.
 
+float driftBaseX = 0.0;
 float driftBaseY = 0.0;
 float driftBaseZ = 0.0;
 
@@ -372,85 +284,62 @@ float driftBaseZ = 0.0;
 
 // Slow adaptation.
 //
-// This controls how quickly a new orientation becomes
-// the new baseline, once in STABLE.
+// This controls how quickly a new hill orientation
+// becomes the new baseline.
 //
 // Lower = slower adaptation.
 // Higher = faster adaptation.
-//
-// Deliberately much slower than it first was (0.05). At
-// ~50 loop updates/second, 0.05 gave a time constant of
-// well under a second — meaning once the rate-of-change
-// gating (see baselineStableThreshold/
-// baselineDynamicReentryThreshold below) let a SUSTAINED
-// corner through to STABLE (a roundabout, a long
-// motorway sweeper — anything held at fairly constant
-// lateral G for a few seconds), the baseline would race
-// to match it almost immediately, fading the cornering
-// effect to neutral mid-corner. 0.003 gives a much longer
-// time constant (many seconds), so a normal-length corner
-// doesn't get meaningfully cancelled, while a genuinely
-// stale offset (minutes, not seconds) still eventually
-// corrects.
 
-const float baselineDriftRate = 0.003;
+const float baselineDriftRate = 0.05;
+
+
+// ==================================================
+// DYNAMIC MOVEMENT THRESHOLDS
+// ==================================================
+
+// Forward acceleration threshold.
+
+const float baselineAccelerationThreshold = 0.08;
+
+
+// Forward braking threshold.
+
+const float baselineBrakingThreshold = 0.10;
+
+
+// Sideways cornering threshold.
+
+const float baselineCorneringThreshold = 0.08;
 
 
 // ==================================================
 // STABILITY THRESHOLDS
 // ==================================================
 
-// These now measure RATE OF CHANGE (how much the
-// smoothed gating signal moved since last loop), not
-// absolute magnitude — see previousGatingMovementG's
-// comment for why. A large-but-steady reading (e.g. a
-// stale offset) should NOT count as "dynamic"; only an
-// actively changing one should.
-//
-// Starting values are a reasonable guess, not measured
-// on real driving data — same caveat as every other
-// threshold/sign in this firmware. If genuine cornering
-// isn't reliably freezing the baseline, try lowering
-// baselineDynamicReentryThreshold. If it feels twitchy
-// or won't settle to STABLE even when genuinely calm,
-// try raising baselineStableThreshold slightly.
-
-// Rate of change must fall below this level before
+// Movement must fall below this level before
 // settling can complete.
 
-const float baselineStableThreshold = 0.008;
+const float baselineStableThreshold = 0.045;
 
 
-// Once stable, rate of change must exceed this level to
-// return to DYNAMIC. Higher than baselineStableThreshold
-// so the two don't flicker back and forth right at the
-// boundary (same hysteresis idea as before).
+// Once stable, dynamic movement must exceed this
+// level to return to DYNAMIC.
 
-const float baselineDynamicReentryThreshold = 0.02;
+const float baselineDynamicReentryThreshold = 0.075;
 
 
 // ==================================================
 // SETTLING
 // ==================================================
 
-// Protection period after dynamic movement, before
-// STABLE (and adaptation) can resume.
+// Short protection period after dynamic movement.
 //
 // During this period the baseline remains frozen.
 //
-// Extended from 750ms to 4000ms. The original short
-// value was fine for its intended purpose (don't
-// immediately absorb the tail end of a quick
-// acceleration/braking event as a new baseline), but a
-// sustained corner — a roundabout, a long motorway
-// sweeper — could settle within 750ms of the steering
-// stabilising and start adapting away almost immediately,
-// even mid-corner. 4000ms means only genuinely long holds
-// (well beyond a typical corner) start the adaptation
-// process at all, on top of baselineDriftRate above now
-// making that adaptation slow even once it does start.
+// This prevents the end of acceleration from being
+// immediately absorbed as a new hill baseline.
 
-const unsigned long baselineSettleTime = 4000;
+const unsigned long baselineSettleTime = 750;
 
 
 // ==================================================
@@ -484,7 +373,12 @@ unsigned long dynamicMovementEndedTime = 0;
 
 // Main reactive smoothing.
 
-const float accelerationSmoothing = 0.25;
+const float accelerationSmoothing = 0.15;
+
+
+// Slow gravity / hill tracking.
+
+const float gravitySmoothing = 0.008;
 
 
 // ==================================================
@@ -498,102 +392,15 @@ float smoothedSideG = 0.0;
 float smoothedMovementG = 0.0;
 
 
-// Separate from smoothedMovementG above (which is for
-// LED output and computed later in the loop). This one
-// feeds the STABLE/DYNAMIC/SETTLING gating and needs to
-// exist earlier, before driftBaseY/Z get used. Smoothed
-// before use to avoid single-sample noise spikes.
-
-float smoothedGatingMovementG = 0.0;
-
-
-// The gating decision is based on RATE OF CHANGE of the
-// above, not its raw size — see the ACCELEROMETER
-// RELIABILITY GATING-style reasoning in
-// updateSmartBaseline(). A genuine, sustained offset
-// (e.g. the sensor disturbed after calibration) can be
-// large but essentially unchanging, and a magnitude-only
-// check couldn't tell that apart from real ongoing
-// movement, which could get the state machine stuck in
-// DYNAMIC permanently. Comparing this loop's smoothed
-// value against the previous loop's tells the difference:
-// genuine movement keeps changing throughout the event;
-// a stale offset settles and stops changing, however
-// large it is.
-
-float previousGatingMovementG = 0.0;
-
-
 // ==================================================
-// GYRO PITCH TRACKING (V3.7)
+// GRAVITY ESTIMATE
 // ==================================================
 
-// Replaces V3.6's gravityX/Y/Z low-pass tracker. See
-// the V3.7 CHANGES header comment for the reasoning.
+float gravityX = 0.0;
 
-// Current best estimate of vehicle pitch, in radians.
-// Positive/negative convention isn't critical here —
-// FORWARD_SIGN below still handles final direction,
-// exactly like every other axis in this codebase.
+float gravityY = 0.0;
 
-float pitchAngleRad = 0.0;
-
-
-// The absolute pitch angle at the moment of the last
-// calibration. Used only for a more human-readable debug
-// display ("pitch relative to calibration" rather than
-// raw absolute angle) — never used in the actual gravity
-// compensation math, which correctly needs the absolute
-// angle instead. See calibrateMPU6050() and the serial
-// debug output.
-
-float calibrationPitchRad = 0.0;
-
-
-// Complementary filter blend factor.
-//
-// Closer to 1.0 = trust the gyro more (responds fast,
-//   but slowly drifts over time if left uncorrected).
-// Closer to 0.0 = trust the accelerometer more (stable
-//   long-term, but wrong during genuine acceleration).
-//
-// 0.98 is a common, reasonable starting point.
-
-const float pitchComplementaryAlpha = 0.98;
-
-
-// If the gyro's sign convention doesn't match the
-// accelerometer-based pitch formula's convention, the
-// gyro-integrated estimate can momentarily track pitch
-// in the WRONG direction during a fast tilt — even
-// though it's correct once things settle and the
-// accelerometer correction pulls it back. This can show
-// up as a brief, wrong-looking colour flash regardless
-// of which way you tilt. If that happens, flip this to
-// -1 and retest — same empirical-tuning approach as
-// FORWARD_SIGN/SIDE_SIGN elsewhere in this codebase.
-
-const int PITCH_GYRO_SIGN = -1;
-
-
-// Used to compute dt between pitch updates. 0 means
-// "not yet initialised" — the first reading after
-// startup/calibration is used to seed this rather than
-// integrating against a stale/zero timestamp.
-
-unsigned long lastPitchUpdateMicros = 0;
-
-
-// Every real gyro reads a small nonzero rate even at
-// rest — a manufacturing quirk called bias. Left
-// uncorrected, this integrates into a slow, continuous,
-// phantom pitch drift even when the vehicle never moves,
-// which can easily masquerade as constant "acceleration"
-// and get the smart baseline stuck in DYNAMIC forever.
-// Measured once per calibration (see calibrateMPU6050())
-// and subtracted from every gyro reading afterward.
-
-float gyroYBiasRadPerSec = 0.0;
+float gravityZ = 0.0;
 
 
 // ==================================================
@@ -719,200 +526,14 @@ float getSelectedAxis(
 
 
 // ==================================================
-// GYRO PITCH ESTIMATE (V3.7)
-// ==================================================
-
-// Complementary filter: mostly integrates the gyro's
-// rotation rate (fast, no gravity-tilt confusion, but
-// drifts slowly over time), continuously nudged toward
-// an accelerometer-only pitch estimate (no long-term
-// drift, but wrong during genuine acceleration) so that
-// drift can't build up over a long drive.
-//
-// Written specifically for this vehicle's mounting:
-// pitch is read from the gyro's Y-axis. If FORWARD_AXIS
-// or the physical mounting ever changes, this needs
-// revisiting.
-
-void updatePitchEstimate(
-  float rawX,
-  float rawY,
-  float rawZ,
-  float gyroYRadPerSec
-) {
-
-  unsigned long nowMicros =
-    micros();
-
-
-  // First call after startup/calibration — nothing to
-  // integrate against yet, just seed the clock.
-
-  if (
-    lastPitchUpdateMicros ==
-    0
-  ) {
-
-    lastPitchUpdateMicros =
-      nowMicros;
-
-
-    return;
-  }
-
-
-  float dt =
-    (
-      nowMicros -
-      lastPitchUpdateMicros
-    )
-    /
-    1000000.0;
-
-
-  lastPitchUpdateMicros =
-    nowMicros;
-
-
-  // Remove the measured zero-rate bias before
-  // integrating — otherwise a constant sensor offset
-  // integrates into continuous phantom pitch drift even
-  // while genuinely stationary. Sign correction applied
-  // after bias removal, since the bias itself was
-  // measured in raw (unflipped) units during calibration.
-
-  float correctedGyroYRadPerSec =
-    (
-      gyroYRadPerSec -
-      gyroYBiasRadPerSec
-    )
-    *
-    PITCH_GYRO_SIGN;
-
-
-  // Accelerometer-only pitch estimate — accurate at
-  // rest, unreliable during genuine acceleration. Only
-  // ever blended in gently, never trusted outright.
-
-  float accelPitchRad =
-    atan2(
-      -rawX,
-      sqrt(
-        (
-          rawY *
-          rawY
-        )
-        +
-        (
-          rawZ *
-          rawZ
-        )
-      )
-    );
-
-
-  // =================================================
-  // ACCELEROMETER RELIABILITY GATING
-  // =================================================
-
-  // The accelerometer only measures gravity's direction
-  // correctly when it ISN'T also measuring real
-  // acceleration. At rest (or steady speed), total
-  // accelerometer magnitude reads ~1g regardless of
-  // orientation — that's just gravity. Under real
-  // acceleration/braking/cornering, the vehicle's own
-  // acceleration adds to that, so total magnitude moves
-  // away from 1g. The further away it is, the less the
-  // accelerometer's pitch estimate can be trusted, so
-  // its influence on the filter is scaled down to match
-  // — down to fully ignored during a hard event, leaving
-  // the filter running on gyro alone until things settle.
-
-  float totalAccelMagG =
-    sqrt(
-      (
-        rawX *
-        rawX
-      )
-      +
-      (
-        rawY *
-        rawY
-      )
-      +
-      (
-        rawZ *
-        rawZ
-      )
-    )
-    /
-    9.81;
-
-
-  float accelMagDeviation =
-    fabs(
-      totalAccelMagG -
-      1.0
-    );
-
-
-  // How far from 1g before the accelerometer correction
-  // is fully distrusted. 0.3g is a reasonable starting
-  // point — noticeably harder than normal driving, but
-  // not an extreme event.
-
-  const float accelTrustFadeRangeG = 0.3;
-
-  float accelReliability =
-    1.0 -
-    constrain(
-      accelMagDeviation /
-      accelTrustFadeRangeG,
-      0.0,
-      1.0
-    );
-
-
-  float effectiveAccelWeight =
-    (
-      1.0 -
-      pitchComplementaryAlpha
-    )
-    *
-    accelReliability;
-
-  float effectiveGyroWeight =
-    1.0 -
-    effectiveAccelWeight;
-
-
-  pitchAngleRad =
-    (
-      effectiveGyroWeight *
-      (
-        pitchAngleRad +
-        (
-          correctedGyroYRadPerSec *
-          dt
-        )
-      )
-    )
-    +
-    (
-      effectiveAccelWeight *
-      accelPitchRad
-    );
-}
-
-
-// ==================================================
 // SMART BASELINE UPDATE
 // ==================================================
 
 void updateSmartBaseline(
+  float rawX,
   float rawY,
   float rawZ,
-  float movementChangeG
+  float dynamicMovementG
 ) {
 
 #if HILL_COMPENSATION
@@ -921,10 +542,31 @@ void updateSmartBaseline(
     millis();
 
 
+  // =================================================
+  // DETECT DYNAMIC MOVEMENT
+  // =================================================
+
+  // Dynamic movement is based on the magnitude of
+  // the fast-vs-slow accelerometer component.
+  //
+  // This is deliberately independent of the slowly
+  // changing hill baseline.
+  //
+  // This allows the system to distinguish:
+  //
+  //   Fast acceleration
+  //       from
+  //   Slow hill orientation
+  //
+
   bool dynamicMovement =
-    movementChangeG >
+    dynamicMovementG >
     baselineDynamicReentryThreshold;
 
+
+  // =================================================
+  // DYNAMIC STATE
+  // =================================================
 
   if (
     dynamicMovement
@@ -938,9 +580,20 @@ void updateSmartBaseline(
       now;
 
 
+    // IMPORTANT:
+    //
+    // Do not update driftBase here.
+    //
+    // The baseline is completely frozen while
+    // genuine dynamic movement is detected.
+
     return;
   }
 
+
+  // =================================================
+  // DYNAMIC -> SETTLING
+  // =================================================
 
   if (
     baselineState ==
@@ -959,13 +612,20 @@ void updateSmartBaseline(
   }
 
 
+  // =================================================
+  // SETTLING STATE
+  // =================================================
+
   if (
     baselineState ==
     BASELINE_SETTLING
   ) {
 
+    // If meaningful movement starts again,
+    // immediately return to DYNAMIC.
+
     if (
-      movementChangeG >
+      dynamicMovementG >
       baselineDynamicReentryThreshold
     ) {
 
@@ -981,8 +641,11 @@ void updateSmartBaseline(
     }
 
 
+    // If movement is still above the calm threshold,
+    // restart the settling timer.
+
     if (
-      movementChangeG >
+      dynamicMovementG >
       baselineStableThreshold
     ) {
 
@@ -994,6 +657,8 @@ void updateSmartBaseline(
     }
 
 
+    // Wait for the short settling period.
+
     if (
       now -
       dynamicMovementEndedTime <
@@ -1004,34 +669,41 @@ void updateSmartBaseline(
     }
 
 
+    // =================================================
+    // SETTLING COMPLETE
+    // =================================================
+
     baselineState =
       BASELINE_STABLE;
   }
 
+
+  // =================================================
+  // STABLE STATE
+  // =================================================
 
   if (
     baselineState ==
     BASELINE_STABLE
   ) {
 
+    // Only adapt when the vehicle is genuinely calm.
+
     if (
-      movementChangeG <
+      dynamicMovementG <
       baselineStableThreshold
     ) {
 
-      // Note: driftBaseX no longer exists here. The
-      // forward axis is compensated by gyro pitch
-      // tracking instead — see updatePitchEstimate()
-      // and readAcceleration(). Only Y/Z (side/vertical)
-      // still use this slow adaptive baseline.
-      //
-      // Also note: this now only runs when the gating
-      // signal has genuinely STOPPED CHANGING (rate of
-      // change below threshold), not just when it's
-      // small — so a stale/large-but-steady offset can
-      // still correctly reach here and get adapted away,
-      // rather than being permanently mistaken for
-      // ongoing movement.
+      driftBaseX =
+        driftBaseX *
+        (
+          1.0 -
+          baselineDriftRate
+        )
+        +
+        rawX *
+        baselineDriftRate;
+
 
       driftBaseY =
         driftBaseY *
@@ -1084,6 +756,10 @@ uint32_t blueToOrange(
   int b;
 
 
+  // =================================================
+  // BLUE -> CONTROLLED VIOLET-BLUE
+  // =================================================
+
   if (
     amount <
     0.5
@@ -1135,6 +811,10 @@ uint32_t blueToOrange(
       t;
   }
 
+
+  // =================================================
+  // VIOLET-BLUE -> ORANGE
+  // =================================================
 
   else {
 
@@ -1565,6 +1245,10 @@ void readAcceleration() {
   );
 
 
+  // =================================================
+  // RAW ACCELERATION
+  // =================================================
+
   float rawX =
     accel.acceleration.x;
 
@@ -1578,73 +1262,146 @@ void readAcceleration() {
 
 
   // =================================================
-  // GYRO PITCH UPDATE (V3.7)
+  // INITIALISE GRAVITY ESTIMATE
   // =================================================
 
-  // Pitch is read from the gyro's Y-axis for this
-  // vehicle's mounting — see updatePitchEstimate().
-  // Gated by HILL_COMPENSATION so the toggle still
-  // means "no hill compensation at all" for comparison/
-  // debugging, not just "the old baseline system off."
+  if (
+    gravityX == 0.0 &&
+    gravityY == 0.0 &&
+    gravityZ == 0.0
+  ) {
 
-#if HILL_COMPENSATION
-
-  updatePitchEstimate(
-    rawX,
-    rawY,
-    rawZ,
-    gyro.gyro.y
-  );
+    gravityX =
+      rawX;
 
 
-  // How much of rawX is explained by gravity at the
-  // current estimated pitch angle.
-
-  float gravityForwardComponent =
-    9.81 *
-    sin(
-      pitchAngleRad
-    );
+    gravityY =
+      rawY;
 
 
-  // What's left after removing it — genuine dynamic
-  // (non-gravity) forward acceleration, regardless of
-  // how long the vehicle has been on a slope.
-
-  float pitchCompensatedX =
-    rawX +
-    gravityForwardComponent;
-
-#else
-
-  // Hill compensation disabled — use the raw reading
-  // directly, uncompensated, same as if pitch tracking
-  // didn't exist.
-
-  float pitchCompensatedX =
-    rawX;
-
-#endif
+    gravityZ =
+      rawZ;
+  }
 
 
   // =================================================
-  // FORWARD AXIS (PITCH-COMPENSATED, X ONLY)
+  // SLOW GRAVITY / HILL FILTER
   // =================================================
 
-  float currentXG =
-    pitchCompensatedX /
+  gravityX =
+    gravityX *
+    (
+      1.0 -
+      gravitySmoothing
+    )
+    +
+    rawX *
+    gravitySmoothing;
+
+
+  gravityY =
+    gravityY *
+    (
+      1.0 -
+      gravitySmoothing
+    )
+    +
+    rawY *
+    gravitySmoothing;
+
+
+  gravityZ =
+    gravityZ *
+    (
+      1.0 -
+      gravitySmoothing
+    )
+    +
+    rawZ *
+    gravitySmoothing;
+
+
+  // =================================================
+  // FAST DYNAMIC COMPONENT
+  // =================================================
+
+  float dynamicX =
+    rawX -
+    gravityX;
+
+
+  float dynamicY =
+    rawY -
+    gravityY;
+
+
+  float dynamicZ =
+    rawZ -
+    gravityZ;
+
+
+  // =================================================
+  // DYNAMIC COMPONENT IN G
+  // =================================================
+
+  float dynamicXG =
+    dynamicX /
     9.81;
 
 
+  float dynamicYG =
+    dynamicY /
+    9.81;
+
+
+  float dynamicZG =
+    dynamicZ /
+    9.81;
+
+
+  float rawMovementG =
+    sqrt(
+      (
+        dynamicXG *
+        dynamicXG
+      )
+      +
+      (
+        dynamicYG *
+        dynamicYG
+      )
+      +
+      (
+        dynamicZG *
+        dynamicZG
+      )
+    );
+
+
   // =================================================
-  // SIDE / VERTICAL AXES (UNCHANGED FROM V3.6)
+  // UPDATE SMART BASELINE STATE
   // =================================================
 
-  // Uses driftBaseY/Z as they currently stand — i.e.
-  // from the end of the previous loop. updateSmartBaseline()
-  // below may adjust them for next time, but this
-  // iteration's output is computed first, against
-  // whatever baseline was already established.
+  updateSmartBaseline(
+    rawX,
+    rawY,
+    rawZ,
+    rawMovementG
+  );
+
+
+  // =================================================
+  // BASELINE-CORRECTED VALUES
+  // =================================================
+
+  float currentXG =
+    (
+      rawX -
+      driftBaseX
+    )
+    /
+    9.81;
+
 
   float currentYG =
     (
@@ -1665,69 +1422,7 @@ void readAcceleration() {
 
 
   // =================================================
-  // OVERALL DYNAMIC MOVEMENT (GATES THE STATE MACHINE)
-  // =================================================
-
-  float rawMovementG =
-    sqrt(
-      (
-        currentXG *
-        currentXG
-      )
-      +
-      (
-        currentYG *
-        currentYG
-      )
-      +
-      (
-        currentZG *
-        currentZG
-      )
-    );
-
-
-  // Smoothed before gating — see the comment on
-  // smoothedGatingMovementG's declaration for why.
-
-  smoothedGatingMovementG =
-    (
-      smoothedGatingMovementG *
-      (
-        1.0 -
-        accelerationSmoothing
-      )
-    )
-    +
-    (
-      rawMovementG *
-      accelerationSmoothing
-    );
-
-
-  // How much the gating signal moved since last loop —
-  // see previousGatingMovementG's comment for why this,
-  // not the raw magnitude, is what actually gets gated on.
-
-  float movementChangeG =
-    fabs(
-      smoothedGatingMovementG -
-      previousGatingMovementG
-    );
-
-  previousGatingMovementG =
-    smoothedGatingMovementG;
-
-
-  updateSmartBaseline(
-    rawY,
-    rawZ,
-    movementChangeG
-  );
-
-
-  // =================================================
-  // FORWARD / SIDE SELECTION
+  // FORWARD
   // =================================================
 
   float rawForwardG =
@@ -1741,6 +1436,10 @@ void readAcceleration() {
     FORWARD_SIGN;
 
 
+  // =================================================
+  // SIDE
+  // =================================================
+
   float rawSideG =
     getSelectedAxis(
       currentXG,
@@ -1751,6 +1450,10 @@ void readAcceleration() {
     *
     SIDE_SIGN;
 
+
+  // =================================================
+  // LOW-PASS FILTER
+  // =================================================
 
   smoothedForwardG =
     (
@@ -1830,13 +1533,6 @@ void calibrateMPU6050() {
   float totalZ = 0.0;
 
 
-  // Accumulates gyro Y readings while the board is held
-  // still, to measure its zero-rate bias (see
-  // gyroYBiasRadPerSec above).
-
-  float totalGyroY = 0.0;
-
-
   for (
     int i = 0;
     i < samples;
@@ -1869,15 +1565,11 @@ void calibrateMPU6050() {
       accel.acceleration.z;
 
 
-    totalGyroY +=
-      gyro.gyro.y;
-
-
     delay(10);
   }
 
 
-  calibrationAccelX =
+  baseX =
     totalX /
     samples;
 
@@ -1892,13 +1584,10 @@ void calibrateMPU6050() {
     samples;
 
 
-  // Whatever the gyro read on average while genuinely
-  // still IS the bias — real rotation should average to
-  // ~0 over 120 samples if the board didn't move.
+  // Initialise adaptive baseline.
 
-  gyroYBiasRadPerSec =
-    totalGyroY /
-    samples;
+  driftBaseX =
+    baseX;
 
 
   driftBaseY =
@@ -1909,52 +1598,21 @@ void calibrateMPU6050() {
     baseZ;
 
 
-  // Seed the pitch estimate directly from the
-  // calibration averages, using the same formula as
-  // updatePitchEstimate()'s accelerometer-only estimate.
-  // Without this, pitch tracking would start assuming
-  // "perfectly level" even if the sensor is actually
-  // mounted at a slight angle, and would take a while
-  // to converge via the complementary filter alone.
-  //
-  // This is the TRUE absolute tilt angle (mounting
-  // offset included), which is deliberately what the
-  // gravity-compensation math needs — see the header
-  // comment on pitchAngleRad for why. calibrationPitchRad
-  // stores this same value separately, purely so the
-  // debug output can also show pitch RELATIVE to this
-  // calibration position (e.g. "10 degrees of hill"
-  // instead of "17 degrees absolute, which includes
-  // whatever angle the sensor happens to be bolted at").
+  // Initialise gravity estimate.
 
-  pitchAngleRad =
-    atan2(
-      -calibrationAccelX,
-      sqrt(
-        (
-          baseY *
-          baseY
-        )
-        +
-        (
-          baseZ *
-          baseZ
-        )
-      )
-    );
+  gravityX =
+    baseX;
 
 
-  calibrationPitchRad =
-    pitchAngleRad;
+  gravityY =
+    baseY;
 
 
-  // Reset so the next pitch update seeds its own
-  // timestamp fresh, rather than integrating across the
-  // gap the calibration routine's own delays created.
+  gravityZ =
+    baseZ;
 
-  lastPitchUpdateMicros =
-    0;
 
+  // Reset state.
 
   baselineState =
     BASELINE_STABLE;
@@ -1963,6 +1621,8 @@ void calibrateMPU6050() {
   dynamicMovementEndedTime =
     millis();
 
+
+  // Reset filters.
 
   smoothedForwardG =
     0.0;
@@ -1973,14 +1633,6 @@ void calibrateMPU6050() {
 
 
   smoothedMovementG =
-    0.0;
-
-
-  smoothedGatingMovementG =
-    0.0;
-
-
-  previousGatingMovementG =
     0.0;
 
 
@@ -1995,7 +1647,7 @@ void calibrateMPU6050() {
 
 
   Serial.println(
-    calibrationAccelX
+    baseX
   );
 
 
@@ -2016,22 +1668,6 @@ void calibrateMPU6050() {
 
   Serial.println(
     baseZ
-  );
-
-
-  Serial.print(
-    "Gyro Y bias: "
-  );
-
-  Serial.print(
-    gyroYBiasRadPerSec *
-    180.0 /
-    PI,
-    3
-  );
-
-  Serial.println(
-    " deg/s"
   );
 
 
@@ -2331,11 +1967,19 @@ void updateMainReactiveMode(
   float sideG
 ) {
 
+  // =================================================
+  // AMBIENT
+  // =================================================
+
   float ambientBrightness =
     userBrightness *
     0.25 *
     breathingMultiplier();
 
+
+  // =================================================
+  // BRAKING
+  // =================================================
 
   if (
     forwardG <
@@ -2428,6 +2072,10 @@ void updateMainReactiveMode(
   }
 
 
+  // =================================================
+  // ACCELERATION
+  // =================================================
+
   float accelIntensity =
     0.0;
 
@@ -2466,6 +2114,10 @@ void updateMainReactiveMode(
   }
 
 
+  // =================================================
+  // BRIGHTNESS
+  // =================================================
+
   float reactiveBrightness =
     ambientBrightness +
     (
@@ -2486,6 +2138,10 @@ void updateMainReactiveMode(
     );
 
 
+  // =================================================
+  // COLOUR
+  // =================================================
+
   uint32_t leftColour =
     blueToOrange(
       accelIntensity,
@@ -2500,6 +2156,10 @@ void updateMainReactiveMode(
     );
 
 
+  // =================================================
+  // CORNERING
+  // =================================================
+
   float leftBrightness;
 
   float rightBrightness;
@@ -2512,6 +2172,10 @@ void updateMainReactiveMode(
     rightBrightness
   );
 
+
+  // =================================================
+  // OUTPUT
+  // =================================================
 
   setBothStrips(
     leftColour,
@@ -2542,6 +2206,10 @@ void updateLEDs() {
   float movementG =
     smoothedMovementG;
 
+
+  // =================================================
+  // MODE SELECT
+  // =================================================
 
   switch (
     mode
@@ -2610,6 +2278,10 @@ void updateLEDs() {
   }
 
 
+  // =================================================
+  // SERIAL DEBUG
+  // =================================================
+
   if (
     millis() -
     lastSerialPrint >
@@ -2674,7 +2346,7 @@ void updateLEDs() {
       BASELINE_STABLE
     ) {
 
-      Serial.print(
+      Serial.println(
         "STABLE"
       );
     }
@@ -2684,48 +2356,17 @@ void updateLEDs() {
       BASELINE_DYNAMIC
     ) {
 
-      Serial.print(
+      Serial.println(
         "DYNAMIC"
       );
     }
 
     else {
 
-      Serial.print(
+      Serial.println(
         "SETTLING"
       );
     }
-
-
-    Serial.print(
-      " | Pitch (abs): "
-    );
-
-    Serial.print(
-      pitchAngleRad *
-      180.0 /
-      PI,
-      1
-    );
-
-    Serial.print(
-      " deg | Pitch (vs cal): "
-    );
-
-    Serial.print(
-      (
-        pitchAngleRad -
-        calibrationPitchRad
-      )
-      *
-      180.0 /
-      PI,
-      1
-    );
-
-    Serial.println(
-      " deg"
-    );
 
 
     lastSerialPrint =
@@ -2818,6 +2459,10 @@ void processEncoderRotation() {
   interrupts();
 
 
+  // =================================================
+  // CLOCKWISE
+  // =================================================
+
   while (
     accumulatedSteps >=
     stepsPerDetent
@@ -2850,6 +2495,10 @@ void processEncoderRotation() {
   }
 
 
+  // =================================================
+  // ANTICLOCKWISE
+  // =================================================
+
   while (
     accumulatedSteps <=
     -stepsPerDetent
@@ -2881,6 +2530,10 @@ void processEncoderRotation() {
     );
   }
 
+
+  // =================================================
+  // RETURN INCOMPLETE MOVEMENT
+  // =================================================
 
   if (
     accumulatedSteps !=
@@ -2917,6 +2570,10 @@ void readEncoderButton() {
     millis();
 
 
+  // =================================================
+  // BUTTON PRESSED
+  // =================================================
+
   if (
     buttonDown &&
     !buttonWasDown
@@ -2934,6 +2591,10 @@ void readEncoderButton() {
       now;
   }
 
+
+  // =================================================
+  // LONG PRESS
+  // =================================================
 
   if (
     buttonDown &&
@@ -2955,6 +2616,10 @@ void readEncoderButton() {
   }
 
 
+  // =================================================
+  // BUTTON RELEASED
+  // =================================================
+
   if (
     !buttonDown &&
     buttonWasDown
@@ -2963,6 +2628,10 @@ void readEncoderButton() {
     buttonWasDown =
       false;
 
+
+    // =================================================
+    // SHORT PRESS
+    // =================================================
 
     if (
       !longPressHandled &&
@@ -3025,14 +2694,14 @@ void setup() {
 
 
   Serial.println(
-    "MR2 Reactive LEDs — FINAL FIRMWARE V3.7"
+    "MR2 Reactive LEDs — FINAL FIRMWARE V2.0"
   );
 
 
 #if HILL_COMPENSATION
 
   Serial.println(
-    "Hill compensation: ENABLED (gyro + accelerometer pitch fusion)"
+    "Smart hill compensation: ENABLED"
   );
 
 #else
@@ -3056,6 +2725,10 @@ void setup() {
     " ms"
   );
 
+
+  // =================================================
+  // ENCODER
+  // =================================================
 
   pinMode(
     ENCODER_CLK,
@@ -3109,6 +2782,10 @@ void setup() {
   );
 
 
+  // =================================================
+  // LED STRIPS
+  // =================================================
+
   leftStrip.begin();
 
   rightStrip.begin();
@@ -3137,11 +2814,19 @@ void setup() {
   startupSweep();
 
 
+  // =================================================
+  // I2C
+  // =================================================
+
   Wire.begin(
     I2C_SDA,
     I2C_SCL
   );
 
+
+  // =================================================
+  // MPU6050
+  // =================================================
 
   if (
     !mpu.begin()
@@ -3195,6 +2880,10 @@ void setup() {
   );
 
 
+  // =================================================
+  // MPU6050 CONFIGURATION
+  // =================================================
+
   mpu.setAccelerometerRange(
     MPU6050_RANGE_4_G
   );
@@ -3209,6 +2898,10 @@ void setup() {
     MPU6050_BAND_21_HZ
   );
 
+
+  // =================================================
+  // INITIAL CALIBRATION
+  // =================================================
 
   calibrateMPU6050();
 
