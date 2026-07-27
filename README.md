@@ -12,7 +12,7 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Project Status
 
-**Current Stage:** Control box built and bench-tested. Preparing for real-world vehicle testing.
+**Current Stage:** Physically installed in the MR2 (control box, sensor, and encoder mounted). Currently running on USB-C power for bench-in-car testing ahead of the first real test drive. Vehicle 12V supply and buck converter not yet connected. See [Build Log](docs/build-log.md) for full details.
 
 Completed:
 
@@ -23,11 +23,14 @@ Completed:
 - PCB manufacturing
 - PCB assembly (including a GPIO fault investigation and replacement board)
 - Control box construction
+- Control box installed in the MR2
+- MPU6050 accelerometer and rotary encoder mounted
 - Hardware documentation
 
 Upcoming:
 
-- Vehicle testing
+- Test drives, logging sensor data for tuning
+- Connect vehicle 12V supply through the buck converter
 - Final installation
 
 ## Features
