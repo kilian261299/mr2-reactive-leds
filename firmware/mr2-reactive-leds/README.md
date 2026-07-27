@@ -519,6 +519,10 @@ This is one of the specific things to watch for during real-world driving. If it
 - Wider dead zones.
 - A minimum-duration requirement — only react once a spike has been sustained for some threshold (e.g. ~100ms+), since bumps are typically much shorter-lived than genuine acceleration/braking events.
 
+### Post-Install Update: LED Count
+
+Not part of the original v3.0 development — added afterward, once the LED strips were physically cut to fit final mounting. `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` updated from `160` to `80` to match. See the build log's "Build Change: LED Strips Cut to Fit Final Mounting" entry for the hardware side of this.
+
 ### Result
 
 v3.0 is intended to resolve the core limitation carried through every previous version of the hill-compensation system: rather than carefully managing the ambiguity between "tilted" and "accelerating," it removes the ambiguity directly by using the MPU6050's gyroscope — a sensor that was physically present on the chip all along (the MPU6050 is a combined accelerometer + gyroscope), but whose readings earlier versions requested and then discarded without using. Bench testing confirmed the forward-axis pitch compensation working as intended, including recovering correctly from a large, sustained reorientation.
