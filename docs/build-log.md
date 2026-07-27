@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** Control box completed and functionally tested. Ready for temporary vehicle installation and real-world testing.
+**Status:** System physically installed in the MR2 (control box, sensor, encoder mounted). Currently powered via USB-C for bench-in-car testing ahead of the first real test drive. Vehicle 12V supply and buck converter not yet connected. Master power switch omitted from the build — see Stage 8 for details.
 
 Completed:
 
@@ -18,17 +18,19 @@ Completed:
 - Replacement PCB validation
 - Control box construction
 - PCB installation into control box
-- Buck converter installation
+- Buck converter installation (into control box — not yet wired into the vehicle)
 - Control box functional testing
+- Control box installed in the MR2
+- MPU6050 accelerometer mounted in final orientation
+- Rotary encoder mounted
 
 Next steps:
 
-- Temporarily install the control box in the MR2
+- Test drives (USB/laptop powered, Serial logging) — see Stage 8
+- Tune sensitivity/filtering based on logged data
 - Connect the vehicle 12V supply through the buck converter
-- Verify buck converter output
-- Mount the MPU6050 accelerometer in its final vehicle orientation
-- Test the system under real driving conditions
-- Adjust sensitivity and filtering if required
+- Verify buck converter output from vehicle power
+- Re-verify system behaviour running from vehicle power rather than USB
 - Complete permanent installation into MR2
 
 ## Stage 1 — Planning
@@ -488,7 +490,17 @@ The control box is now ready for temporary vehicle installation and real-world t
 
 ### Control Box Photos
 
-![Control Box](../images/control-box/control_box.jpeg)
+Photos documenting the control box construction, PCB installation, buck converter installation, wiring, and completed enclosure are included below.
+
+*(Photo links below are placeholders — images not yet uploaded to the repository.)*
+
+![Control Box](../images/control-box/control_box.jpg)
+
+![PCB Mounted Inside Control Box](../images/control-box/pcb_mounted.jpg)
+
+![Buck Converter and Control Box Wiring](../images/control-box/control_box_wiring.jpg)
+
+![Completed Control Box](../images/control-box/control_box_complete.jpg)
 
 **Notes:**
 
@@ -521,28 +533,49 @@ The completed control box will be temporarily installed in the MR2 to verify the
 
 **Firmware version under test:** v3.0 (gyroscope + accelerometer sensor fusion hill compensation). Developed and bench-tested after the control box (Stage 7) was already built — see Stage 6 and [firmware/README.md](../firmware/README.md) for full details of what changed and what's still unverified pending this real-world test.
 
+### Build Change: Master Power Switch Removed
+
+The Gebildet metal toggle switch specified in the original design was not fitted — insufficient mounting space was available at the intended location. The switch connector on the PCB has been shorted instead, so the system is now permanently live whenever it has power, with no separate physical on/off switch.
+
+Practical effect: the system powers on/off by whatever connects/disconnects its power feed (currently the USB-C cable during testing; the fused 12V vehicle supply once the buck converter is wired in), rather than a dedicated switch. This is a deliberate build simplification, not a firmware change — the switch was never read by the firmware, only ever a physical interrupt on the power line upstream of the board.
+
+This affects the top-level project README (Features, Hardware table, System Behaviour table, Wiring Summary) and the wiring plan, both updated separately to match.
+
+### Installation Progress
+
+Completed so far:
+
+- Control box installed in the MR2.
+- MPU6050 accelerometer mounted in its final vehicle orientation.
+- Rotary encoder mounted.
+- Master switch connector shorted (see above) in place of the physical switch.
+
+Not yet done:
+
+- Vehicle 12V supply not yet connected — buck converter not yet wired into the car's electrical system.
+- Currently powered via USB-C for bench-in-car testing only.
+- No test drive has taken place yet.
+
 Planned work:
 
-- Temporarily install the control box in the MR2
-- Connect the vehicle 12V supply to the control box
-- Verify the 12V to 5V buck converter output
-- Verify the system powers on and off correctly
-- Mount the MPU6050 accelerometer in its final vehicle orientation
-- Test startup sequence
+- Test drives, powered via laptop USB (for Serial logging) rather than the vehicle supply — see logging plan below.
 - Test acceleration response
 - Test braking response
 - Test left/right cornering effects
+- Test hill/gradient response
 - Verify rotary encoder brightness adjustment
 - Verify LED strip operation
 - Adjust sensitivity and filtering if required
-- Verify behaviour during real driving conditions
 - Specifically check: hill/gradient behaviour (v3.0's main change), sustained cornering brightness (recently patched, unverified), and road bump/surface noise sensitivity (untested, flagged as a risk in the firmware changelog)
+- Once test drives are complete and any tuning is done: connect the vehicle 12V supply through the buck converter, verify its output, and re-verify the system still behaves correctly running from vehicle power rather than USB.
 
-**Status:** Pending
+**Logging plan:** two planned test drives, using the existing mode-cycling (short press) as phase markers rather than a dedicated logging firmware — Drive 1 covers acceleration/braking (soft and hard) across Modes 0–4, Drive 2 covers hills and cornering. Serial output logged via laptop, reviewed afterward to tune dead zones and response ranges against real-world G values.
+
+**Status:** In progress — physically installed, not yet driven.
 
 **Testing notes:**
 
-Pending.
+Pending first test drive.
 
 ## Stage 9 — Final Installation
 
