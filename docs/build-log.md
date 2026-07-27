@@ -529,7 +529,13 @@ The Gebildet metal toggle switch specified in the original design was not fitted
 
 Practical effect: the system powers on/off by whatever connects/disconnects its power feed (currently the USB-C cable during testing; the fused 12V vehicle supply once the buck converter is wired in), rather than a dedicated switch. This is a deliberate build simplification, not a firmware change — the switch was never read by the firmware, only ever a physical interrupt on the power line upstream of the board.
 
-This affects the top-level project README (Features, Hardware table, System Behaviour table, Wiring Summary) and the wiring plan, both updated separately to match.
+This affects the top-level project README (Features, Hardware table, System Behaviour table, Wiring Summary) and the wiring plan, both updated separately to match. It also affects Stage 9's planned work below.
+
+### Build Change: LED Strips Cut to Fit Final Mounting
+
+The two 1m/160-LED WS2812B strips originally specified were cut down to approximately 0.5m (80 LEDs) per side to fit the final footwell mounting.
+
+Firmware updated to match: `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80` in the v3.0 firmware. This constant controls the pixel buffer size and, more importantly, the startup sweep animation's length — an unmatched count wouldn't damage anything, but would make that animation run for double its intended length before continuing to calibration. Static/reactive colour output (all five modes) sets every physical LED to the same colour, so it wasn't affected by the count either way. See [firmware/README.md](../firmware/README.md) for the code-level detail.
 
 ### Installation Progress
 
@@ -539,6 +545,7 @@ Completed so far:
 - MPU6050 accelerometer mounted in its final vehicle orientation.
 - Rotary encoder mounted.
 - Master switch connector shorted (see above) in place of the physical switch.
+- LED strips cut to final length and firmware updated to match (see above).
 
 Not yet done:
 
@@ -577,11 +584,12 @@ Planned work:
 - Secure the PCB enclosure
 - Connect the fused 12V vehicle power supply
 - Permanently install the rotary encoder
-- Permanently install the master toggle switch
 - Permanently install the LED strips
 - Mount the MPU6050 accelerometer securely in its final orientation
 - Route and secure all wiring
 - Complete final system test
+
+**Note:** the master toggle switch listed in this stage's original planning was not fitted — see Stage 8's "Build Change: Master Power Switch Removed." No switch installation step remains for final installation.
 
 **Status:** Pending
 
