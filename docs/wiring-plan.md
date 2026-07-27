@@ -6,7 +6,7 @@ Power is tapped from the rear of the cigarette lighter circuit.
 
 ```text
 Cigarette lighter +12V
-→ inline 5A fuse
+→ inline 15A fuse
 → 12V to 5V buck converter input +
 
 Cigarette lighter ground
@@ -14,6 +14,12 @@ Cigarette lighter ground
 ```
 
 The fuse should be placed as close to the cigarette lighter tap as possible.
+
+### Master Power Switch — Not Fitted
+
+The PCB includes a master power switch connector, originally intended for a Gebildet metal toggle switch. This was not fitted in the final build — insufficient mounting space was available at the intended location — so the connector is shorted instead.
+
+The system is therefore live whenever it has power, with no separate physical on/off switch. Power is controlled entirely by whatever supplies the board (currently USB-C for bench-in-car testing; the fused 12V vehicle supply once the buck converter is connected).
 
 ### 5V Power Distribution
 
