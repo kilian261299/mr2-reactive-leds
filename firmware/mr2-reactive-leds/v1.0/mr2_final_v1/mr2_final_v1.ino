@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V1
+  MR2 Reactive LEDs — Final Firmware V1.0
   ==================================================
 
   Hardware used:
@@ -713,7 +713,7 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  Serial.println("MR2 Reactive LEDs — Final Firmware V1");
+  Serial.println("MR2 Reactive LEDs — Final Firmware V1.0");
 
   pinMode(ENCODER_CLK, INPUT_PULLUP);
   pinMode(ENCODER_DT, INPUT_PULLUP);

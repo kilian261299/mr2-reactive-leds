@@ -85,7 +85,7 @@
   valid quadrature transitions count as movement.
 
   --------------------------------------------------
-  WHAT'S IN V3
+  WHAT'S IN V1.3
   --------------------------------------------------
 
   Axis orientation is confirmed working.

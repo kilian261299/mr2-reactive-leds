@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V1.5
+  MR2 Reactive LEDs — Final Firmware V1.3
   ==================================================
 
   Hardware used:
@@ -16,29 +16,6 @@
   - Two WS2812B LED strips
   - SN74AHCT125N level shifter
   - 12V to 5V converter
-
-  --------------------------------------------------
-  WHAT'S NEW IN V1.5
-  --------------------------------------------------
-
-  Fixed a jittery/unreliable brightness knob (would drift up and down
-  instead of moving cleanly one direction, especially near zero).
-
-  The old rotation-reading method reacted to any single change on the
-  CLK pin, trusting DT to tell it which direction. That's fragile —
-  contact bounce or a slower loop (this sketch redraws 320 LEDs every
-  cycle) can catch a transition mid-bounce or miss one, misreading
-  direction.
-
-  Replaced with full quadrature decoding: CLK and DT are tracked
-  together as a state, and only a complete, valid 4-step sequence
-  counts as one "click" of the knob. Invalid/bounced in-between states
-  are ignored rather than misread, which should make brightness
-  control far more reliable, including reaching a clean, stable zero.
-
-  If your particular encoder feels like it needs two physical clicks
-  per brightness step (or the reverse), adjust stepsPerDetent near
-  readEncoderRotation() — most KY-040s are 4, some are 2 or 1.
 
   --------------------------------------------------
   WHAT'S NEW IN V1.3
@@ -181,10 +158,9 @@
   Mode 4 — Green, themed reactive
 
     Colour stays fixed, but brightness reacts to overall movement
-    (not direction — just "moving" vs "calm") and cornering (left/
-    right brightness shift, same as Mode 0), and gently breathes
-    when the car is still. Knob still sets the overall brightness
-    ceiling.
+    (not direction — just "moving" vs "calm") and gently breathes
+    when the car is still, same as Mode 0's idle breathing. Knob
+    still sets the overall brightness ceiling.
 
   --------------------------------------------------
   HOW TO SET UP AFTER INSTALLING
@@ -321,9 +297,7 @@ const int numberOfModes = 5;
 // ENCODER / BUTTON VARIABLES
 // ==================================================
 
-// (Quadrature state tracking for the encoder — encoderState and
-// encoderAccumulatedSteps — is declared with readEncoderRotation()
-// further down.)
+int lastCLKState;
 
 bool buttonWasDown = false;
 bool longPressHandled = false;
@@ -595,13 +569,11 @@ float breathingMultiplier() {
 
 // Used by the four static theme modes (Purple/Red/Blue/Green).
 // Colour stays fixed, but brightness reacts to overall movement and
-// cornering, and breathes gently when the car is still — same
-// breathing floor and cornering shift as Mode 0, just without any
-// hue change. Uses movementG (overall G) for the base reactive level
-// since these modes don't need to distinguish forward/back, only
-// "moving" vs "calm" — but sideG still drives the left/right shift
-// so cornering is visible here too.
-void updateStaticThemeMode(int r, int g, int b, float movementG, float sideG) {
+// breathes gently when the car is still — same breathing floor as
+// Mode 0, just without any hue change. Uses movementG (overall G,
+// not split into forward/side) since these modes don't need to
+// distinguish direction, only "moving" vs "calm".
+void updateStaticThemeMode(int r, int g, int b, float movementG) {
   int ambientBrightness = userBrightness * 0.25 * breathingMultiplier();
 
   float intensity = movementG / 0.50;
@@ -610,16 +582,11 @@ void updateStaticThemeMode(int r, int g, int b, float movementG, float sideG) {
   int themeBrightness = ambientBrightness + ((userBrightness - ambientBrightness) * intensity);
   themeBrightness = constrain(themeBrightness, 0, userBrightness);
 
-  int leftBrightness;
-  int rightBrightness;
-
-  applyCorneringBrightness(themeBrightness, sideG, leftBrightness, rightBrightness);
-
   setBothStrips(
     leftStrip.Color(r, g, b),
     rightStrip.Color(r, g, b),
-    leftBrightness,
-    rightBrightness
+    themeBrightness,
+    themeBrightness
   );
 }
 
@@ -707,22 +674,22 @@ void updateLEDs() {
 
     case 1:
       // Purple, brightness reacts to movement, breathes when calm
-      updateStaticThemeMode(54, 1, 63, movementG, sideG);
+      updateStaticThemeMode(140, 0, 255, movementG);
       break;
 
     case 2:
       // Red, brightness reacts to movement, breathes when calm
-      updateStaticThemeMode(255, 0, 0, movementG, sideG);
+      updateStaticThemeMode(255, 0, 0, movementG);
       break;
 
     case 3:
       // Blue, brightness reacts to movement, breathes when calm
-      updateStaticThemeMode(0, 0, 255, movementG, sideG);
+      updateStaticThemeMode(0, 0, 255, movementG);
       break;
 
     case 4:
       // Green, brightness reacts to movement, breathes when calm
-      updateStaticThemeMode(0, 255, 10, movementG, sideG);
+      updateStaticThemeMode(0, 255, 80, movementG);
       break;
   }
 
@@ -762,65 +729,23 @@ void updateLEDs() {
 // ENCODER HANDLING
 // ==================================================
 
-// Full quadrature state-transition decoding.
-//
-// The old approach ("any time CLK changes, check DT") relies on
-// catching every single transition cleanly. That's fragile — contact
-// bounce or a slow/busy loop (like this one, redrawing 320 LEDs every
-// cycle) can catch a pin mid-bounce or miss a transition, which
-// throws off the CLK/DT pairing and misreads direction. That's what
-// caused brightness to drift up and down instead of moving cleanly
-// one way.
-//
-// This table tracks CLK+DT together as a 2-bit "state" and looks at
-// the last 2 states combined (4 bits total) to decide if a full,
-// valid quadrature step has occurred. Invalid/bounced transitions
-// simply return 0 (ignored) instead of being misread as a direction —
-// much more resistant to noise and timing variation.
-const int8_t encoderTransitionTable[16] = {
-   0, -1,  1,  0,
-   1,  0,  0, -1,
-  -1,  0,  0,  1,
-   0,  1, -1,  0
-};
-
-uint8_t encoderState = 0;
-int8_t encoderAccumulatedSteps = 0;
-
-// Most KY-040 encoders produce 4 valid quarter-steps per physical
-// "click" of the knob. If your knob feels like it needs two clicks
-// per brightness change (or changes brightness twice per click),
-// try 2 or 1 here instead.
-const int8_t stepsPerDetent = 4;
-
 void readEncoderRotation() {
-  int clk = digitalRead(ENCODER_CLK);
-  int dt  = digitalRead(ENCODER_DT);
+  int currentCLKState = digitalRead(ENCODER_CLK);
 
-  uint8_t newState = (clk << 1) | dt;
-  encoderState = ((encoderState << 2) | newState) & 0x0F;
-
-  int8_t movement = encoderTransitionTable[encoderState];
-
-  if (movement != 0) {
-    encoderAccumulatedSteps += movement;
-
-    if (encoderAccumulatedSteps >= stepsPerDetent) {
+  if (currentCLKState != lastCLKState) {
+    if (digitalRead(ENCODER_DT) != currentCLKState) {
       userBrightness += 5;
-      encoderAccumulatedSteps = 0;
-
-      userBrightness = constrain(userBrightness, minBrightness, maxBrightness);
-      Serial.print("Brightness max set to: ");
-      Serial.println(userBrightness);
-    } else if (encoderAccumulatedSteps <= -stepsPerDetent) {
+    } else {
       userBrightness -= 5;
-      encoderAccumulatedSteps = 0;
-
-      userBrightness = constrain(userBrightness, minBrightness, maxBrightness);
-      Serial.print("Brightness max set to: ");
-      Serial.println(userBrightness);
     }
+
+    userBrightness = constrain(userBrightness, minBrightness, maxBrightness);
+
+    Serial.print("Brightness max set to: ");
+    Serial.println(userBrightness);
   }
+
+  lastCLKState = currentCLKState;
 }
 
 void readEncoderButton() {
@@ -869,7 +794,7 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  Serial.println("MR2 Reactive LEDs — Final Firmware V1.5");
+  Serial.println("MR2 Reactive LEDs — Final Firmware V1.3");
 
 #if HILL_COMPENSATION
   Serial.println("Hill compensation: ENABLED (drifting baseline)");
@@ -881,9 +806,7 @@ void setup() {
   pinMode(ENCODER_DT, INPUT_PULLUP);
   pinMode(ENCODER_SW, INPUT_PULLUP);
 
-  // Seed the quadrature state with the encoder's actual starting
-  // position, so the first read isn't compared against a fake "0".
-  encoderState = (digitalRead(ENCODER_CLK) << 1) | digitalRead(ENCODER_DT);
+  lastCLKState = digitalRead(ENCODER_CLK);
 
   leftStrip.begin();
   rightStrip.begin();
@@ -940,4 +863,6 @@ void loop() {
   readEncoderRotation();
   readEncoderButton();
   updateLEDs();
+
+  delay(20);
 }

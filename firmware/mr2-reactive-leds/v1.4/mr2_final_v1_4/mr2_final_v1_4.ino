@@ -5,7 +5,7 @@
 
 /*
   ==================================================
-  MR2 Reactive LEDs — Final Firmware V3
+  MR2 Reactive LEDs — Final Firmware V1.4
   ==================================================
 
   Hardware used:
@@ -18,7 +18,7 @@
   - 12V to 5V converter
 
   --------------------------------------------------
-  WHAT'S NEW IN V3
+  WHAT'S NEW IN V1.4
   --------------------------------------------------
 
   Axis orientation is confirmed working (forward/back and left/right
@@ -52,11 +52,11 @@
     and the breathing effect is naturally overridden.
 
   If axes ever need re-checking in the future (e.g. after remounting
-  or resoldering), the previous version (V2) still has the X/Y/Z
+  or resoldering), the previous version (V1.1) still has the X/Y/Z
   diagnostic modes and can be reflashed temporarily for that.
 
   --------------------------------------------------
-  WHAT'S IN HILL COMPENSATION (carried over from V2)
+  WHAT'S IN HILL COMPENSATION (carried over from V1.1)
   --------------------------------------------------
 
   Added HILL_COMPENSATION: a slowly-drifting accelerometer baseline.
@@ -175,7 +175,7 @@
 
   Axis orientation (FORWARD_AXIS/SIGN, SIDE_AXIS/SIGN below) was
   confirmed during bench + tilt testing. If the car is remounted or
-  resoldered later, reflash V2 temporarily to re-check axes using its
+  resoldered later, reflash V1.1 temporarily to re-check axes using its
   diagnostic modes, then come back to this version.
 
   --------------------------------------------------
@@ -802,7 +802,7 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  Serial.println("MR2 Reactive LEDs — Final Firmware V3");
+  Serial.println("MR2 Reactive LEDs — Final Firmware V1.4");
 
 #if HILL_COMPENSATION
   Serial.println("Hill compensation: ENABLED (drifting baseline)");
