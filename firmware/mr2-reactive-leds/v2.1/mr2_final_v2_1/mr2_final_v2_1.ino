@@ -59,6 +59,13 @@
   need further adjustment once more driving data
   (different gears/speeds) is available.
 
+  Also carried over from the v3.0 firmware, which had
+  this fix but v2.0 did not: NUM_LEDS_LEFT/RIGHT
+  changed from 160 to 80, matching the LED strips as
+  physically cut for final mounting. See the build log's
+  "LED Strips Cut to Fit Final Mounting" entry for the
+  hardware side of this.
+
 
   ==================================================
   V2.1 FEATURES
@@ -246,8 +253,8 @@
 // LED SETUP
 // ==================================================
 
-#define NUM_LEDS_LEFT   160
-#define NUM_LEDS_RIGHT  160
+#define NUM_LEDS_LEFT   80
+#define NUM_LEDS_RIGHT  80
 
 Adafruit_NeoPixel leftStrip(
   NUM_LEDS_LEFT,

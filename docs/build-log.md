@@ -28,7 +28,6 @@ Completed:
 Next steps:
 
 - Serial-logged test drive on v2.1 to confirm the acceleration tuning fix
-- Update LED count constant in v2.1 to match the cut strips
 - Connect the vehicle 12V supply through the buck converter
 - Verify buck converter output from vehicle power
 - Re-verify system behaviour running from vehicle power rather than USB
@@ -536,7 +535,7 @@ This affects the top-level project README (Features, Hardware table, System Beha
 
 The two 1m/160-LED WS2812B strips originally specified were cut down to approximately 0.5m (80 LEDs) per side to fit the final footwell mounting.
 
-Firmware updated to match: `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80` in the v3.0 firmware specifically (v2.0/v2.1 retain the original `160`, since they weren't in active use when the strips were cut — worth updating if/when v2.1 becomes the permanent version). This constant controls the pixel buffer size and, more importantly, the startup sweep animation's length — an unmatched count wouldn't damage anything, but would make that animation run for double its intended length before continuing to calibration. Static/reactive colour output (all five modes) sets every physical LED to the same colour, so it wasn't affected by the count either way. See [firmware/README.md](../firmware/README.md) for the code-level detail.
+Firmware updated to match: `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80`. Originally applied to v3.0 only; v2.0 retains the original `160` (it wasn't in active use when the strips were cut), but v2.1 has since had the same fix applied, since that's the version actually running in the car — see Test Drive Results below. This constant controls the pixel buffer size and, more importantly, the startup sweep animation's length — an unmatched count wouldn't damage anything, but would make that animation run for double its intended length before continuing to calibration. Static/reactive colour output (all five modes) sets every physical LED to the same colour, so it wasn't affected by the count either way. See [firmware/README.md](../firmware/README.md) for the code-level detail.
 
 ### Installation Progress
 
@@ -554,7 +553,6 @@ Not yet done:
 
 - Vehicle 12V supply not yet connected — buck converter not yet wired into the car's electrical system.
 - Full Serial-logged test drive on the tuned v2.1 (the logged drive so far was on v3.0, used to diagnose the acceleration response issue that v2.1 then fixed).
-- `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` not yet updated in v2.0/v2.1 to match the cut strips.
 
 ### Test Drive Results
 
@@ -564,12 +562,11 @@ Not yet done:
 
 **Decision:** development moved to tuning v2.0 (now v2.1) rather than continuing v3.0 immediately, based on v2.0's clean real-world result versus v3.0's unresolved pitch-drift question. This is provisional — v3.0 is not considered abandoned, and may be revisited once its pitch behaviour can be tested unambiguously (hard acceleration on confirmed-flat ground). See the firmware changelog's v2.1 entry for the full reasoning.
 
-**v2.1 fix applied:** `accelerationResponseG` lowered from `0.35` to `0.18` based on the logged 0.17g data point. Not yet re-tested in the car.
+**v2.1 fixes applied:** `accelerationResponseG` lowered from `0.35` to `0.18` based on the logged 0.17g data point. `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` updated from `160` to `80` to match the cut strips (v3.0 already had this; now carried over to v2.1 as the version actually running in the car). Neither fix has been re-tested in the car yet.
 
 Planned work:
 
-- Serial-logged test drive on v2.1 to confirm the acceleration fix, and gather a fuller spread of gentle/moderate/hard acceleration data.
-- Update `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` in v2.1 to `80` to match the cut strips.
+- Serial-logged test drive on v2.1 to confirm both fixes, and gather a fuller spread of gentle/moderate/hard acceleration data.
 - Revisit whether the v3.0 pitch question needs isolated testing (hard acceleration on confirmed-flat ground).
 - Verify rotary encoder brightness adjustment and LED strip operation in the car (not yet specifically confirmed against the earlier bench tests).
 - Once satisfied with tuning: connect the vehicle 12V supply through the buck converter, verify its output, and re-verify the system still behaves correctly running from vehicle power rather than USB.

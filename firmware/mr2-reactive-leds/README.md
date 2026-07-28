@@ -557,6 +557,10 @@ Logged driving data (from the same drive, captured while running v3.0 — the un
 
 This is a first estimate from a single data point, not a fully characterised response curve. May need further adjustment once more driving data — a range of gentle/moderate/hard accelerations, not just one hard launch — is available. Braking (`brakingResponseG = 0.40`) and cornering (`corneringResponseG = 0.35`) were left unchanged, since both were already reported working well.
 
+### Change: LED Count
+
+`NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80`, matching the LED strips as physically cut for final mounting. v3.0 already had this fix (it was made directly to v3.0 while that was the active version); v2.0 did not, since it wasn't in active use when the strips were cut. Now carried over to v2.1 since this is the version actually being run in the car.
+
 ### Also Noted (Not Yet Changed)
 
 **Braking doesn't trigger during upshifts in v2.0**, unlike v3.0 where it did. Likely explanation: v2.0 doesn't have v3.0's pitch-compensation erosion pulling the forward signal down toward zero during sustained acceleration, so the smoothing filter has a genuinely elevated, stable signal to blend against — a brief upshift dip may get partially smoothed out rather than crossing the braking threshold. Considered low priority (cosmetic, not core reactive behaviour) and not addressed in this version.
