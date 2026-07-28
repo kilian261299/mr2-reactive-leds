@@ -529,4 +529,38 @@ v3.0 is intended to resolve the core limitation carried through every previous v
 
 The side-axis (cornering) baseline system from v2.0 is retained, kept deliberately despite three rounds of unverified fixes during this version (see above) — its narrow remaining benefit (self-correcting mid-drive without a manual recalibration) was judged worth one more real-world test before deciding whether to simplify or remove it.
 
-Firmware is installed for real-world car testing as of this version. Further refinement — including whether `pitchComplementaryAlpha`, the dead zones, or the new rate-of-change/settle-time/drift-rate thresholds need retuning, whether sustained corners now hold their brightness correctly, and whether road bumps/surface noise cause false reactions — will follow from that testing.
+Firmware was installed for real-world car testing as of this version. See v2.1 below for what that testing found and the resulting development direction.
+
+---
+
+## v2.1 – Field Tuning (Branches from v2.0)
+
+Following real-world driving in both v3.0 and v2.0 (see v3.0's Result above), this version branches from **v2.0**, not v3.0. This section explains why, and documents the one tuning change made so far.
+
+### Why v2.0, Not v3.0
+
+The same drive tested both versions.
+
+**v3.0's result was ambiguous.** Logged data showed the forward-axis pitch estimate swinging significantly (double digits, degrees) during hard acceleration — consistent with the gyro absorbing genuine acceleration as if it were a hill, the exact failure mode the accelerometer-reliability gating was meant to prevent. However, this is **not confirmed** — the test run wasn't verified to be on flat ground, so the same data is equally consistent with a genuine road gradient. Untangling the two requires a controlled test (hard acceleration on confirmed-flat ground) that hasn't been done yet.
+
+**v2.0's result was unambiguous and positive.** Braking and cornering both worked well. A real hill, driven at steady speed, correctly settled to blue. The one clear problem found — acceleration rarely reaching true orange — turned out to be a shared tuning issue affecting both versions equally (see below), not something specific to either compensation approach.
+
+Given one version has a confirmed-working, if imperfect, result, and the other has an open question that needs further isolated testing to resolve, development focus moved to tuning v2.0 rather than continuing v3.0 immediately.
+
+**This is provisional, not final.** v3.0's gyroscope approach isn't abandoned — it's paused pending a proper flat-ground test to resolve the ambiguity above. If that test confirms the drift concern, v3.0 would need real design changes (e.g. limiting how far the gyro can drift before forcing a correction) before it's worth continuing. If it turns out to be genuine road gradient all along, v3.0's approach may simply need the same kind of tuning v2.1 is getting here.
+
+### Change: Acceleration Response Range
+
+`accelerationResponseG` lowered from `0.35` to `0.18`.
+
+Logged driving data (from the same drive, captured while running v3.0 — the underlying accelerometer data is the same sensor either way) showed hard acceleration peaking around `0.17g`. Against the old `0.35` target, even a hard launch only reached partway through the blue → orange transition — a brief violet flash, never true orange, matching what was reported: "can only briefly get it to go purple to orange when taking off very fast in 1st gear." `0.18` was chosen just above that logged peak.
+
+This is a first estimate from a single data point, not a fully characterised response curve. May need further adjustment once more driving data — a range of gentle/moderate/hard accelerations, not just one hard launch — is available. Braking (`brakingResponseG = 0.40`) and cornering (`corneringResponseG = 0.35`) were left unchanged, since both were already reported working well.
+
+### Also Noted (Not Yet Changed)
+
+**Braking doesn't trigger during upshifts in v2.0**, unlike v3.0 where it did. Likely explanation: v2.0 doesn't have v3.0's pitch-compensation erosion pulling the forward signal down toward zero during sustained acceleration, so the smoothing filter has a genuinely elevated, stable signal to blend against — a brief upshift dip may get partially smoothed out rather than crossing the braking threshold. Considered low priority (cosmetic, not core reactive behaviour) and not addressed in this version.
+
+### Result
+
+v2.1 is the currently active development branch, based on v2.0's confirmed-working real-world behaviour rather than v3.0's still-unresolved pitch question. The one identified shared issue (acceleration response range) has been corrected with a first-estimate fix, pending further driving data to refine it. v3.0 remains available and is not considered abandoned — see "Why v2.0, Not v3.0" above for what would need to happen to revisit it.

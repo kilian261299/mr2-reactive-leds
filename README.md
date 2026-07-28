@@ -18,7 +18,7 @@ Completed:
 
 - Hardware selection
 - Breadboard prototype
-- Firmware development (through v3.0 — gyroscope + accelerometer sensor fusion for hill compensation)
+- Firmware development (currently on v2.1 — see [firmware/README.md](firmware/README.md) for the version history, including v3.0's gyroscope-based approach, currently paused pending further testing)
 - Custom PCB design
 - PCB manufacturing
 - PCB assembly (including a GPIO fault investigation and replacement board)
@@ -37,7 +37,7 @@ Upcoming:
 
 - Reactive LED brightness based on vehicle acceleration
 - Smooth blue ↔ orange colour blending
-- Gyroscope + accelerometer sensor fusion for hill compensation, so genuine acceleration/braking is distinguished from the vehicle simply pitching on a slope
+- Hill compensation, so genuine acceleration/braking is distinguished from the vehicle simply pitching on a slope (accelerometer-only baseline approach — a gyroscope-based version exists and is being evaluated, see firmware docs)
 - Independent left and right LED outputs
 - Cornering effects using lateral acceleration
 - User-adjustable maximum brightness
@@ -87,7 +87,7 @@ Detailed hardware documentation, PCB design information, and manufacturing files
 
 ## Firmware Modes
 
-All modes share the same underlying sensor processing — including the gyroscope-based hill compensation described above — so a steady hill is correctly ignored in every mode's brightness, not just Mode 0's colour. The rotary encoder sets a **maximum** brightness ceiling in every mode too — actual output stays at or below that, reacting to vehicle movement and cornering, and gently breathing when the car is calm. The only real difference between modes is which colour(s) are shown.
+All modes share the same underlying sensor processing — including hill compensation — so a steady hill is correctly ignored in every mode's brightness, not just Mode 0's colour. The rotary encoder sets a **maximum** brightness ceiling in every mode too — actual output stays at or below that, reacting to vehicle movement and cornering, and gently breathing when the car is calm. The only real difference between modes is which colour(s) are shown.
 
 | Mode | Colour behaviour |
 |---|---|

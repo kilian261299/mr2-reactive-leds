@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** System physically installed in the MR2 (control box, sensor, encoder mounted). Currently powered via USB-C for bench-in-car testing ahead of the first real test drive. Vehicle 12V supply and buck converter not yet connected. Master power switch omitted from the build — see Stage 8 for details.
+**Status:** System physically installed and driven twice (v3.0 and v2.0 tested). Actively tuning **v2.1** (a field-tuned branch of v2.0) based on real driving data — see Stage 8. Vehicle 12V supply and buck converter not yet connected. Master power switch omitted from the build — see Stage 8 for details.
 
 Completed:
 
@@ -23,11 +23,12 @@ Completed:
 - Control box installed in the MR2
 - MPU6050 accelerometer mounted in final orientation
 - Rotary encoder mounted
+- Two real-world test drives (v3.0 logged, v2.0 visual check) — see Stage 8
 
 Next steps:
 
-- Test drives (USB/laptop powered, Serial logging) — see Stage 8
-- Tune sensitivity/filtering based on logged data
+- Serial-logged test drive on v2.1 to confirm the acceleration tuning fix
+- Update LED count constant in v2.1 to match the cut strips
 - Connect the vehicle 12V supply through the buck converter
 - Verify buck converter output from vehicle power
 - Re-verify system behaviour running from vehicle power rather than USB
@@ -521,7 +522,7 @@ Goal: validate the completed system in the MR2 before permanently mounting the c
 
 The completed control box will be temporarily installed in the MR2 to verify the buck converter, vehicle power connection, accelerometer orientation, and reactive lighting behaviour under real driving conditions.
 
-**Firmware version under test:** v3.0 (gyroscope + accelerometer sensor fusion hill compensation). Developed and bench-tested after the control box (Stage 7) was already built — see Stage 6 and [firmware/README.md](../firmware/README.md) for full details of what changed and what's still unverified pending this real-world test.
+**Firmware version tested:** v3.0 (gyroscope + accelerometer sensor fusion) and v2.0 (accelerometer-only smart baseline), both tested in real driving — see "Test Drive Results" below. Currently active version is **v2.1**, a field-tuned branch of v2.0 — see [firmware/README.md](../firmware/README.md) for the full version history and why development moved to v2.1 rather than continuing v3.0.
 
 ### Build Change: Master Power Switch Removed
 
@@ -535,7 +536,7 @@ This affects the top-level project README (Features, Hardware table, System Beha
 
 The two 1m/160-LED WS2812B strips originally specified were cut down to approximately 0.5m (80 LEDs) per side to fit the final footwell mounting.
 
-Firmware updated to match: `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80` in the v3.0 firmware. This constant controls the pixel buffer size and, more importantly, the startup sweep animation's length — an unmatched count wouldn't damage anything, but would make that animation run for double its intended length before continuing to calibration. Static/reactive colour output (all five modes) sets every physical LED to the same colour, so it wasn't affected by the count either way. See [firmware/README.md](../firmware/README.md) for the code-level detail.
+Firmware updated to match: `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80` in the v3.0 firmware specifically (v2.0/v2.1 retain the original `160`, since they weren't in active use when the strips were cut — worth updating if/when v2.1 becomes the permanent version). This constant controls the pixel buffer size and, more importantly, the startup sweep animation's length — an unmatched count wouldn't damage anything, but would make that animation run for double its intended length before continuing to calibration. Static/reactive colour output (all five modes) sets every physical LED to the same colour, so it wasn't affected by the count either way. See [firmware/README.md](../firmware/README.md) for the code-level detail.
 
 ### Installation Progress
 
@@ -545,34 +546,39 @@ Completed so far:
 - MPU6050 accelerometer mounted in its final vehicle orientation.
 - Rotary encoder mounted.
 - Master switch connector shorted (see above) in place of the physical switch.
-- LED strips cut to final length and firmware updated to match (see above).
+- LED strips cut to final length (v3.0 firmware updated to match; see note above re: v2.1).
+- Powered via USB-C / portable charger for testing — vehicle 12V supply and buck converter not yet connected.
+- Two real-world test drives completed (visual check on the first; see below).
 
 Not yet done:
 
 - Vehicle 12V supply not yet connected — buck converter not yet wired into the car's electrical system.
-- Currently powered via USB-C for bench-in-car testing only.
-- No test drive has taken place yet.
+- Full Serial-logged test drive on the tuned v2.1 (the logged drive so far was on v3.0, used to diagnose the acceleration response issue that v2.1 then fixed).
+- `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` not yet updated in v2.0/v2.1 to match the cut strips.
+
+### Test Drive Results
+
+**Drive 1 (v3.0, Serial-logged):** Cornering worked well. Braking was responsive, including correctly triggering on hills. Acceleration rarely reached true orange — logged data showed hard acceleration peaking around 0.17g against a 0.35g target, meaning even a hard launch only reached partway through the colour transition. Pitch estimate showed large swings during acceleration (double-digit degrees) — possibly the gyro absorbing genuine acceleration as a hill, possibly genuine road gradient; not confirmed either way, as the run wasn't verified to be on flat ground.
+
+**Drive 2 (v2.0, visual check only):** Braking and cornering worked well, including correctly triggering red while braking downhill. A real hill, driven at steady speed, correctly settled to blue. Acceleration had the same rarely-reaches-orange issue as v3.0 — confirming it as a shared tuning problem, not specific to either hill-compensation approach. One difference from v3.0: braking didn't trigger on upshifts (v3.0 did) — see firmware changelog for the likely explanation.
+
+**Decision:** development moved to tuning v2.0 (now v2.1) rather than continuing v3.0 immediately, based on v2.0's clean real-world result versus v3.0's unresolved pitch-drift question. This is provisional — v3.0 is not considered abandoned, and may be revisited once its pitch behaviour can be tested unambiguously (hard acceleration on confirmed-flat ground). See the firmware changelog's v2.1 entry for the full reasoning.
+
+**v2.1 fix applied:** `accelerationResponseG` lowered from `0.35` to `0.18` based on the logged 0.17g data point. Not yet re-tested in the car.
 
 Planned work:
 
-- Test drives, powered via laptop USB (for Serial logging) rather than the vehicle supply — see logging plan below.
-- Test acceleration response
-- Test braking response
-- Test left/right cornering effects
-- Test hill/gradient response
-- Verify rotary encoder brightness adjustment
-- Verify LED strip operation
-- Adjust sensitivity and filtering if required
-- Specifically check: hill/gradient behaviour (v3.0's main change), sustained cornering brightness (recently patched, unverified), and road bump/surface noise sensitivity (untested, flagged as a risk in the firmware changelog)
-- Once test drives are complete and any tuning is done: connect the vehicle 12V supply through the buck converter, verify its output, and re-verify the system still behaves correctly running from vehicle power rather than USB.
+- Serial-logged test drive on v2.1 to confirm the acceleration fix, and gather a fuller spread of gentle/moderate/hard acceleration data.
+- Update `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` in v2.1 to `80` to match the cut strips.
+- Revisit whether the v3.0 pitch question needs isolated testing (hard acceleration on confirmed-flat ground).
+- Verify rotary encoder brightness adjustment and LED strip operation in the car (not yet specifically confirmed against the earlier bench tests).
+- Once satisfied with tuning: connect the vehicle 12V supply through the buck converter, verify its output, and re-verify the system still behaves correctly running from vehicle power rather than USB.
 
-**Logging plan:** two planned test drives, using the existing mode-cycling (short press) as phase markers rather than a dedicated logging firmware — Drive 1 covers acceleration/braking (soft and hard) across Modes 0–4, Drive 2 covers hills and cornering. Serial output logged via laptop, reviewed afterward to tune dead zones and response ranges against real-world G values.
-
-**Status:** In progress — physically installed, not yet driven.
+**Status:** In progress — installed and driven twice. Actively tuning v2.1 based on real driving data. Not yet on permanent vehicle power.
 
 **Testing notes:**
 
-Pending first test drive.
+See "Test Drive Results" above. Full Serial logs from Drive 1 (v3.0) retained; Drive 2 (v2.0) was visual-only, no logs.
 
 ## Stage 9 — Final Installation
 

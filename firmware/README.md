@@ -26,6 +26,7 @@ firmware/
     ├── v1.6/
     ├── v1.7/
     ├── v2.0/
+    ├── v2.1/
     └── v3.0/
 ```
 
@@ -128,11 +129,21 @@ A more robust accelerometer-only hill-compensation system, using a STABLE/DYNAMI
 
 ## v3.0 – Gyroscope + Accelerometer Sensor Fusion
 
-**Current production version.**
-
 Replaces the accelerometer-only hill compensation with gyroscope + accelerometer sensor fusion: the gyro tracks the vehicle's actual pitch angle (a hill causes rotation; genuine acceleration doesn't), letting gravity's contribution to the forward-axis reading be calculated and removed directly, rather than inferred from a slowly adapting baseline.
 
-Includes several fixes found during bench testing (gyro bias correction, accelerometer reliability gating, sign tuning, side-axis gating rework) — see the full changelog for details, including what's still flagged as unverified pending real-world driving data.
+Includes several fixes found during bench testing (gyro bias correction, accelerometer reliability gating, sign tuning, side-axis gating rework) — see the full changelog for details.
+
+Real-world testing found an unresolved question: the pitch estimate showed large swings during acceleration, which may mean the gyro is absorbing genuine acceleration as if it were a hill — or may simply reflect a real road gradient, since the test wasn't confirmed to be on flat ground. Not yet isolated. Development focus has moved to v2.1 (below) while this is pending, but v3.0 is not considered abandoned.
+
+---
+
+## v2.1 – Field Tuning (Current Active Version)
+
+**Currently active development branch.** Branches from v2.0 (not v3.0) — see the full changelog for why. Same accelerometer-only hill compensation as v2.0, unchanged.
+
+One tuning fix applied so far: `accelerationResponseG` lowered from `0.35` to `0.18`, based on real driving data showing hard acceleration peaking around `0.17g` — the old value meant acceleration rarely reached true orange.
+
+This decision is provisional — v3.0 may be revisited once its pitch behaviour can be tested unambiguously.
 
 For detailed version history and development notes, see:
 
