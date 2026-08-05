@@ -378,10 +378,10 @@ const float baselineStableThreshold = 0.045;
 // once triggered, so a brief lull during a sustained
 // pull is less likely to let it slip back toward STABLE
 // prematurely. Untested; part of the same v2.2 tuning
-// pass as gravitySmoothing and accelerationSmoothing
-// below — if the combined result overshoots (things stay
+// pass as gravitySmoothing and accelSmoothing below —
+// if the combined result overshoots (things stay
 // locked in for too long, e.g. after a real stop), this
-// is one of three knobs to walk back individually.
+// is one of the knobs to walk back individually.
 
 const float baselineDynamicReentryThreshold = 0.055;
 
@@ -429,17 +429,46 @@ unsigned long dynamicMovementEndedTime = 0;
 // ACCELEROMETER FILTERING
 // ==================================================
 
-// Main reactive smoothing.
-//
-// Was 0.15. Lowered to 0.10 — steadier displayed colour,
-// less prone to dipping visibly during a brief lull in
-// an otherwise sustained pull. Trade-off: also slightly
-// slower to reach full colour at the very start, and
-// slightly slower to fade back to blue once you actually
-// stop. Untested; part of the same v2.2 tuning pass as
-// the two changes above.
+// Previously one shared "accelerationSmoothing" value
+// governed acceleration, braking, cornering, AND theme-
+// mode movement brightness all at once — despite the
+// name, it wasn't acceleration-specific at all. That
+// meant lowering it to help acceleration hold its colour
+// longer would have also made braking and cornering feel
+// less snappy, even though neither was part of the
+// problem being fixed. Split into separate constants so
+// each can be tuned independently.
 
-const float accelerationSmoothing = 0.10;
+// Acceleration only. Was 0.15 (shared value), lowered to
+// 0.10 for this v2.2 tuning pass — steadier displayed
+// colour, less prone to dipping visibly during a brief
+// lull in an otherwise sustained pull. Trade-off: also
+// slightly slower to reach full colour at the very
+// start, and slightly slower to fade back to blue once
+// you actually stop accelerating.
+
+const float accelSmoothing = 0.10;
+
+
+// Braking only. Restored to the original 0.15 — braking
+// was already reported working well, so left untouched
+// rather than inheriting the acceleration-specific
+// change above.
+
+const float brakeSmoothing = 0.15;
+
+
+// Cornering only. Also restored to 0.15, same reasoning
+// as braking — wasn't part of the problem, left as it
+// was.
+
+const float corneringSmoothing = 0.15;
+
+
+// Theme modes' overall movement brightness only. Also
+// restored to 0.15.
+
+const float movementSmoothing = 0.15;
 
 
 // Slow gravity / hill tracking.
@@ -1565,18 +1594,44 @@ void readAcceleration() {
   // LOW-PASS FILTER
   // =================================================
 
+  // Forward axis: pick accel or brake smoothing based on
+  // the CURRENT raw reading's sign, each loop. This is a
+  // single continuous filter over one signal
+  // (smoothedForwardG can't be two separate variables),
+  // but the blend rate it uses can still change loop to
+  // loop depending on whether this instant looks like
+  // acceleration or braking.
+
+  float forwardSmoothingToUse;
+
+  if (
+    rawForwardG <
+    0
+  ) {
+
+    forwardSmoothingToUse =
+      brakeSmoothing;
+  }
+
+  else {
+
+    forwardSmoothingToUse =
+      accelSmoothing;
+  }
+
+
   smoothedForwardG =
     (
       smoothedForwardG *
       (
         1.0 -
-        accelerationSmoothing
+        forwardSmoothingToUse
       )
     )
     +
     (
       rawForwardG *
-      accelerationSmoothing
+      forwardSmoothingToUse
     );
 
 
@@ -1585,13 +1640,13 @@ void readAcceleration() {
       smoothedSideG *
       (
         1.0 -
-        accelerationSmoothing
+        corneringSmoothing
       )
     )
     +
     (
       rawSideG *
-      accelerationSmoothing
+      corneringSmoothing
     );
 
 
@@ -1600,13 +1655,13 @@ void readAcceleration() {
       smoothedMovementG *
       (
         1.0 -
-        accelerationSmoothing
+        movementSmoothing
       )
     )
     +
     (
       rawMovementG *
-      accelerationSmoothing
+      movementSmoothing
     );
 }
 
