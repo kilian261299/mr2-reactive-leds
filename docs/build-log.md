@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** System physically installed and driven twice (v3.0 and v2.0 tested). Actively tuning **v2.1** (a field-tuned branch of v2.0) based on real driving data — see Stage 8. Vehicle 12V supply and buck converter not yet connected. Master power switch omitted from the build — see Stage 8 for details.
+**Status:** System installed and running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). The original buck converter was replaced with a repurposed USB charger module after the buck converter caused intermittent cold-boot failures — see Stage 8. A USB-power backfeed to the car's radio circuit was discovered and is not yet fixed (blocking diode needed, not yet installed). Master power switch omitted from the build. Currently tuning the v2.x firmware line based on real driving data; v2.2 is built but not yet tested.
 
 Completed:
 
@@ -18,19 +18,21 @@ Completed:
 - Replacement PCB validation
 - Control box construction
 - PCB installation into control box
-- Buck converter installation (into control box — not yet wired into the vehicle)
 - Control box functional testing
 - Control box installed in the MR2
 - MPU6050 accelerometer mounted in final orientation
 - Rotary encoder mounted
-- Two real-world test drives (v3.0 logged, v2.0 visual check) — see Stage 8
+- Buck converter replaced with a USB charger module
+- Vehicle 12V power connected (cigarette lighter circuit, fused, Wago-spliced)
+- Several real-world test drives (v3.0 logged; v2.0, v2.1, v3.1 visual-only) — see Stage 8
+- v2.1 confirmed as a genuinely clean, working baseline
+- v2.2 built (further acceleration-hold tuning) — not yet tested
 
 Next steps:
 
-- Serial-logged test drive on v2.1 to confirm the acceleration tuning fix
-- Connect the vehicle 12V supply through the buck converter
-- Verify buck converter output from vehicle power
-- Re-verify system behaviour running from vehicle power rather than USB
+- Flash and drive-test v2.2
+- Install the reverse-current blocking diode for the USB backfeed issue
+- Repeated cold-boot testing to build confidence in the power fix
 - Complete permanent installation into MR2
 
 ## Stage 1 — Planning
@@ -519,7 +521,7 @@ The control box is now ready for temporary vehicle installation. The buck conver
 
 Goal: validate the completed system in the MR2 before permanently mounting the control box and LED components.
 
-The completed control box will be temporarily installed in the MR2 to verify the buck converter, vehicle power connection, accelerometer orientation, and reactive lighting behaviour under real driving conditions.
+The completed control box was installed in the MR2 to verify vehicle power connection, accelerometer orientation, and reactive lighting behaviour under real driving conditions — including validating the buck converter originally installed for this, which was subsequently replaced (see Build Change entries below).
 
 **Firmware version tested:** v3.0 (gyroscope + accelerometer sensor fusion) and v2.0 (accelerometer-only smart baseline), both tested in real driving — see "Test Drive Results" below. Currently active version is **v2.1**, a field-tuned branch of v2.0 — see [firmware/README.md](../firmware/README.md) for the full version history and why development moved to v2.1 rather than continuing v3.0.
 
@@ -527,7 +529,7 @@ The completed control box will be temporarily installed in the MR2 to verify the
 
 The Gebildet metal toggle switch specified in the original design was not fitted — insufficient mounting space was available at the intended location. The switch connector on the PCB has been shorted instead, so the system is now permanently live whenever it has power, with no separate physical on/off switch.
 
-Practical effect: the system powers on/off by whatever connects/disconnects its power feed (currently the USB-C cable during testing; the fused 12V vehicle supply once the buck converter is wired in), rather than a dedicated switch. This is a deliberate build simplification, not a firmware change — the switch was never read by the firmware, only ever a physical interrupt on the power line upstream of the board.
+Practical effect: the system powers on/off by whatever connects/disconnects its power feed — the fused 12V vehicle supply via the power module (originally a buck converter, now a repurposed USB charger module — see Build Change entries below), or USB-C for bench/upload purposes — rather than a dedicated switch. This is a deliberate build simplification, not a firmware change — the switch was never read by the firmware, only ever a physical interrupt on the power line upstream of the board.
 
 This affects the top-level project README (Features, Hardware table, System Behaviour table, Wiring Summary) and the wiring plan, both updated separately to match. It also affects Stage 9's planned work below.
 
@@ -536,6 +538,30 @@ This affects the top-level project README (Features, Hardware table, System Beha
 The two 1m/160-LED WS2812B strips originally specified were cut down to approximately 0.5m (80 LEDs) per side to fit the final footwell mounting.
 
 Firmware updated to match: `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` changed from `160` to `80`. Originally applied to v3.0 only; v2.0 retains the original `160` (it wasn't in active use when the strips were cut), but v2.1 has since had the same fix applied, since that's the version actually running in the car — see Test Drive Results below. This constant controls the pixel buffer size and, more importantly, the startup sweep animation's length — an unmatched count wouldn't damage anything, but would make that animation run for double its intended length before continuing to calibration. Static/reactive colour output (all five modes) sets every physical LED to the same colour, so it wasn't affected by the count either way. See [firmware/README.md](../firmware/README.md) for the code-level detail.
+
+### Build Change: 12V to 5V Buck Converter Replaced with a Repurposed USB Charger Module
+
+The original 12V to 5V buck converter specified in the design (see BOM) was replaced with a small USB car-charger module (disassembled from its housing) mounted inside the control box in its place.
+
+**Why:** once wired into the car and powered via the cigarette lighter circuit, the system exhibited an intermittent cold-boot failure — the startup sweep would often not run, and sometimes not even the calibration flash would appear, though a manual replug of the power connector reliably fixed it once running. Extensive troubleshooting (documented in project chat history, not reproduced in full here) ruled out the fuse, the Wago splices, wire gauge, and the car's own wiring quality (confirmed via a working USB charger plugged into the same circuit) as causes, narrowing it down specifically to the buck converter module's power-up characteristics — most likely a slow or unclean voltage rise on cold start, which can cause an ESP32-C3 to read its strapping pins (including one shared with the I2C bus) incorrectly during boot. A bulk capacitor was tried first as a smaller intervention; it did not resolve the issue. A software I2C bus-recovery routine was also tried and later reverted, since the PCB's I2C pins (GPIO8/9) are fixed by the manufactured board and can't be reassigned, and the fix didn't reliably address a true boot-time strapping issue in any case.
+
+**The fix:** a small USB phone-charger module was confirmed via bench testing (powered from an improvised 12V source, 9V + 2×1.5V AA batteries) to output a clean, stable ~5.2V with no boot issues across repeated cold cycles — commercial USB chargers use proper current-limited, soft-start regulation that the buck converter apparently lacked. The module was disassembled from its housing and mounted inside the control box in place of the buck converter, using the same 12V input (from the existing fuse/Wago splice) and 5V output wiring.
+
+**Status:** installed and powering the system from actual vehicle power. Multiple cold boots should be tested to confirm reliability before considering this fully resolved — see Installation Progress below.
+
+This changes the top-level README, hardware table, wiring plan, and BOM, which described a buck converter; these are being updated separately to match. The buck converter component itself remains listed in the BOM as originally purchased, but is no longer used in the build.
+
+### Build Change: USB Power Backfeed Discovered — Fix Not Yet Installed
+
+While testing, it was discovered that connecting the board via USB-C (laptop power, key off) causes the car radio to power on. Root cause: the lighter and radio circuits share a common fuse/node downstream of the ignition switch, and the charger module (like most simple buck/charger modules) has no reverse-current blocking diode on its input — current from USB can flow backward through the module and out onto that shared circuit, powering anything else on it.
+
+This does not reach the battery or cross the ignition switch (which remains a genuine open circuit with the key off), so it is not a drain or safety risk in that sense. But it confirms the USB-power and vehicle-power paths are not actually isolated from each other, reinforcing the existing rule that both must never be connected to the board at the same time — key must be fully off any time USB-C is connected.
+
+**Recommended fix, not yet installed:** a Schottky diode (e.g. 1N5822, 3A rated) in-line on the +12V feed, between the Wago splice and the charger module's input, oriented to block reverse current while allowing normal forward current through. Schottky specifically for its low forward voltage drop, so it doesn't meaningfully rob the module of headroom.
+
+### Note: Minor Audio Noise Through Speakers
+
+A slight noise through the car speakers was noted when LED brightness changes, most audible when adjusting the encoder. This is a known, common characteristic of PWM-driven addressable LED strips (WS2812B) — the strips' own switching behaviour is electrically noisy, largely independent of which power module feeds them — so this was likely present in some form regardless of the buck-converter-to-charger-module change above. Not investigated further; possible future mitigations if it becomes bothersome include ferrite chokes on the LED power/data wires, or moving the LED ground splice to a chassis point further from the shared lighter/radio circuit.
 
 ### Installation Progress
 
@@ -546,15 +572,22 @@ Completed so far:
 - Rotary encoder mounted.
 - Master switch connector shorted (see above) in place of the physical switch.
 - LED strips cut to final length (v3.0 firmware updated to match; see note above re: v2.1).
-- Powered via USB-C / portable charger for testing — vehicle 12V supply and buck converter not yet connected.
-- Two real-world test drives completed (visual check on the first; see below).
+- Buck converter replaced with a USB charger module (see Build Change above).
+- Vehicle 12V power connected via the cigarette lighter circuit (fused, Wago-spliced) — system now runs from actual vehicle power, not just USB/portable testing.
+- Several real-world test drives completed across v3.0, v2.0, and v2.1 (see Test Drive Results below).
+- v2.1 confirmed as a genuinely clean baseline (tuned acceleration response + LED count, no other changes) after an earlier documentation mix-up was caught and corrected.
+- v2.2 built: further tuning pass on top of v2.1, targeting the sustained-acceleration fade issue — not yet tested in the car.
 
 Not yet done:
 
-- Vehicle 12V supply not yet connected — buck converter not yet wired into the car's electrical system.
-- Full Serial-logged test drive on the tuned v2.1 (the logged drive so far was on v3.0, used to diagnose the acceleration response issue that v2.1 then fixed).
+- Reverse-current blocking diode for the USB backfeed issue (see Build Change above) — not yet installed.
+- Multiple repeated cold-boot tests on vehicle power with the new charger module, to build confidence the intermittent boot issue is genuinely resolved rather than just improved.
+- v2.2 has not been flashed or driven yet.
+- v3.1 (gyroscope + tuned acceleration response, plus a lowered `pitchComplementaryAlpha`) tested once — found to fade even faster than v2.1 during sustained acceleration. Parked for now; not being actively developed, not documented further here.
 
 ### Test Drive Results
+
+
 
 **Drive 1 (v3.0, Serial-logged):** Cornering worked well. Braking was responsive, including correctly triggering on hills. Acceleration rarely reached true orange — logged data showed hard acceleration peaking around 0.17g against a 0.35g target, meaning even a hard launch only reached partway through the colour transition. Pitch estimate showed large swings during acceleration (double-digit degrees) — possibly the gyro absorbing genuine acceleration as a hill, possibly genuine road gradient; not confirmed either way, as the run wasn't verified to be on flat ground.
 
@@ -562,20 +595,27 @@ Not yet done:
 
 **Decision:** development moved to tuning v2.0 (now v2.1) rather than continuing v3.0 immediately, based on v2.0's clean real-world result versus v3.0's unresolved pitch-drift question. This is provisional — v3.0 is not considered abandoned, and may be revisited once its pitch behaviour can be tested unambiguously (hard acceleration on confirmed-flat ground). See the firmware changelog's v2.1 entry for the full reasoning.
 
-**v2.1 fixes applied:** `accelerationResponseG` lowered from `0.35` to `0.18` based on the logged 0.17g data point. `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` updated from `160` to `80` to match the cut strips (v3.0 already had this; now carried over to v2.1 as the version actually running in the car). Neither fix has been re-tested in the car yet.
+**v2.1 fixes applied and confirmed:** `accelerationResponseG` lowered from `0.35` to `0.18` based on the logged 0.17g data point. `NUM_LEDS_LEFT`/`NUM_LEDS_RIGHT` updated from `160` to `80` to match the cut strips. Braking and cornering confirmed working well on real drives. Acceleration confirmed to reach orange correctly with the tuned value, though found to fade prematurely on a sufficiently long, sustained pull — a distinct issue from the tuning fix itself, addressed below.
+
+**Drive 3 (v3.1, visual check only):** v3.0 with the same acceleration tuning ported across, plus `pitchComplementaryAlpha` lowered from `0.98` to `0.90`. Braking worked well. Acceleration briefly reached orange only under hard 1st-gear launches, fading back to blue in under a second even while still accelerating — faster than v2.1's fade, not slower. This matches the timing of the pitch drift seen in the original v3.0 log closely enough to strongly suggest the gyro is absorbing genuine acceleration as if it were a hill, rather than this being a road-gradient artefact. v3.1 is parked for now — not actively developed further, not carried into the firmware changelog in detail. v2.1/v2.2 remain the active line of development.
+
+**v2.1's sustained-acceleration fade, investigated:** traced to a tracker (`gravityX/Y/Z`) that feeds the STABLE/DYNAMIC gating decision, updating unconditionally regardless of state — over several seconds of genuine sustained acceleration, it would catch up to the elevated reading and falsely signal "calm," releasing the real baseline to re-adapt and fade the display. A full fix (freezing this tracker during DYNAMIC, matching how the real baseline is already protected) was built and reasoned through, but found to very likely break hill behaviour in exchange — the same signal that protects acceleration is also what lets a real hill eventually be recognised and absorbed, and a plain accelerometer cannot reliably tell the two apart. This fix was **not shipped** as v2.2.
+
+**v2.2 built instead**, as a milder compromise: `gravitySmoothing` slowed (not frozen) from `0.008` to `0.003`, `baselineDynamicReentryThreshold` lowered from `0.075` to `0.055`, and the smoothing constant split into separate `accelSmoothing`/`brakeSmoothing`/`corneringSmoothing`/`movementSmoothing` values (previously one shared value covered all four, meaning any acceleration-specific tuning would have also affected braking and cornering, which were already working well). `accelSmoothing` lowered to `0.10`; the other three restored to the original `0.15`. Full detail in the firmware changelog's v2.2 entry. **Not yet tested in the car.**
 
 Planned work:
 
-- Serial-logged test drive on v2.1 to confirm both fixes, and gather a fuller spread of gentle/moderate/hard acceleration data.
-- Revisit whether the v3.0 pitch question needs isolated testing (hard acceleration on confirmed-flat ground).
+- Flash and drive-test v2.2 — specifically watching whether sustained acceleration holds noticeably longer, and whether real hills still settle to blue in a reasonable time (the expected trade-off).
+- Install the reverse-current blocking diode for the USB backfeed issue.
+- Repeated cold-boot testing on the new charger module to build confidence in the power fix.
+- Revisit whether the v3.0/v3.1 pitch question is worth isolated testing (hard acceleration on confirmed-flat ground), or whether to leave that line parked given v2.x's progress.
 - Verify rotary encoder brightness adjustment and LED strip operation in the car (not yet specifically confirmed against the earlier bench tests).
-- Once satisfied with tuning: connect the vehicle 12V supply through the buck converter, verify its output, and re-verify the system still behaves correctly running from vehicle power rather than USB.
 
-**Status:** In progress — installed and driven twice. Actively tuning v2.1 based on real driving data. Not yet on permanent vehicle power.
+**Status:** In progress — installed and driven several times, now running on actual vehicle power via the replaced charger module. Actively tuning the v2.x line based on real driving data; v2.2 awaiting its first test.
 
 **Testing notes:**
 
-See "Test Drive Results" above. Full Serial logs from Drive 1 (v3.0) retained; Drive 2 (v2.0) was visual-only, no logs.
+See "Test Drive Results" above. Full Serial logs from Drive 1 (v3.0) retained; later drives (v2.0, v2.1, v3.1) were visual-only, no logs, since USB and vehicle power can't be connected simultaneously.
 
 ## Stage 9 — Final Installation
 

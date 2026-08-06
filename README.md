@@ -12,25 +12,27 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Project Status
 
-**Current Stage:** Physically installed in the MR2 (control box, sensor, and encoder mounted). Currently running on USB-C power for bench-in-car testing ahead of the first real test drive. Vehicle 12V supply and buck converter not yet connected. See [Build Log](docs/build-log.md) for full details.
+**Current Stage:** Installed in the MR2 and running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Currently tuning the reactive firmware based on real driving data.
 
 Completed:
 
 - Hardware selection
 - Breadboard prototype
-- Firmware development (currently on v2.1 — see [firmware/README.md](firmware/README.md) for the version history, including v3.0's gyroscope-based approach, currently paused pending further testing)
+- Firmware development (currently tuning v2.x — see [firmware/README.md](firmware/README.md) for the version history, including v3.0's gyroscope-based approach, currently parked pending further testing)
 - Custom PCB design
 - PCB manufacturing
 - PCB assembly (including a GPIO fault investigation and replacement board)
 - Control box construction
 - Control box installed in the MR2
 - MPU6050 accelerometer and rotary encoder mounted
+- Vehicle 12V power connected (buck converter replaced with a USB charger module)
+- Several real-world test drives, firmware tuning based on results
 - Hardware documentation
 
 Upcoming:
 
-- Test drives, logging sensor data for tuning
-- Connect vehicle 12V supply through the buck converter
+- Further test drives to confirm the latest firmware tuning
+- Install a blocking diode to resolve a discovered USB-power backfeed issue (see Build Log)
 - Final installation
 
 ## Features
@@ -44,7 +46,7 @@ Upcoming:
 - Rotary encoder controlled modes and calibration
 - 3.3V to 5V logic level shifting using an SN74AHCT125N
 - Custom EasyEDA PCB with JST-XH connectors
-- Powered from the cigarette lighter circuit via a fused 12V to 5V buck converter
+- Powered from the cigarette lighter circuit via a fused 5V supply module
 
 ## Hardware
 
@@ -59,7 +61,7 @@ The table below covers the major functional components. For the complete parts l
 | WS2812B LED strip | Addressable interior lighting output |
 | SN74AHCT125N | 3.3V to 5V logic level shifter for reliable LED data transmission |
 | Rotary encoder | Brightness adjustment and lighting mode selection |
-| 12V to 5V buck converter | Converts vehicle electrical supply to regulated 5V |
+| USB charger module (repurposed) | Converts vehicle electrical supply to regulated 5V — replaces the originally specified buck converter; see Build Log |
 | Inline fuse holder | Protects the additional vehicle wiring |
 | Custom PCB | Dedicated controller board integrating the system hardware |
 | JST-XH connectors | Removable connections between PCB and external components |
@@ -110,13 +112,15 @@ All modes share the same underlying sensor processing — including hill compens
 | Rotary encoder rotation | Adjust maximum LED brightness |
 | Rotary encoder short press | Cycle through firmware modes |
 | Rotary encoder long press | Recalibrate the accelerometer baseline. Flashes LEDs green to confirm |
-| System power | No separate switch — the system is live whenever it has power (currently USB-C for testing; the fused 12V vehicle supply once fully installed) |
+| System power | No separate switch — the system is live whenever it has power (fused 12V vehicle supply, via the cigarette lighter circuit) |
 
 ## Wiring Summary
 
-Power is taken from the rear of the cigarette lighter circuit, protected by an inline fuse, converted to 5V using a buck converter, then routed to the controller PCB.
+Power is taken from the rear of the cigarette lighter circuit, protected by an inline fuse, converted to 5V using a repurposed USB charger module (replacing the originally specified buck converter — see Build Log for why), then routed to the controller PCB.
 
 The PCB distributes power to the ESP32-C3, MPU6050, SN74AHCT125N level shifter and both LED strips. The PCB has a master power switch connector; the physical Gebildet toggle switch originally planned for this wasn't fitted due to insufficient mounting space at the intended location, so this connector is currently shorted instead. The system is live whenever it has power, with no separate physical on/off switch.
+
+**Known issue:** the charger module has no reverse-current blocking diode on its input, and the lighter/radio circuits share a common fuse downstream of the ignition switch — connecting the board via USB (laptop power) with the key off currently backfeeds enough current to power the car radio on. Doesn't cross the ignition switch or reach the battery, so not a safety/drain concern, but confirms USB power and vehicle power must never be connected to the board simultaneously. A blocking diode fix is planned but not yet installed — see Build Log.
 
 The MPU6050 is mounted separately on the vehicle chassis to provide accurate acceleration measurements independent of the controller enclosure.
 

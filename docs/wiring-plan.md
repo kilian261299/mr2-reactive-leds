@@ -7,32 +7,35 @@ Power is tapped from the rear of the cigarette lighter circuit.
 ```text
 Cigarette lighter +12V
 → inline 15A fuse
-→ 12V to 5V buck converter input +
+→ [RECOMMENDED, NOT YET INSTALLED: Schottky diode, e.g. 1N5822]
+→ USB charger module input +
 
 Cigarette lighter ground
-→ 12V to 5V buck converter input -
+→ USB charger module input -
 ```
 
 The fuse should be placed as close to the cigarette lighter tap as possible.
+
+**Backfeed issue, fix not yet installed:** the lighter and radio circuits share a common fuse/node downstream of the ignition switch. The USB charger module (see below) has no reverse-current blocking diode on its input, so connecting the board via USB-C (laptop power) while the key is off currently backfeeds enough current to power the car radio on. This doesn't cross the ignition switch or reach the battery, so it isn't a safety or drain concern, but it confirms the USB-power and vehicle-power paths aren't isolated from each other — reinforcing that both must never be connected to the board at the same time. A Schottky diode (low forward voltage drop) placed in-line here, oriented to block reverse current, is the planned fix.
 
 ### Master Power Switch — Not Fitted
 
 The PCB includes a master power switch connector, originally intended for a Gebildet metal toggle switch. This was not fitted in the final build — insufficient mounting space was available at the intended location — so the connector is shorted instead.
 
-The system is therefore live whenever it has power, with no separate physical on/off switch. Power is controlled entirely by whatever supplies the board (currently USB-C for bench-in-car testing; the fused 12V vehicle supply once the buck converter is connected).
+The system is therefore live whenever it has power, with no separate physical on/off switch. Power is controlled entirely by whatever supplies the board — currently the fused 12V vehicle supply via the cigarette lighter circuit; USB-C is used separately for bench/upload purposes, never at the same time as vehicle power (see Backfeed issue above).
 
 ### 5V Power Distribution
 
-The buck converter provides 5V for the ESP32-C3, LED strips, and level shifter.
+Power is provided by a repurposed USB charger module — see "Power Module" below for why this replaced the originally planned buck converter.
 
 ```text
-Buck converter 5V output +
+5V output +
 ├── ESP32-C3 5V / VIN
 ├── SN74AHCT125N pin 14
 ├── Left LED strip 5V
 └── Right LED strip 5V
 
-Buck converter ground output
+Ground output
 ├── ESP32-C3 GND
 ├── SN74AHCT125N pin 7
 ├── Left LED strip GND
@@ -41,7 +44,13 @@ Buck converter ground output
 └── Rotary encoder GND
 ```
 
-The LED strips are powered directly from the buck converter, not through the ESP32-C3.
+The LED strips are powered directly from the power module, not through the ESP32-C3.
+
+### Power Module — Buck Converter Replaced with a USB Charger Module
+
+The originally specified 12V to 5V buck converter caused an intermittent cold-boot failure once wired into the car — the startup sweep would often not run, and sometimes not even the calibration flash would appear, though a manual power replug reliably fixed it once running. Traced to the buck converter's power-up characteristics (likely a slow or unclean voltage rise on cold start), rather than the wiring, fuse, or splices.
+
+Replaced with a small USB phone-charger module, disassembled from its housing and mounted inside the control box in the buck converter's place, using the same 12V input and 5V output wiring. Confirmed via bench testing to output a clean, stable ~5.2V with no boot issues across repeated cold cycles. See the project build log for the full troubleshooting history.
 
 ### MPU6050 Accelerometer
 
@@ -108,17 +117,17 @@ SN74AHCT125N pin 13 → GND
 
 ### LED Strip Outputs
 
-The LED strip will be cut into two separate sections.
+The LED strip was cut into two separate sections (approximately 0.5m / 80 LEDs each) to fit final mounting.
 
 ```text
 Left LED strip:
-5V → buck converter 5V
-GND → buck converter GND
+5V → power module 5V
+GND → power module GND
 DIN → level-shifted data from SN74AHCT125N pin 3
 
 Right LED strip:
-5V → buck converter 5V
-GND → buck converter GND
+5V → power module 5V
+GND → power module GND
 DIN → level-shifted data from SN74AHCT125N pin 6
 ```
 

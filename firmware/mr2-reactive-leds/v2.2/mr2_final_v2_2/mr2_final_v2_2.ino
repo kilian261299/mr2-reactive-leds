@@ -16,7 +16,8 @@
   - KY-040 rotary encoder
   - Two WS2812B LED strips
   - SN74AHCT125N level shifter
-  - 12V to 5V buck converter
+  - USB charger module (repurposed, replaces
+    the originally specified buck converter)
 
 
   ==================================================

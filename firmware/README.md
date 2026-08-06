@@ -27,6 +27,7 @@ firmware/
     ├── v1.7/
     ├── v2.0/
     ├── v2.1/
+    ├── v2.2/
     └── v3.0/
 ```
 
@@ -89,7 +90,7 @@ The production firmware is located in:
 
 [mr2-reactive-leds/](mr2-reactive-leds/)
 
-The firmware was developed through ten versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
+The firmware was developed through eleven versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
 
 ---
 
@@ -137,13 +138,25 @@ Real-world testing found an unresolved question: the pitch estimate showed large
 
 ---
 
-## v2.1 – Field Tuning (Current Active Version)
+## v2.1 – Field Tuning (Confirmed Working Baseline)
 
-**Currently active development branch.** Branches from v2.0 (not v3.0) — see the full changelog for why. Same accelerometer-only hill compensation as v2.0, unchanged.
+Branches from v2.0 (not v3.0) — see the full changelog for why. Same accelerometer-only hill compensation as v2.0, unchanged.
 
-One tuning fix applied so far: `accelerationResponseG` lowered from `0.35` to `0.18`, based on real driving data showing hard acceleration peaking around `0.17g` — the old value meant acceleration rarely reached true orange.
+`accelerationResponseG` lowered from `0.35` to `0.18`, based on real driving data showing hard acceleration peaking around `0.17g` — the old value meant acceleration rarely reached true orange.
 
-This decision is provisional — v3.0 may be revisited once its pitch behaviour can be tested unambiguously.
+Confirmed on real driving: braking, cornering, and the tuned acceleration response all work well. One further issue found — acceleration can prematurely fade back to blue on a sufficiently long, sustained pull — addressed with a milder compromise in v2.2 below (a full fix was considered and rejected; see the full changelog for why).
+
+This remains a genuinely good, working version even without v2.2's further tuning.
+
+---
+
+## v2.2 – Milder Acceleration-Hold Tuning (Newest, Not Yet Tested)
+
+Branches from the confirmed-clean v2.1 above. Slows down (rather than freezes) the tracker responsible for the premature-fade issue, and splits a previously shared smoothing constant into separate acceleration/braking/cornering/movement values, so tuning one no longer affects the others.
+
+Expected to hold sustained acceleration noticeably longer than v2.1; expected trade-off is that real hills may take somewhat longer to settle to blue. Built but not yet tested in the car — full detail, including the rejected full-fix reasoning, in the changelog.
+
+The decision to branch from v2.0 rather than continue v3.0 is provisional — v3.0's gyroscope approach may be revisited once its own pitch behaviour can be tested unambiguously; see the changelog for the parked v3.1 experiment.
 
 For detailed version history and development notes, see:
 

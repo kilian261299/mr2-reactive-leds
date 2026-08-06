@@ -568,3 +568,66 @@ This is a first estimate from a single data point, not a fully characterised res
 ### Result
 
 v2.1 is the currently active development branch, based on v2.0's confirmed-working real-world behaviour rather than v3.0's still-unresolved pitch question. The one identified shared issue (acceleration response range) has been corrected with a first-estimate fix, pending further driving data to refine it. v3.0 remains available and is not considered abandoned — see "Why v2.0, Not v3.0" above for what would need to happen to revisit it.
+
+**Confirmed on further real driving**: braking and cornering both continued to work well. Acceleration correctly reached true orange with the tuned response range — confirming that fix. A new issue was found: on a sufficiently long, sustained acceleration, the display could fade back to blue before the acceleration actually ended.
+
+**Note on file integrity**: partway through investigating the fade issue below, an intermediate build was briefly and mistakenly shipped as "v2.1" with the (later rejected) full-freeze fix already applied, differing only in its internal version label. This was caught and corrected — the file distributed as v2.1 is confirmed to match the description in this document exactly (tuned acceleration response and LED count only, nothing else). Documented here for a clean record; no impact on the firmware description above.
+
+**The fade issue, investigated**: traced to `gravityX/Y/Z`, a tracker that feeds the STABLE/DYNAMIC/SETTLING gating decision. Unlike `driftBaseX/Y/Z` (the actual output baseline, which correctly freezes during `DYNAMIC`), this tracker was updating unconditionally, every loop, regardless of state. Over several seconds of genuinely sustained acceleration, it would slowly catch up to the elevated reading, shrinking the gating signal toward zero even though real acceleration was still happening — eventually fooling the state machine into thinking things had calmed down, which released the real baseline to re-adapt and fade the display.
+
+**A full fix was built and reasoned through, but not shipped.** Freezing `gravityX/Y/Z` during `DYNAMIC`/`SETTLING` (the same way the real baseline is already protected) does stop acceleration from fading — but the same signal also does a second job: eventually recognising that a sustained reading is a real hill, not an event, and releasing the baseline to absorb it as the new normal. Freezing it unconditionally removes that second job too. A plain accelerometer genuinely cannot tell "long sustained acceleration" apart from "constant-grade hill" — both produce the same signal, held roughly constant over time. This is the same structural ambiguity v3.0's gyroscope exists to resolve; there is no cleverer accelerometer-only heuristic that resolves it. Given the choice between "hills fade correctly, acceleration can prematurely fade" (v2.1's original behaviour) and "acceleration never fades, hills likely never fade either" (the full fix), the full fix was judged a worse trade-off, not a genuine improvement, and was not shipped as v2.2.
+
+---
+
+## v2.2 – Milder Acceleration-Hold Tuning
+
+Branches from the confirmed-clean v2.1 above. A milder compromise for the same fade issue, rather than the full (rejected) fix — slows down the relevant trackers instead of freezing them, buying more headroom for genuine sustained acceleration without removing hill-absorption altogether.
+
+### Change: Slower Gating Tracker
+
+`gravitySmoothing` lowered from `0.008` to `0.003`.
+
+Rather than freezing this tracker during `DYNAMIC` (the rejected full fix), it's simply slowed down — roughly tripling how long a sustained reading needs to persist before being treated as "the new normal," based on this loop's approximate rate (around 2.5s before, around 6–7s now). A typical hard acceleration run (a few seconds) should get meaningfully more headroom before fading; a genuine hill (tens of seconds or more) should still be absorbed correctly, just somewhat more slowly than before. Both directions are affected together — this doesn't resolve the underlying ambiguity, only shifts where the trade-off sits. Untested at time of writing.
+
+### Change: More Stubborn Dynamic Re-Entry
+
+`baselineDynamicReentryThreshold` lowered from `0.075g` to `0.055g`.
+
+Makes the state machine more reluctant to consider things "calm enough" once an event is underway, so a brief lull during a sustained pull is less likely to let it slip back toward `STABLE` prematurely. Same event-holding goal as the change above, different mechanism. Untested at time of writing. If the combined result overshoots (things stay "locked in" for too long, e.g. noticeably after a real stop), this is one of the knobs to walk back individually.
+
+### Change: Split Smoothing Constants (Acceleration, Braking, Cornering, Movement)
+
+Previously, one shared `accelerationSmoothing` constant governed the low-pass filtering for acceleration, braking, cornering, *and* the theme modes' overall movement brightness — despite the name, it wasn't acceleration-specific at all. This meant tuning it to help acceleration hold its colour longer would have also made braking and cornering feel less snappy, even though neither was part of the problem being fixed (both were already reported working well).
+
+Split into four separate constants:
+
+- `accelSmoothing = 0.10` — acceleration only. Lowered from the previous shared `0.15`, for a steadier displayed colour, less prone to dipping during a brief lull in a sustained pull. Trade-off: slightly slower to reach full colour at the start, and slightly slower to fade back to blue once acceleration actually ends.
+- `brakeSmoothing = 0.15` — braking only. Restored to the original value, left untouched.
+- `corneringSmoothing = 0.15` — cornering only. Restored to the original value, left untouched.
+- `movementSmoothing = 0.15` — theme modes' movement brightness only. Restored to the original value, left untouched.
+
+The forward-axis filter now picks `accelSmoothing` or `brakeSmoothing` each loop based on the current raw reading's sign — a single continuous filter over one signal (`smoothedForwardG`), but with a blend rate that can change depending on whether the current instant looks like acceleration or braking.
+
+### Expected Behaviour Change, v2.1 → v2.2
+
+All three changes above act in the same direction — more reluctant to release an active reading. Expected effects, by scenario:
+
+- **Short, everyday acceleration**: little to no noticeable change.
+- **Long, sustained hard acceleration** (the target case): should hold its colour noticeably longer before fading, if it fades within a typical pull at all.
+- **Real hills at steady speed**: likely to take longer to settle to blue than v2.1 did — this is the actual cost of the fix, not an unintended side effect, and the main thing to verify on the next real hill test.
+- **Braking**: should feel unchanged from v2.1, now that its smoothing is isolated from the acceleration-specific tuning.
+- **Cornering**: should also feel unchanged, for the same reason.
+
+### Result
+
+Built but **not yet tested in the car** at time of writing. The two things to confirm on the next drive: whether sustained acceleration genuinely holds longer (the intended improvement), and whether a real hill still settles to blue in a reasonable time (the accepted trade-off, not expected to be eliminated).
+
+---
+
+## v3.1 – Ported Tuning, Gyro Fusion (Parked)
+
+Branches from v3.0: the same acceleration response tuning as v2.1 (`accelerationResponseG` to `0.18`), plus `pitchComplementaryAlpha` lowered from `0.98` to `0.90` in an attempt to reduce the pitch drift seen in v3.0's original real-world test.
+
+Tested once, visually. Braking worked well. Acceleration briefly reached orange only under hard 1st-gear launches, fading back to blue in under a second even while still accelerating — noticeably faster than v2.1's fade, not slower. The timing closely matches the pitch drift seen in the original v3.0 log, strengthening (though not fully confirming, absent a controlled flat-ground test) the theory that the gyro is absorbing genuine acceleration as if it were a hill.
+
+**Parked for now.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggests the opposite. Not being actively developed further while v2.x's milder, better-performing line of tuning (v2.2 above) is explored. Not abandoned — the flat-ground test that would properly settle the pitch-drift question has still never been done.
