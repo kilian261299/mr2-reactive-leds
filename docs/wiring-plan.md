@@ -7,7 +7,6 @@ Power is tapped from the rear of the cigarette lighter circuit.
 ```text
 Cigarette lighter +12V
 → inline 15A fuse
-→ [RECOMMENDED, NOT YET INSTALLED: Schottky diode, e.g. 1N5822]
 → USB charger module input +
 
 Cigarette lighter ground
@@ -16,7 +15,7 @@ Cigarette lighter ground
 
 The fuse should be placed as close to the cigarette lighter tap as possible.
 
-**Backfeed issue, fix not yet installed:** the lighter and radio circuits share a common fuse/node downstream of the ignition switch. The USB charger module (see below) has no reverse-current blocking diode on its input, so connecting the board via USB-C (laptop power) while the key is off currently backfeeds enough current to power the car radio on. This doesn't cross the ignition switch or reach the battery, so it isn't a safety or drain concern, but it confirms the USB-power and vehicle-power paths aren't isolated from each other — reinforcing that both must never be connected to the board at the same time. A Schottky diode (low forward voltage drop) placed in-line here, oriented to block reverse current, is the planned fix.
+**Backfeed issue, accepted rather than fixed:** the lighter and radio circuits share a common fuse/node downstream of the ignition switch. The USB charger module (see below) has no reverse-current blocking diode on its input, so connecting the board via USB-C (laptop power) while the key is off currently backfeeds enough current to power the car radio on. This doesn't cross the ignition switch or reach the battery, so it isn't a safety or drain concern, but it confirms the USB-power and vehicle-power paths aren't isolated from each other — reinforcing that both must never be connected to the board at the same time. A Schottky diode (low forward voltage drop) placed in-line here, oriented to block reverse current, would fix this — but given the limited real-world impact, it was deliberately not installed.
 
 ### Master Power Switch — Not Fitted
 

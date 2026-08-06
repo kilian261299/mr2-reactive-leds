@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** System installed and running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). The original buck converter was replaced with a repurposed USB charger module after the buck converter caused intermittent cold-boot failures — see Stage 8. A USB-power backfeed to the car's radio circuit was discovered and is not yet fixed (blocking diode needed, not yet installed). Master power switch omitted from the build. Currently tuning the v2.x firmware line based on real driving data; v2.2 is built but not yet tested.
+**Status:** Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — see Stage 8. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. The only remaining work is firmware tuning: currently on the v2.x line, with v2.2 built but not yet tested.
 
 Completed:
 
@@ -20,10 +20,12 @@ Completed:
 - PCB installation into control box
 - Control box functional testing
 - Control box installed in the MR2
-- MPU6050 accelerometer mounted in final orientation
-- Rotary encoder mounted
+- MPU6050 accelerometer mounted in final orientation, under the shift boot leather
+- Rotary encoder mounted, with a hole drilled into the dash trim to fit it
+- LED strips installed in the footwells
 - Buck converter replaced with a USB charger module
 - Vehicle 12V power connected (cigarette lighter circuit, fused, Wago-spliced)
+- All physical installation complete — see Stage 9
 - Several real-world test drives (v3.0 logged; v2.0, v2.1, v3.1 visual-only) — see Stage 8
 - v2.1 confirmed as a genuinely clean, working baseline
 - v2.2 built (further acceleration-hold tuning) — not yet tested
@@ -31,9 +33,8 @@ Completed:
 Next steps:
 
 - Flash and drive-test v2.2
-- Install the reverse-current blocking diode for the USB backfeed issue
 - Repeated cold-boot testing to build confidence in the power fix
-- Complete permanent installation into MR2
+- Ongoing firmware tuning as needed — this is the only remaining project work
 
 ## Stage 1 — Planning
 
@@ -551,25 +552,28 @@ The original 12V to 5V buck converter specified in the design (see BOM) was repl
 
 This changes the top-level README, hardware table, wiring plan, and BOM, which described a buck converter; these are being updated separately to match. The buck converter component itself remains listed in the BOM as originally purchased, but is no longer used in the build.
 
-### Build Change: USB Power Backfeed Discovered — Fix Not Yet Installed
+### Build Change: USB Power Backfeed Discovered — Accepted, Not Fixed
 
 While testing, it was discovered that connecting the board via USB-C (laptop power, key off) causes the car radio to power on. Root cause: the lighter and radio circuits share a common fuse/node downstream of the ignition switch, and the charger module (like most simple buck/charger modules) has no reverse-current blocking diode on its input — current from USB can flow backward through the module and out onto that shared circuit, powering anything else on it.
 
-This does not reach the battery or cross the ignition switch (which remains a genuine open circuit with the key off), so it is not a drain or safety risk in that sense. But it confirms the USB-power and vehicle-power paths are not actually isolated from each other, reinforcing the existing rule that both must never be connected to the board at the same time — key must be fully off any time USB-C is connected.
+This does not reach the battery or cross the ignition switch (which remains a genuine open circuit with the key off), so it is not a drain or safety risk in that sense. It confirms the USB-power and vehicle-power paths are not fully isolated from each other, reinforcing the existing rule that both must never be connected to the board at the same time — key must be fully off any time USB-C is connected.
 
-**Recommended fix, not yet installed:** a Schottky diode (e.g. 1N5822, 3A rated) in-line on the +12V feed, between the Wago splice and the charger module's input, oriented to block reverse current while allowing normal forward current through. Schottky specifically for its low forward voltage drop, so it doesn't meaningfully rob the module of headroom.
+**Decision: not fixing this.** A blocking diode (Schottky, e.g. 1N5822) was identified as the correct fix, but given the impact is limited to "radio turns on while USB is connected with the key off" — not a safety or drain issue — it was judged not worth the added complexity. Documented here as a known, deliberate trade-off rather than an outstanding task.
 
-### Note: Minor Audio Noise Through Speakers
+### Note: Minor Audio Noise Through Speakers — Accepted, Not Investigated Further
 
-A slight noise through the car speakers was noted when LED brightness changes, most audible when adjusting the encoder. This is a known, common characteristic of PWM-driven addressable LED strips (WS2812B) — the strips' own switching behaviour is electrically noisy, largely independent of which power module feeds them — so this was likely present in some form regardless of the buck-converter-to-charger-module change above. Not investigated further; possible future mitigations if it becomes bothersome include ferrite chokes on the LED power/data wires, or moving the LED ground splice to a chassis point further from the shared lighter/radio circuit.
+A slight noise through the car speakers was noted when LED brightness changes, most audible when adjusting the encoder — in practice barely noticeable, if noticeable at all. This is a known, common characteristic of PWM-driven addressable LED strips (WS2812B) — the strips' own switching behaviour is electrically noisy, largely independent of which power module feeds them — so this was likely present in some form regardless of the buck-converter-to-charger-module change above.
+
+**Decision: not worth further investigation.** Given how marginal the noise actually is, mitigations like ferrite chokes or moving the ground splice weren't pursued. Documented for completeness in case it becomes more noticeable in the future.
 
 ### Installation Progress
 
 Completed so far:
 
 - Control box installed in the MR2.
-- MPU6050 accelerometer mounted in its final vehicle orientation.
-- Rotary encoder mounted.
+- MPU6050 accelerometer mounted in its final vehicle orientation, under the shift boot leather.
+- Rotary encoder mounted, with a hole drilled into the dash trim to fit it.
+- LED strips installed in the footwells (left and right).
 - Master switch connector shorted (see above) in place of the physical switch.
 - LED strips cut to final length (v3.0 firmware updated to match; see note above re: v2.1).
 - Buck converter replaced with a USB charger module (see Build Change above).
@@ -578,9 +582,10 @@ Completed so far:
 - v2.1 confirmed as a genuinely clean baseline (tuned acceleration response + LED count, no other changes) after an earlier documentation mix-up was caught and corrected.
 - v2.2 built: further tuning pass on top of v2.1, targeting the sustained-acceleration fade issue — not yet tested in the car.
 
+**All physical installation is complete** — control box, accelerometer, encoder, and LED strips are all mounted in their final positions, and the system runs on actual vehicle power. What remains is firmware tuning only (v2.2 and beyond) — see Stage 9 below, which has been updated to reflect this; the original plan assumed a separate "temporary test install, then permanent install" split that didn't end up matching how the build actually happened.
+
 Not yet done:
 
-- Reverse-current blocking diode for the USB backfeed issue (see Build Change above) — not yet installed.
 - Multiple repeated cold-boot tests on vehicle power with the new charger module, to build confidence the intermittent boot issue is genuinely resolved rather than just improved.
 - v2.2 has not been flashed or driven yet.
 - v3.1 (gyroscope + tuned acceleration response, plus a lowered `pitchComplementaryAlpha`) tested once — found to fade even faster than v2.1 during sustained acceleration. Parked for now; not being actively developed, not documented further here.
@@ -606,12 +611,11 @@ Not yet done:
 Planned work:
 
 - Flash and drive-test v2.2 — specifically watching whether sustained acceleration holds noticeably longer, and whether real hills still settle to blue in a reasonable time (the expected trade-off).
-- Install the reverse-current blocking diode for the USB backfeed issue.
 - Repeated cold-boot testing on the new charger module to build confidence in the power fix.
 - Revisit whether the v3.0/v3.1 pitch question is worth isolated testing (hard acceleration on confirmed-flat ground), or whether to leave that line parked given v2.x's progress.
 - Verify rotary encoder brightness adjustment and LED strip operation in the car (not yet specifically confirmed against the earlier bench tests).
 
-**Status:** In progress — installed and driven several times, now running on actual vehicle power via the replaced charger module. Actively tuning the v2.x line based on real driving data; v2.2 awaiting its first test.
+**Status:** Physical installation complete. Actively tuning the v2.x firmware line based on real driving data; v2.2 awaiting its first test — this is the only remaining work.
 
 **Testing notes:**
 
@@ -619,23 +623,23 @@ See "Test Drive Results" above. Full Serial logs from Drive 1 (v3.0) retained; l
 
 ## Stage 9 — Final Installation
 
-Goal: permanently install the validated reactive LED system into the MR2 following successful vehicle testing.
+Goal, as originally planned: permanently install the validated reactive LED system into the MR2 following successful vehicle testing.
 
-Planned work:
+**This didn't end up happening as a separate phase.** The original plan assumed a two-step process — a temporary install for testing (Stage 8), then a distinct permanent install afterward (this stage) once firmware tuning was finalised. In practice, everything was installed in its final position during Stage 8, ahead of firmware tuning actually being finished — there was no separate "temporary" rig to later replace.
 
-- Permanently mount the control box behind the centre dash
-- Secure the PCB enclosure
-- Connect the fused 12V vehicle power supply
-- Permanently install the rotary encoder
-- Permanently install the LED strips
-- Mount the MPU6050 accelerometer securely in its final orientation
-- Route and secure all wiring
-- Complete final system test
+What was actually done (all under Stage 8, see above for full detail):
 
-**Note:** the master toggle switch listed in this stage's original planning was not fitted — see Stage 8's "Build Change: Master Power Switch Removed." No switch installation step remains for final installation.
+- Control box permanently mounted in the MR2.
+- Rotary encoder permanently installed, with a hole drilled into the dash trim to fit it.
+- MPU6050 accelerometer mounted in its final orientation, under the shift boot leather.
+- LED strips installed in the footwells (left and right).
+- Fused 12V vehicle power connected via the cigarette lighter circuit.
+- Wiring routed and secured.
 
-**Status:** Pending
+The master toggle switch listed in the original planning for this stage was not fitted — see Stage 8's "Build Change: Master Power Switch Removed."
+
+**Status:** Complete. All physical installation is finished. The only remaining work on the project is firmware tuning (v2.2 and beyond) — see Stage 8's "Planned work" for what's left there.
 
 **Installation notes:**
 
-Pending.
+See Stage 8 for full detail on each installed component and the reasoning behind build decisions made along the way.
