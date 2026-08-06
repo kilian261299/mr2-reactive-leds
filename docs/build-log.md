@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — see Stage 8. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. The only remaining work is firmware tuning: currently on the v2.x line, with v2.2 built but not yet tested.
+**Status:** Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — repeated cold-boot testing since confirms the replacement works reliably every time. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. The only remaining work is firmware tuning: currently on the v2.x line, with v2.2 built but not yet tested.
 
 Completed:
 
@@ -33,7 +33,6 @@ Completed:
 Next steps:
 
 - Flash and drive-test v2.2
-- Repeated cold-boot testing to build confidence in the power fix
 - Ongoing firmware tuning as needed — this is the only remaining project work
 
 ## Stage 1 — Planning
@@ -548,7 +547,7 @@ The original 12V to 5V buck converter specified in the design (see BOM) was repl
 
 **The fix:** a small USB phone-charger module was confirmed via bench testing (powered from an improvised 12V source, 9V + 2×1.5V AA batteries) to output a clean, stable ~5.2V with no boot issues across repeated cold cycles — commercial USB chargers use proper current-limited, soft-start regulation that the buck converter apparently lacked. The module was disassembled from its housing and mounted inside the control box in place of the buck converter, using the same 12V input (from the existing fuse/Wago splice) and 5V output wiring.
 
-**Status:** installed and powering the system from actual vehicle power. Multiple cold boots should be tested to confirm reliability before considering this fully resolved — see Installation Progress below.
+**Status:** Installed and powering the system from actual vehicle power. Repeated cold-boot testing since confirms the fix — the intermittent boot failure has not recurred, and the system now boots reliably every time.
 
 This changes the top-level README, hardware table, wiring plan, and BOM, which described a buck converter; these are being updated separately to match. The buck converter component itself remains listed in the BOM as originally purchased, but is no longer used in the build.
 
@@ -581,12 +580,12 @@ Completed so far:
 - Several real-world test drives completed across v3.0, v2.0, and v2.1 (see Test Drive Results below).
 - v2.1 confirmed as a genuinely clean baseline (tuned acceleration response + LED count, no other changes) after an earlier documentation mix-up was caught and corrected.
 - v2.2 built: further tuning pass on top of v2.1, targeting the sustained-acceleration fade issue — not yet tested in the car.
+- Repeated cold-boot testing on vehicle power with the new charger module — confirmed reliable every time, resolving the intermittent boot issue.
 
 **All physical installation is complete** — control box, accelerometer, encoder, and LED strips are all mounted in their final positions, and the system runs on actual vehicle power. What remains is firmware tuning only (v2.2 and beyond) — see Stage 9 below, which has been updated to reflect this; the original plan assumed a separate "temporary test install, then permanent install" split that didn't end up matching how the build actually happened.
 
 Not yet done:
 
-- Multiple repeated cold-boot tests on vehicle power with the new charger module, to build confidence the intermittent boot issue is genuinely resolved rather than just improved.
 - v2.2 has not been flashed or driven yet.
 - v3.1 (gyroscope + tuned acceleration response, plus a lowered `pitchComplementaryAlpha`) tested once — found to fade even faster than v2.1 during sustained acceleration. Parked for now; not being actively developed, not documented further here.
 
@@ -611,7 +610,6 @@ Not yet done:
 Planned work:
 
 - Flash and drive-test v2.2 — specifically watching whether sustained acceleration holds noticeably longer, and whether real hills still settle to blue in a reasonable time (the expected trade-off).
-- Repeated cold-boot testing on the new charger module to build confidence in the power fix.
 - Revisit whether the v3.0/v3.1 pitch question is worth isolated testing (hard acceleration on confirmed-flat ground), or whether to leave that line parked given v2.x's progress.
 - Verify rotary encoder brightness adjustment and LED strip operation in the car (not yet specifically confirmed against the earlier bench tests).
 
