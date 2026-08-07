@@ -4,7 +4,7 @@ Reactive LED lighting controller (ESP32-C3 + MPU6050 + WS2812B) built and instal
 
 ## Current State
 
-All physical installation is **complete** — control box, accelerometer, rotary encoder, and both LED strips are mounted in their final positions, running on real vehicle power (fused 12V from the cigarette lighter circuit). Hardware/PCB work is done, including a GPIO4 fault on the first assembled board that was resolved by swapping to a spare PCB (root cause: damaged GPIO4 on that specific ESP32-C3 module, not a design fault).
+All physical installation is **complete** — control box, accelerometer, rotary encoder, and both LED strips are mounted in their final positions, running on real vehicle power (fused 12V from the cigarette lighter circuit). Rotary encoder brightness adjustment and LED strip output were confirmed working correctly in the car at this initial installation. Hardware/PCB work is done, including a GPIO4 fault on the first assembled board that was resolved by swapping to a spare PCB (root cause: damaged GPIO4 on that specific ESP32-C3 module, not a design fault).
 
 The originally specified buck converter was swapped for a repurposed USB charger module after it caused intermittent cold-boot failures (likely an unclean voltage rise affecting ESP32-C3 strapping pins on boot). The replacement has since been cold-boot tested repeatedly with no recurrence — **confirmed fixed**.
 
@@ -19,7 +19,6 @@ Firmware is on the **v2.x line**. `v2.1` is the confirmed-clean, working baselin
 ## Open Work
 
 - **Flash and drive-test v2.2** — the only real outstanding task. Watch for: sustained acceleration holding noticeably longer than v2.1, and real hills still settling to blue in a reasonable time (expected trade-off).
-- Verify rotary encoder brightness adjustment and LED output specifically in the car (confirmed on the bench/control box, not yet re-confirmed post-install).
 - Decide whether the v3.0/v3.1 pitch-drift question is worth isolated testing (hard acceleration on confirmed-flat ground), or leave it parked.
 
 ## Key Docs

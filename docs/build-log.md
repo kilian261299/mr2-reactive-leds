@@ -569,7 +569,7 @@ A slight noise through the car speakers was noted when LED brightness changes, m
 
 Completed so far:
 
-- Control box installed in the MR2.
+- Control box installed in the MR2 — rotary encoder brightness adjustment and LED strip output confirmed working correctly in the car at this initial installation.
 - MPU6050 accelerometer mounted in its final vehicle orientation, under the shift boot leather.
 - Rotary encoder mounted, with a hole drilled into the dash trim to fit it.
 - LED strips installed in the footwells (left and right).
@@ -611,7 +611,6 @@ Planned work:
 
 - Flash and drive-test v2.2 — specifically watching whether sustained acceleration holds noticeably longer, and whether real hills still settle to blue in a reasonable time (the expected trade-off).
 - Revisit whether the v3.0/v3.1 pitch question is worth isolated testing (hard acceleration on confirmed-flat ground), or whether to leave that line parked given v2.x's progress.
-- Verify rotary encoder brightness adjustment and LED strip operation in the car (not yet specifically confirmed against the earlier bench tests).
 
 **Status:** Physical installation complete. Actively tuning the v2.x firmware line based on real driving data; v2.2 awaiting its first test — this is the only remaining work.
 
