@@ -12,14 +12,18 @@ Two known issues were found and deliberately left unfixed (not bugs to chase, ju
 - USB power backfeeds enough current to power the car radio when connected with the key off (no reverse-blocking diode on the charger module). Not a safety/drain issue since it doesn't cross the ignition switch. Rule: never connect USB and vehicle power at the same time.
 - Minor audible noise through the speakers when LED brightness changes — typical WS2812B PWM noise, barely noticeable.
 
-Firmware is on the **v2.x line**. `v2.1` is the confirmed-clean, working baseline (accelerometer-only hill compensation, tuned `accelerationResponseG` to `0.18`, LED count corrected to 80/strip). `v2.2` is built on top of v2.1 with milder acceleration-hold tuning (targets a premature-fade issue during sustained acceleration) but **has not been flashed/drive-tested yet**.
+Firmware is on the **v2.x line**. `v2.1` is the confirmed-clean, working baseline (accelerometer-only hill compensation, tuned `accelerationResponseG` to `0.18`, LED count corrected to 80/strip). `v2.2` (milder acceleration-hold tuning) has been drive-tested and **works well overall**, mainly noticeable accelerating in 1st/2nd gear — but surfaced two limitations: higher gears rarely reach true orange, and very steep downhill sections over-trigger braking (red) beyond what the pedal input alone would cause. `v2.3` addresses the first issue (`accelerationResponseG` lowered from `0.18` to `0.12`, a physics-based estimate rather than measured data — see below) but **has not been flashed/drive-tested yet**.
+
+The steep-downhill-braking issue is **not** fixed by v2.3 and isn't expected to be fixable on the accelerometer-only v2.x line at all — it's the same tilt-vs-dynamic-event ambiguity as the acceleration-fade problem v2.2 targets, mirrored onto braking. Documented as an accepted limitation; a real fix would mean revisiting the gyroscope approach below.
 
 `v3.0`/`v3.1` (gyroscope + accelerometer sensor fusion) is a parallel, parked branch — real-world testing found an unresolved question of whether the gyro absorbs genuine acceleration as if it were a hill. Not abandoned, just not the active line while v2.x is being tuned.
 
+**Note:** the board now runs permanently on vehicle power, and USB (needed for Serial logging) can never be connected at the same time as vehicle power. Further tuning is based on visual driving feedback, not fresh logged data.
+
 ## Open Work
 
-- **Flash and drive-test v2.2** — the only real outstanding task. Watch for: sustained acceleration holding noticeably longer than v2.1, and real hills still settling to blue in a reasonable time (expected trade-off).
-- Decide whether the v3.0/v3.1 pitch-drift question is worth isolated testing (hard acceleration on confirmed-flat ground), or leave it parked.
+- **Flash and drive-test v2.3** — the only real outstanding task. Watch for: whether higher gears now reach orange, and whether the lower threshold overreacts on normal light-throttle driving in lower gears.
+- Decide whether the v3.0/v3.1 pitch-drift question is worth isolated testing (hard acceleration on confirmed-flat ground), or leave it parked — the steep-downhill-braking limitation found on v2.2 is an added reason this might eventually be worth revisiting.
 
 ## Key Docs
 

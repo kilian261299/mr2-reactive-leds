@@ -620,7 +620,40 @@ All three changes above act in the same direction — more reluctant to release 
 
 ### Result
 
-Built but **not yet tested in the car** at time of writing. The two things to confirm on the next drive: whether sustained acceleration genuinely holds longer (the intended improvement), and whether a real hill still settles to blue in a reasonable time (the accepted trade-off, not expected to be eliminated).
+**Confirmed on real driving.** Works well overall, mainly noticeable accelerating in 1st and 2nd gear. Braking and cornering unaffected, as expected.
+
+Two things found:
+
+- **Higher gears rarely reach true orange.** `accelerationResponseG` (0.18) was set from a single logged 1st-gear launch peaking at 0.17g. Higher gears produce much lower forward g for the same "hard acceleration" feel, so they were likely peaking well under 0.18g the whole time. Addressed in v2.3 below.
+- **Very steep downhill sections trigger braking (red) heavily/frequently**, beyond what the actual brake pedal input alone would suggest. Not addressed in v2.3 — see that section for why this is a harder problem than the acceleration one.
+
+---
+
+## v2.3 – Higher-Gear Acceleration Tuning
+
+Branches from v2.2, based on its first real driving feedback (above).
+
+### Change: Acceleration Response Range, Again
+
+`accelerationResponseG` lowered from `0.18` to `0.12`.
+
+0.18 worked for 1st/2nd gear but higher gears (lower forward g for the same "hard" feel, due to less torque multiplication) rarely reached orange at all. 0.12 gives higher gears more room on the ramp.
+
+**This is a physics-based estimate, not measured data.** Unlike the original 0.18 figure — derived from a real logged data point — there's no way to log a real number for higher-gear pulls anymore: the board now runs permanently on vehicle power, and USB (needed for Serial logging) can never be connected at the same time as vehicle power (see the build log's backfeed entry). The next drive on this value is the test. If normal light-throttle driving now reaches orange too easily, raise back toward ~0.15; if higher gears still don't get there, lower further toward ~0.09–0.10.
+
+### Steep Downhill Braking: Investigated, Not Fixed
+
+Also reported from the same v2.2 drive: very steep downhill sections trigger heavy, frequent braking (red) beyond what the actual pedal input would suggest.
+
+**Root cause:** the mirror image of the acceleration-fade issue v2.2 targets, on the braking side. A steep grade change freezes `driftBaseX/Y/Z` (see `updateSmartBaseline()`) the same way genuine braking does — and on a winding descent, repeated real braking can keep that baseline frozen for the whole hill, since each brake application resets the freeze/settle timer before the baseline ever catches up to the new pitch angle. The leftover gravity offset from the grade then stacks on top of genuine brake input, reading as harder and more frequent braking than the pedal alone caused.
+
+**Why this isn't fixed here:** this is the same structural ambiguity the acceleration-fade issue has — an accelerometer alone cannot separate "steep, sustained grade" from "genuine sustained deceleration" when both freeze the same baseline. Blunt mitigations exist (raising `brakingDeadZone`/`brakingResponseG` to require a stronger signal before triggering red), but those would dull genuine light braking everywhere, not just on hills — a worse trade-off, not a fix. The real fix is a pitch reference independent of the forward accelerometer axis, which is exactly what v3.0's gyroscope fusion was built for — but that branch remains parked pending its own unresolved pitch-drift question (see v3.0/v3.1 above).
+
+**Decision: documented as a known, accepted limitation of the v2.x accelerometer-only line**, not something a threshold tweak can resolve. Revisiting it properly means revisiting v3.0/v3.1 instead.
+
+### Result
+
+Built but **not yet tested in the car** at time of writing. Next drive should confirm whether higher gears now reach orange, and whether the new threshold overreacts on normal light-throttle driving in lower gears.
 
 ---
 

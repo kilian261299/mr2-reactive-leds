@@ -28,6 +28,7 @@ firmware/
     ├── v2.0/
     ├── v2.1/
     ├── v2.2/
+    ├── v2.3/
     └── v3.0/
 ```
 
@@ -90,7 +91,7 @@ The production firmware is located in:
 
 [mr2-reactive-leds/](mr2-reactive-leds/)
 
-The firmware was developed through eleven versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
+The firmware was developed through fourteen versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
 
 ---
 
@@ -150,11 +151,17 @@ This remains a genuinely good, working version even without v2.2's further tunin
 
 ---
 
-## v2.2 – Milder Acceleration-Hold Tuning (Newest, Not Yet Tested)
+## v2.2 – Milder Acceleration-Hold Tuning (Confirmed Working, With Known Limitations)
 
 Branches from the confirmed-clean v2.1 above. Slows down (rather than freezes) the tracker responsible for the premature-fade issue, and splits a previously shared smoothing constant into separate acceleration/braking/cornering/movement values, so tuning one no longer affects the others.
 
-Expected to hold sustained acceleration noticeably longer than v2.1; expected trade-off is that real hills may take somewhat longer to settle to blue. Built but not yet tested in the car — full detail, including the rejected full-fix reasoning, in the changelog.
+**Confirmed on real driving**: works well overall, mainly noticeable accelerating in 1st and 2nd gear. Two issues found: higher gears rarely reach true orange (addressed in v2.3 below), and very steep downhill sections trigger heavy/frequent braking beyond what pedal input alone would cause (a known, accepted limitation — see v2.3).
+
+## v2.3 – Higher-Gear Acceleration Tuning (Newest, Not Yet Tested)
+
+Branches from v2.2, based on its first real driving feedback. `accelerationResponseG` lowered further, from `0.18` to `0.12`, to give higher gears (lower forward g for the same "hard" feel) more room to reach orange. This is a physics-based estimate rather than measured data — Serial logging is no longer possible now the board runs permanently on vehicle power (USB and vehicle power can never be connected together).
+
+The steep-downhill-braking issue found in the same v2.2 drive is **not** addressed here — it's the same accelerometer-only tilt/dynamic-event ambiguity as the acceleration-fade problem, mirrored onto braking, and isn't fixable with a threshold tweak. Documented as an accepted limitation of the v2.x line; a real fix would mean revisiting v3.0/v3.1's gyroscope approach.
 
 The decision to branch from v2.0 rather than continue v3.0 is provisional — v3.0's gyroscope approach may be revisited once its own pitch behaviour can be tested unambiguously; see the changelog for the parked v3.1 experiment.
 
