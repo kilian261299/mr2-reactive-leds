@@ -397,25 +397,6 @@ const float baselineDriftRate = 0.05;
 
 
 // ==================================================
-// DYNAMIC MOVEMENT THRESHOLDS
-// ==================================================
-
-// Forward acceleration threshold.
-
-const float baselineAccelerationThreshold = 0.08;
-
-
-// Forward braking threshold.
-
-const float baselineBrakingThreshold = 0.10;
-
-
-// Sideways cornering threshold.
-
-const float baselineCorneringThreshold = 0.08;
-
-
-// ==================================================
 // STABILITY THRESHOLDS
 // ==================================================
 
@@ -582,6 +563,8 @@ float gravityY = 0.0;
 
 float gravityZ = 0.0;
 
+bool gravityInitialized = false;
+
 
 // ==================================================
 // USER SETTINGS
@@ -723,6 +706,48 @@ float getSelectedAxis(
 
 
 // ==================================================
+// INTENSITY SHAPING
+// ==================================================
+
+// Shared "effective value / available range, clamped
+// 0-1, then squared for a progressive feel" curve used
+// by acceleration, braking, cornering, and the static
+// theme modes' movement brightness. `range` is floored
+// away from zero so a response constant tuned too close
+// to its dead zone can't produce a divide-by-zero or an
+// inverted/negative intensity.
+
+float squareRatio(
+  float effectiveValue,
+  float range
+) {
+
+  range =
+    max(
+      range,
+      0.01f
+    );
+
+
+  float ratio =
+    effectiveValue /
+    range;
+
+  ratio =
+    constrain(
+      ratio,
+      0.0,
+      1.0
+    );
+
+
+  return
+    ratio *
+    ratio;
+}
+
+
+// ==================================================
 // SMART BASELINE UPDATE
 // ==================================================
 
@@ -818,25 +843,15 @@ void updateSmartBaseline(
     BASELINE_SETTLING
   ) {
 
-    // If meaningful movement starts again,
-    // immediately return to DYNAMIC.
-
-    if (
-      dynamicMovementG >
-      baselineDynamicReentryThreshold
-    ) {
-
-      baselineState =
-        BASELINE_DYNAMIC;
-
-
-      dynamicMovementEndedTime =
-        now;
-
-
-      return;
-    }
-
+    // NOTE: no re-check of dynamicMovementG against
+    // baselineDynamicReentryThreshold here. It's already
+    // guaranteed below that threshold by this point —
+    // the top-of-function check already returned early
+    // (entering BASELINE_DYNAMIC) on this same call if
+    // it wasn't. Resuming movement is still caught
+    // correctly: the top-of-function check runs fresh
+    // on every call, so the very next call re-promotes
+    // to DYNAMIC immediately if movement resumes.
 
     // If movement is still above the calm threshold,
     // restart the settling timer.
@@ -1078,6 +1093,20 @@ uint32_t blueToOrange(
 // LED OUTPUT
 // ==================================================
 
+// Per-strip "last colour actually written" cache, so a
+// held saturated colour (e.g. sustained hard acceleration
+// or braking) doesn't rewrite every pixel and call
+// .show() every single loop once nothing has changed.
+
+uint32_t lastLeftScaledColour = 0;
+
+bool lastLeftScaledColourValid = false;
+
+uint32_t lastRightScaledColour = 0;
+
+bool lastRightScaledColourValid = false;
+
+
 void setStrip(
   Adafruit_NeoPixel &strip,
   int ledCount,
@@ -1191,6 +1220,33 @@ void setStrip(
     );
 
 
+  bool isLeft =
+    (&strip == &leftStrip);
+
+  uint32_t &lastScaledColour =
+    isLeft ?
+      lastLeftScaledColour :
+      lastRightScaledColour;
+
+  bool &lastScaledColourValid =
+    isLeft ?
+      lastLeftScaledColourValid :
+      lastRightScaledColourValid;
+
+
+  if (
+    lastScaledColourValid &&
+    lastScaledColour == scaledColour
+  ) {
+
+    // Same output as the last frame — skip rewriting
+    // all `ledCount` pixels and re-sending over the
+    // data line.
+
+    return;
+  }
+
+
   for (
     int i = 0;
     i < ledCount;
@@ -1205,6 +1261,13 @@ void setStrip(
 
 
   strip.show();
+
+
+  lastScaledColour =
+    scaledColour;
+
+  lastScaledColourValid =
+    true;
 }
 
 
@@ -1463,9 +1526,7 @@ void readAcceleration() {
   // =================================================
 
   if (
-    gravityX == 0.0 &&
-    gravityY == 0.0 &&
-    gravityZ == 0.0
+    !gravityInitialized
   ) {
 
     gravityX =
@@ -1478,6 +1539,10 @@ void readAcceleration() {
 
     gravityZ =
       rawZ;
+
+
+    gravityInitialized =
+      true;
   }
 
 
@@ -1730,6 +1795,36 @@ void readAcceleration() {
 
 void calibrateMPU6050() {
 
+  // Refuse to calibrate while the vehicle is moving —
+  // averaging live accelerometer samples while dynamic
+  // movement is happening would bake a bad baseline in
+  // for the rest of the drive. Only checked here, at
+  // entry; the sampling loop below is still a fixed
+  // ~1.2s regardless.
+
+  if (
+    smoothedMovementG >
+    baselineStableThreshold
+  ) {
+
+    Serial.println(
+      "Calibration refused: vehicle not stationary."
+    );
+
+
+    flashConfirmation(
+      leftStrip.Color(
+        255,
+        0,
+        0
+      )
+    );
+
+
+    return;
+  }
+
+
   Serial.println(
     "Calibrating MPU6050..."
   );
@@ -1833,6 +1928,10 @@ void calibrateMPU6050() {
 
   gravityZ =
     baseZ;
+
+
+  gravityInitialized =
+    true;
 
 
   // Reset state.
@@ -1954,30 +2053,14 @@ void applyCorneringBrightness(
   }
 
 
-  float availableRange =
-    corneringResponseG -
-    corneringDeadZone;
-
-
   float sideIntensity =
-    abs(
-      effectiveSideG
-    )
-    /
-    availableRange;
-
-
-  sideIntensity =
-    constrain(
-      sideIntensity,
-      0.0,
-      1.0
+    squareRatio(
+      abs(
+        effectiveSideG
+      ),
+      corneringResponseG -
+        corneringDeadZone
     );
-
-
-  sideIntensity =
-    sideIntensity *
-    sideIntensity;
 
 
   leftBrightness =
@@ -2111,22 +2194,16 @@ void updateStaticThemeMode(
     breathingMultiplier();
 
 
+  // Uses accelerationResponseG as the response range
+  // (rather than a separate hardcoded value) so this
+  // brightness curve stays in step with Mode 0's colour
+  // curve as that constant gets field-tuned.
+
   float intensity =
-    movementG /
-    0.50;
-
-
-  intensity =
-    constrain(
-      intensity,
-      0.0,
-      1.0
+    squareRatio(
+      movementG,
+      accelerationResponseG
     );
-
-
-  intensity =
-    intensity *
-    intensity;
 
 
   float themeBrightness =
@@ -2217,27 +2294,12 @@ void updateMainReactiveMode(
       brakingDeadZone;
 
 
-    float availableRange =
-      brakingResponseG -
-      brakingDeadZone;
-
-
     float brakeIntensity =
-      effectiveBrakeG /
-      availableRange;
-
-
-    brakeIntensity =
-      constrain(
-        brakeIntensity,
-        0.0,
-        1.0
+      squareRatio(
+        effectiveBrakeG,
+        brakingResponseG -
+          brakingDeadZone
       );
-
-
-    brakeIntensity =
-      brakeIntensity *
-      brakeIntensity;
 
 
     float brakeBrightness =
@@ -2313,27 +2375,12 @@ void updateMainReactiveMode(
       accelerationDeadZone;
 
 
-    float availableRange =
-      accelerationResponseG -
-      accelerationDeadZone;
-
-
     accelIntensity =
-      effectiveAccelG /
-      availableRange;
-
-
-    accelIntensity =
-      constrain(
-        accelIntensity,
-        0.0,
-        1.0
+      squareRatio(
+        effectiveAccelG,
+        accelerationResponseG -
+          accelerationDeadZone
       );
-
-
-    accelIntensity =
-      accelIntensity *
-      accelIntensity;
   }
 
 
@@ -2365,18 +2412,23 @@ void updateMainReactiveMode(
   // COLOUR
   // =================================================
 
-  uint32_t leftColour =
+  // leftStrip and rightStrip share the same colour order
+  // (NEO_GRB + NEO_KHZ800), so .Color(r,g,b) packs
+  // identically for both — one call covers both strips.
+
+  uint32_t reactiveColour =
     blueToOrange(
       accelIntensity,
       leftStrip
     );
 
 
+  uint32_t leftColour =
+    reactiveColour;
+
+
   uint32_t rightColour =
-    blueToOrange(
-      accelIntensity,
-      rightStrip
-    );
+    reactiveColour;
 
 
   // =================================================
