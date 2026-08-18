@@ -651,9 +651,19 @@ Also reported from the same v2.2 drive: very steep downhill sections trigger hea
 
 **Decision: documented as a known, accepted limitation of the v2.x accelerometer-only line**, not something a threshold tweak can resolve. Revisiting it properly means revisiting v3.0/v3.1 instead.
 
+### Code Review Follow-Up (Before First Drive)
+
+A code review of this file, run before it had been driven, found several issues fixed in place rather than shipped as a separate version — none of them re-tune the values above:
+
+- **Modes 1–4 were silently decoupled from the acceleration tuning.** The static colour themes scaled their movement brightness against a hardcoded `0.50g` threshold that had never moved across three rounds of `accelerationResponseG` tuning (`0.35` → `0.18` → `0.12`). They now use `accelerationResponseG` directly. **This is a genuine, previously-unnoticed bug fix and a real behaviour change** — Modes 1-4 will now swing to full brightness much more readily than before, where they barely reacted to movement at all.
+- `calibrateMPU6050()` now refuses to run (flashes red, returns immediately) if the vehicle isn't stationary, instead of silently averaging a moving-vehicle reading into the calibration baseline on an accidental long-press while driving.
+- The repeated "dead zone → range → ratio → clamp → square" intensity curve (acceleration, braking, cornering, theme brightness) was unified into one `squareRatio()` helper, which also floors its range argument away from zero — closes off a possible future divide-by-zero if `accelerationResponseG` is ever tuned down close to `accelerationDeadZone`.
+- Removed dead code: three unused `baseline*Threshold` constants, and an unreachable re-check inside `updateSmartBaseline()`'s SETTLING state.
+- Minor efficiency/robustness cleanup: `setStrip()` now skips rewriting LED data when output is unchanged from the previous frame; `blueToOrange()` is called once per loop instead of twice; the gravity "not yet initialised" check now uses an explicit flag instead of a fragile exact-zero float comparison.
+
 ### Result
 
-Built but **not yet tested in the car** at time of writing. Next drive should confirm whether higher gears now reach orange, and whether the new threshold overreacts on normal light-throttle driving in lower gears.
+Built but **not yet tested in the car** at time of writing. Next drive should confirm whether higher gears now reach orange, whether the new threshold overreacts on normal light-throttle driving in lower gears, and — new, from the review fixes — how Modes 1-4 feel now that they actually respond to movement.
 
 ---
 

@@ -163,6 +163,8 @@ Branches from v2.2, based on its first real driving feedback. `accelerationRespo
 
 The steep-downhill-braking issue found in the same v2.2 drive is **not** addressed here — it's the same accelerometer-only tilt/dynamic-event ambiguity as the acceleration-fade problem, mirrored onto braking, and isn't fixable with a threshold tweak. Documented as an accepted limitation of the v2.x line; a real fix would mean revisiting v3.0/v3.1's gyroscope approach.
 
+A code review of this file (before it had been driven) found and fixed several issues in place: Modes 1-4 were using a hardcoded brightness threshold that had silently fallen out of sync with three rounds of acceleration tuning (a genuine bug, now fixed — those modes will react to movement much more readily than before), plus a moving-vehicle recalibration guard and some dead-code/duplication cleanup. See the changelog for the full list.
+
 The decision to branch from v2.0 rather than continue v3.0 is provisional — v3.0's gyroscope approach may be revisited once its own pitch behaviour can be tested unambiguously; see the changelog for the parked v3.1 experiment.
 
 For detailed version history and development notes, see:

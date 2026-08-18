@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). Rotary encoder brightness adjustment and LED strip output were confirmed working correctly in the car at this initial installation. The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — repeated cold-boot testing since confirms the replacement works reliably every time. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. The only remaining work is firmware tuning: v2.2 has been drive-tested (works well, with two known gear/hill-related limitations); v2.3 built to address one of them, not yet tested.
+**Status:** Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). Rotary encoder brightness adjustment and LED strip output were confirmed working correctly in the car at this initial installation. The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — repeated cold-boot testing since confirms the replacement works reliably every time. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. The only remaining work is firmware tuning: v2.2 has been drive-tested (works well, with two known gear/hill-related limitations); v2.3 built to address one of them, then code-reviewed before its first drive (fixing a genuine bug where Modes 1-4 had silently stopped reacting to movement, plus a moving-vehicle recalibration guard and other cleanup) — not yet tested.
 
 Completed:
 
@@ -29,7 +29,7 @@ Completed:
 - Several real-world test drives (v3.0 logged; v2.0, v2.1, v2.2, v3.1 visual-only) — see Stage 8
 - v2.1 confirmed as a genuinely clean, working baseline
 - v2.2 drive-tested — works well, with two known limitations (higher gears rarely reach orange; steep downhill braking over-triggers)
-- v2.3 built (higher-gear acceleration tuning) — not yet tested
+- v2.3 built (higher-gear acceleration tuning), then code-reviewed before its first drive — fixed a genuine bug (Modes 1-4 had silently stopped reacting to movement) plus a moving-vehicle recalibration guard and dead-code/duplication cleanup — not yet tested
 
 Next steps:
 
@@ -581,7 +581,7 @@ Completed so far:
 - Several real-world test drives completed across v3.0, v2.0, v2.1, and v2.2 (see Test Drive Results below).
 - v2.1 confirmed as a genuinely clean baseline (tuned acceleration response + LED count, no other changes) after an earlier documentation mix-up was caught and corrected.
 - v2.2 drive-tested: further tuning pass on top of v2.1, targeting the sustained-acceleration fade issue. Works well overall; two limitations found (higher gears rarely reach orange, steep downhill braking over-triggers) — see Test Drive Results below.
-- v2.3 built: addresses the higher-gear acceleration issue found on v2.2 — not yet tested in the car.
+- v2.3 built: addresses the higher-gear acceleration issue found on v2.2. Code-reviewed before its first drive, fixing a genuine bug (Modes 1-4 had silently stopped reacting to movement) and some robustness cleanup — see Test Drive Results below. Not yet tested in the car.
 - Repeated cold-boot testing on vehicle power with the new charger module — confirmed reliable every time, resolving the intermittent boot issue.
 
 **All physical installation is complete** — control box, accelerometer, encoder, and LED strips are all mounted in their final positions, and the system runs on actual vehicle power. What remains is firmware tuning only (v2.3 and beyond) — see Stage 9 below, which has been updated to reflect this; the original plan assumed a separate "temporary test install, then permanent install" split that didn't end up matching how the build actually happened.
@@ -613,11 +613,13 @@ Not yet done:
 
 **v2.3 built**, addressing the acceleration issue only: `accelerationResponseG` lowered further from `0.18` to `0.12`, to give higher gears more room to reach orange. This is a physics-based estimate rather than measured data — Serial logging is no longer possible now the board runs permanently on vehicle power (USB and vehicle power can never be connected together, see the backfeed note above), so unlike the original 0.18 figure, there's no way to log a real number for higher-gear pulls. The next drive on this value is the test itself.
 
+**Code review, before the first v2.3 drive:** a review of the new file (run before it had been driven) found and fixed several issues in place, none of them re-tuning `accelerationResponseG` itself. The one genuine behavioural bug: Modes 1-4 (the static colour themes) scaled their movement brightness against a hardcoded `0.50g` threshold that had never been touched across three rounds of acceleration tuning (`0.35` → `0.18` → `0.12`), so those modes had quietly stopped reacting to movement at all — now fixed to track `accelerationResponseG` directly, meaning Modes 1-4 will be noticeably livelier on the next drive than before. Also added: a guard refusing to recalibrate while the car is moving (previously an accidental long-press while driving would silently bake a bad baseline in), plus dead-code removal and de-duplication of the repeated intensity-curve math. Full detail in the firmware changelog's v2.3 entry.
+
 The steep-downhill-braking issue is **not addressed** by v2.3. Root cause: the mirror image of the acceleration-fade issue v2.2 targets — a steep grade change freezes the baseline the same way genuine braking does, and repeated real braking on a winding descent can keep it frozen for the whole hill, so the leftover gravity offset from the grade stacks on top of genuine brake input. This is the same accelerometer-only tilt/dynamic-event ambiguity throughout this firmware line, and isn't resolvable with a threshold tweak — a real fix means a pitch reference independent of the forward accelerometer axis, which is what v3.0/v3.1's gyroscope approach was built for. **Decision: documented as a known, accepted limitation of the v2.x line**, not pursued further here — see the firmware changelog's v2.3 entry for full reasoning.
 
 Planned work:
 
-- Flash and drive-test v2.3 — specifically watching whether higher gears now reach orange, and whether the lower threshold overreacts on normal light-throttle driving in lower gears.
+- Flash and drive-test v2.3 — specifically watching whether higher gears now reach orange, whether the lower threshold overreacts on normal light-throttle driving in lower gears, and how Modes 1-4 feel now that the code-review fix makes them actually respond to movement.
 - Revisit whether the v3.0/v3.1 pitch question is worth isolated testing (hard acceleration on confirmed-flat ground), or whether to leave that line parked given v2.x's progress. The steep-downhill-braking limitation found on v2.2 is an additional reason a proper gyroscope-based fix might eventually be worth revisiting.
 
 **Status:** Physical installation complete. Actively tuning the v2.x firmware line based on real driving data; v2.3 awaiting its first test — this is the only remaining work.

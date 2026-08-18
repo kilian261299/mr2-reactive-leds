@@ -75,6 +75,55 @@
   tweak can fix.
 
   ==================================================
+  V2.3 CODE REVIEW FOLLOW-UP (applied before first
+  drive test, same version)
+  ==================================================
+
+  A code review of this file (before it had been driven)
+  found several issues, fixed here rather than shipped as
+  a separate version since none were re-tuning of the
+  values above:
+
+  - Modes 1-4 (the static colour themes) scaled their
+    movement brightness against a hardcoded 0.50g
+    threshold that was never touched across three rounds
+    of accelerationResponseG tuning (0.35 -> 0.18 ->
+    0.12). They now use accelerationResponseG directly,
+    so they track the same sensitivity as Mode 0's colour
+    response. This IS a real behaviour change: Modes 1-4
+    will now swing to full brightness much more readily
+    than before, where they barely reacted at all.
+  - calibrateMPU6050() now refuses to run (flashes red,
+    returns immediately) if the vehicle isn't stationary
+    (smoothedMovementG above baselineStableThreshold),
+    instead of silently averaging a moving-vehicle
+    reading into the calibration baseline on an
+    accidental long-press while driving.
+  - The repeated "dead zone -> range -> ratio -> clamp ->
+    square" intensity curve (acceleration, braking,
+    cornering, theme brightness) was unified into one
+    squareRatio() helper, which also floors its range
+    argument away from zero — closes off a possible
+    future divide-by-zero if accelerationResponseG is
+    ever tuned down close to accelerationDeadZone.
+  - Removed dead code: three unused baseline*Threshold
+    constants, and an unreachable re-check inside
+    updateSmartBaseline()'s SETTLING state.
+  - setStrip() now skips rewriting/re-sending LED data
+    when the output is identical to the previous frame
+    (matters during a sustained saturated accel/brake
+    hold); blueToOrange() is called once per loop instead
+    of twice (both strips share the same colour order);
+    the gravityX/Y/Z "not yet initialised" check now uses
+    an explicit flag instead of a fragile exact-zero
+    float comparison.
+
+  None of this changes the acceleration-tuning behaviour
+  being tested in this version (still 0.12g) — except the
+  Modes 1-4 fix above, which is a genuine, previously
+  unnoticed bug fix, not a tuning change.
+
+  ==================================================
   V2.2 CHANGES (carried over from v2.2, unchanged below)
   ==================================================
 

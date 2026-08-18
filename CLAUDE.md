@@ -12,7 +12,9 @@ Two known issues were found and deliberately left unfixed (not bugs to chase, ju
 - USB power backfeeds enough current to power the car radio when connected with the key off (no reverse-blocking diode on the charger module). Not a safety/drain issue since it doesn't cross the ignition switch. Rule: never connect USB and vehicle power at the same time.
 - Minor audible noise through the speakers when LED brightness changes — typical WS2812B PWM noise, barely noticeable.
 
-Firmware is on the **v2.x line**. `v2.1` is the confirmed-clean, working baseline (accelerometer-only hill compensation, tuned `accelerationResponseG` to `0.18`, LED count corrected to 80/strip). `v2.2` (milder acceleration-hold tuning) has been drive-tested and **works well overall**, mainly noticeable accelerating in 1st/2nd gear — but surfaced two limitations: higher gears rarely reach true orange, and very steep downhill sections over-trigger braking (red) beyond what the pedal input alone would cause. `v2.3` addresses the first issue (`accelerationResponseG` lowered from `0.18` to `0.12`, a physics-based estimate rather than measured data — see below) but **has not been flashed/drive-tested yet**.
+Firmware is on the **v2.x line**. `v2.1` is the confirmed-clean, working baseline (accelerometer-only hill compensation, tuned `accelerationResponseG` to `0.18`, LED count corrected to 80/strip). `v2.2` (milder acceleration-hold tuning) has been drive-tested and **works well overall**, mainly noticeable accelerating in 1st/2nd gear — but surfaced two limitations: higher gears rarely reach true orange, and very steep downhill sections over-trigger braking (red) beyond what the pedal input alone would cause. `v2.3` addresses the first issue (`accelerationResponseG` lowered from `0.18` to `0.12`, a physics-based estimate rather than measured data — see below).
+
+Before its first drive, v2.3 also went through a code review that found and fixed a genuine bug unrelated to the acceleration tuning: **Modes 1–4 (the static colour themes) had silently stopped reacting to movement**, since their brightness curve used a hardcoded `0.50g` threshold that never moved across three rounds of `accelerationResponseG` tuning. They now track `accelerationResponseG` directly — a real, noticeable behaviour change (those modes will be far more reactive than before), separate from the acceleration threshold change itself. The review also added a guard against recalibrating while the car is moving, and cleaned up dead code/duplicated intensity-curve math. v2.3 **has not been flashed/drive-tested yet**.
 
 The steep-downhill-braking issue is **not** fixed by v2.3 and isn't expected to be fixable on the accelerometer-only v2.x line at all — it's the same tilt-vs-dynamic-event ambiguity as the acceleration-fade problem v2.2 targets, mirrored onto braking. Documented as an accepted limitation; a real fix would mean revisiting the gyroscope approach below.
 
@@ -22,7 +24,7 @@ The steep-downhill-braking issue is **not** fixed by v2.3 and isn't expected to 
 
 ## Open Work
 
-- **Flash and drive-test v2.3** — the only real outstanding task. Watch for: whether higher gears now reach orange, and whether the lower threshold overreacts on normal light-throttle driving in lower gears.
+- **Flash and drive-test v2.3** — the only real outstanding task. Watch for: whether higher gears now reach orange, whether the lower threshold overreacts on normal light-throttle driving in lower gears, and how Modes 1-4 feel now that they actually respond to movement (code-review fix, untested).
 - Decide whether the v3.0/v3.1 pitch-drift question is worth isolated testing (hard acceleration on confirmed-flat ground), or leave it parked — the steep-downhill-braking limitation found on v2.2 is an added reason this might eventually be worth revisiting.
 
 ## Key Docs
