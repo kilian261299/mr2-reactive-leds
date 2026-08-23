@@ -135,7 +135,7 @@ Replaces the accelerometer-only hill compensation with gyroscope + accelerometer
 
 Includes several fixes found during bench testing (gyro bias correction, accelerometer reliability gating, sign tuning, side-axis gating rework) — see the full changelog for details.
 
-Real-world testing found an unresolved question: the pitch estimate showed large swings during acceleration, which may mean the gyro is absorbing genuine acceleration as if it were a hill — or may simply reflect a real road gradient, since the test wasn't confirmed to be on flat ground. Not yet isolated. Development focus has moved to v2.1 (below) while this is pending, but v3.0 is not considered abandoned.
+Real-world testing found an unresolved question: the pitch estimate showed large swings during acceleration, which may mean the gyro is absorbing genuine acceleration as if it were a hill — or may simply reflect a real road gradient, since the test wasn't confirmed to be on flat ground. Not isolated — development focus moved to v2.1 (below) instead, and stayed there through v2.3 (adopted as the final firmware version). v3.0/v3.1 is parked and not being pursued further; see v3.1 in the full changelog.
 
 ---
 
@@ -157,15 +157,15 @@ Branches from the confirmed-clean v2.1 above. Slows down (rather than freezes) t
 
 **Confirmed on real driving**: works well overall, mainly noticeable accelerating in 1st and 2nd gear. Two issues found: higher gears rarely reach true orange (addressed in v2.3 below), and very steep downhill sections trigger heavy/frequent braking beyond what pedal input alone would cause (a known, accepted limitation — see v2.3).
 
-## v2.3 – Higher-Gear Acceleration Tuning (Newest, Not Yet Tested)
+## v2.3 – Higher-Gear Acceleration Tuning (Final Version)
 
 Branches from v2.2, based on its first real driving feedback. `accelerationResponseG` lowered further, from `0.18` to `0.12`, to give higher gears (lower forward g for the same "hard" feel) more room to reach orange. This is a physics-based estimate rather than measured data — Serial logging is no longer possible now the board runs permanently on vehicle power (USB and vehicle power can never be connected together).
 
-The steep-downhill-braking issue found in the same v2.2 drive is **not** addressed here — it's the same accelerometer-only tilt/dynamic-event ambiguity as the acceleration-fade problem, mirrored onto braking, and isn't fixable with a threshold tweak. Documented as an accepted limitation of the v2.x line; a real fix would mean revisiting v3.0/v3.1's gyroscope approach.
+A code review of this file (before it had been driven) found and fixed several issues in place: Modes 1-4 were using a hardcoded brightness threshold that had silently fallen out of sync with three rounds of acceleration tuning (a genuine bug, now fixed), plus a moving-vehicle recalibration guard and some dead-code/duplication cleanup. See the changelog for the full list.
 
-A code review of this file (before it had been driven) found and fixed several issues in place: Modes 1-4 were using a hardcoded brightness threshold that had silently fallen out of sync with three rounds of acceleration tuning (a genuine bug, now fixed — those modes will react to movement much more readily than before), plus a moving-vehicle recalibration guard and some dead-code/duplication cleanup. See the changelog for the full list.
+**Confirmed on real driving — works "almost perfectly."** Higher gears now reach true orange, and Modes 1-4 are confirmed noticeably livelier. Braking and cornering unaffected, as expected. One known limitation remains: steep downhill braking still over-triggers on very steep hills — the same accelerometer-only tilt/dynamic-event ambiguity as the acceleration-fade problem, mirrored onto braking, and not fixable with a threshold tweak.
 
-The decision to branch from v2.0 rather than continue v3.0 is provisional — v3.0's gyroscope approach may be revisited once its own pitch behaviour can be tested unambiguously; see the changelog for the parked v3.1 experiment.
+**v2.3 is adopted as the final firmware version — project complete.** The downhill-braking limitation is accepted rather than pursued further, the same treatment given to the USB power backfeed and PWM speaker noise found earlier in the build. v3.0/v3.1's gyroscope approach — the real fix for that limitation — remains parked and is not being pursued further; see the changelog for the parked v3.1 experiment.
 
 For detailed version history and development notes, see:
 

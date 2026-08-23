@@ -663,14 +663,18 @@ A code review of this file, run before it had been driven, found several issues 
 
 ### Result
 
-Built but **not yet tested in the car** at time of writing. Next drive should confirm whether higher gears now reach orange, whether the new threshold overreacts on normal light-throttle driving in lower gears, and — new, from the review fixes — how Modes 1-4 feel now that they actually respond to movement.
+**Confirmed on real driving.** Works "almost perfectly": higher gears now reach true orange (confirming the `0.12` tuning), and Modes 1-4 are confirmed noticeably livelier (confirming the code-review fix). Braking and cornering unaffected, as expected.
+
+One known limitation remains: steep downhill braking still over-triggers, confirmed on very steep hills. Same root cause identified on v2.2 (a steep grade change freezes the baseline the same way genuine braking does), and not resolvable with a threshold tweak on this accelerometer-only line — see v3.0/v3.1 below for the approach that would be needed to fix it properly.
+
+**v2.3 is adopted as the final firmware version.** Given it otherwise performs well, the downhill-braking limitation is accepted as a known, permanent trade-off rather than pursued further — the same treatment given to the USB power backfeed and PWM speaker noise found earlier in the build. v3.0/v3.1's gyroscope approach remains parked, not being developed further.
 
 ---
 
-## v3.1 – Ported Tuning, Gyro Fusion (Parked)
+## v3.1 – Ported Tuning, Gyro Fusion (Parked, Not Pursued Further)
 
 Branches from v3.0: the same acceleration response tuning as v2.1 (`accelerationResponseG` to `0.18`), plus `pitchComplementaryAlpha` lowered from `0.98` to `0.90` in an attempt to reduce the pitch drift seen in v3.0's original real-world test.
 
 Tested once, visually. Braking worked well. Acceleration briefly reached orange only under hard 1st-gear launches, fading back to blue in under a second even while still accelerating — noticeably faster than v2.1's fade, not slower. The timing closely matches the pitch drift seen in the original v3.0 log, strengthening (though not fully confirming, absent a controlled flat-ground test) the theory that the gyro is absorbing genuine acceleration as if it were a hill.
 
-**Parked for now.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggests the opposite. Not being actively developed further while v2.x's milder, better-performing line of tuning (v2.2 above) is explored. Not abandoned — the flat-ground test that would properly settle the pitch-drift question has still never been done.
+**Parked, not pursued further.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggested the opposite. v2.x's line of tuning reached a good enough result with v2.3 (adopted as the final firmware version, see above), so the flat-ground test that would have properly settled the pitch-drift question was never needed and won't be pursued. Not deleted or considered a dead end in principle — just not required to finish this project.

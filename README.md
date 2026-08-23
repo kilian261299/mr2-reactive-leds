@@ -12,13 +12,13 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Project Status
 
-**Current Stage:** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. The only remaining work is firmware tuning, based on real driving data.
+**Project complete.** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Firmware tuning concluded with `v2.3` (see [firmware/README.md](firmware/README.md)), confirmed on real driving to work well, with one known, accepted limitation (steep downhill braking over-triggers on very steep hills — a structural limit of the accelerometer-only approach, not pursued further).
 
 Completed:
 
 - Hardware selection
 - Breadboard prototype
-- Firmware development (currently tuning v2.x — see [firmware/README.md](firmware/README.md) for the version history, including v3.0's gyroscope-based approach, currently parked pending further testing)
+- Firmware development — see [firmware/README.md](firmware/README.md) for the full version history; `v2.3` adopted as the final version, with the gyroscope-based `v3.0`/`v3.1` line parked and not pursued further
 - Custom PCB design
 - PCB manufacturing
 - PCB assembly (including a GPIO fault investigation and replacement board)
@@ -31,15 +31,11 @@ Completed:
 - Several real-world test drives, firmware tuning based on results
 - Hardware documentation
 
-Upcoming:
-
-- Further test drives to confirm the latest firmware tuning (v2.2 and beyond) — this is the only remaining project work
-
 ## Features
 
 - Reactive LED brightness based on vehicle acceleration
 - Smooth blue ↔ orange colour blending
-- Hill compensation, so genuine acceleration/braking is distinguished from the vehicle simply pitching on a slope (accelerometer-only baseline approach — a gyroscope-based version exists and is being evaluated, see firmware docs)
+- Hill compensation, so genuine acceleration/braking is distinguished from the vehicle simply pitching on a slope (accelerometer-only baseline approach — a gyroscope-based version was explored and parked, see firmware docs)
 - Independent left and right LED outputs
 - Cornering effects using lateral acceleration
 - User-adjustable maximum brightness
