@@ -641,15 +641,13 @@ Branches from v2.2, based on its first real driving feedback (above).
 
 **This is a physics-based estimate, not measured data.** Unlike the original 0.18 figure — derived from a real logged data point — there's no way to log a real number for higher-gear pulls anymore: the board now runs permanently on vehicle power, and USB (needed for Serial logging) can never be connected at the same time as vehicle power (see the build log's backfeed entry). The next drive on this value is the test. If normal light-throttle driving now reaches orange too easily, raise back toward ~0.15; if higher gears still don't get there, lower further toward ~0.09–0.10.
 
-### Steep Downhill Braking: Investigated, Not Fixed
+### Steep Downhill Braking: Investigated, Not Fixed Here
 
 Also reported from the same v2.2 drive: very steep downhill sections trigger heavy, frequent braking (red) beyond what the actual pedal input would suggest.
 
-**Root cause:** the mirror image of the acceleration-fade issue v2.2 targets, on the braking side. A steep grade change freezes `driftBaseX/Y/Z` (see `updateSmartBaseline()`) the same way genuine braking does — and on a winding descent, repeated real braking can keep that baseline frozen for the whole hill, since each brake application resets the freeze/settle timer before the baseline ever catches up to the new pitch angle. The leftover gravity offset from the grade then stacks on top of genuine brake input, reading as harder and more frequent braking than the pedal alone caused.
+**Root cause identified at the time:** a steep grade change freezes `driftBaseX/Y/Z` (see `updateSmartBaseline()`) the same way genuine braking does — and on a winding descent, repeated real braking can keep that baseline frozen for the whole hill, since each brake application resets the freeze/settle timer before the baseline ever catches up to the new pitch angle. The leftover gravity offset from the grade then stacks on top of genuine brake input, reading as harder and more frequent braking than the pedal alone caused.
 
-**Why this isn't fixed here:** this is the same structural ambiguity the acceleration-fade issue has — an accelerometer alone cannot separate "steep, sustained grade" from "genuine sustained deceleration" when both freeze the same baseline. Blunt mitigations exist (raising `brakingDeadZone`/`brakingResponseG` to require a stronger signal before triggering red), but those would dull genuine light braking everywhere, not just on hills — a worse trade-off, not a fix. The real fix is a pitch reference independent of the forward accelerometer axis, which is exactly what v3.0's gyroscope fusion was built for — but that branch remains parked pending its own unresolved pitch-drift question (see v3.0/v3.1 above).
-
-**Decision: documented as a known, accepted limitation of the v2.x accelerometer-only line**, not something a threshold tweak can resolve. Revisiting it properly means revisiting v3.0/v3.1 instead.
+At the time, this was believed to be an inherent, unfixable ambiguity of the accelerometer-only approach. **That turned out to be incomplete** — see v2.3's Result below and v2.4, which found and fixed a specific contributor to this that had nothing to do with the fundamental hill-vs-braking ambiguity.
 
 ### Code Review Follow-Up (Before First Drive)
 
@@ -665,9 +663,30 @@ A code review of this file, run before it had been driven, found several issues 
 
 **Confirmed on real driving.** Works "almost perfectly": higher gears now reach true orange (confirming the `0.12` tuning), and Modes 1-4 are confirmed noticeably livelier (confirming the code-review fix). Braking and cornering unaffected, as expected.
 
-One known limitation remains: steep downhill braking still over-triggers, confirmed on very steep hills. Same root cause identified on v2.2 (a steep grade change freezes the baseline the same way genuine braking does), and not resolvable with a threshold tweak on this accelerometer-only line — see v3.0/v3.1 below for the approach that would be needed to fix it properly.
+**One new issue found, not present on earlier versions:** flickering between red (braking) and blue (idle) while going downhill, with no braking input needed at all — a different, more disruptive symptom than the "heavy/frequent braking" originally reported on v2.2. Traced back to **v2.1 → v2.2** (not this version's own acceleration-threshold change or code review): v2.2's `gravitySmoothing` and `baselineDynamicReentryThreshold` changes, made specifically to help sustained acceleration hold its colour, also slowed how fast a downhill grade gets absorbed and made the state machine easier to re-trigger before it settled — together producing a freeze/partial-catch-up/re-trigger cycle on hills. Fixed in v2.4 below, without reverting the acceleration benefit.
 
-**v2.3 is adopted as the final firmware version.** Given it otherwise performs well, the downhill-braking limitation is accepted as a known, permanent trade-off rather than pursued further — the same treatment given to the USB power backfeed and PWM speaker noise found earlier in the build. v3.0/v3.1's gyroscope approach remains parked, not being developed further.
+---
+
+## v2.4 – Downhill Flicker Fix (Final Version)
+
+Branches from v2.3, fixing the downhill red/blue flicker found on that version's first drive (see v2.3's Result above).
+
+### Change: Direction-Aware Gravity Smoothing
+
+`gravitySmoothing` (0.003, the v2.2 rate that protects sustained acceleration from fading) is no longer applied uniformly to the forward axis. A new constant, `gravitySmoothingBraking` (`0.008`, the original pre-v2.2 rate), is used instead whenever the current forward-axis excursion is in the **braking direction** — which a downhill grade shares, since both show up as a sustained shift on the same axis, same sign.
+
+This works because acceleration and braking/downhill-grade are distinguishable by sign on the same axis, even though an accelerometer can't otherwise tell "tilted" from "accelerating." Each loop, `readAcceleration()` checks the sign of the raw forward reading relative to the current gravity estimate (before that estimate updates) and picks the smoothing rate accordingly:
+
+- **Accelerating** → `gravitySmoothing` (`0.003`, unchanged from v2.2/v2.3) — sustained hard pulls still get the full ~6-7s of held colour before the baseline would start absorbing them.
+- **Braking / downhill** → `gravitySmoothingBraking` (`0.008`, restored) — the baseline recognises and absorbs a hill grade at roughly the v2.1 rate again, well before the freeze/re-trigger cycle has a chance to repeat visibly.
+
+This is a different kind of fix than the blunt mitigations considered and rejected for v2.3 (raising `brakingDeadZone`/`brakingResponseG`, which would have dulled genuine light braking everywhere). It doesn't touch the dead zone or response range at all — it only changes how fast the *gating* signal recognises a sustained condition, and only in the direction where fast recognition doesn't cost anything: real braking already ran fine at this exact rate across v2.0 and v2.1, before v2.2 slowed it down uniformly for acceleration's sake.
+
+`baselineDynamicReentryThreshold` (`0.055`, also lowered in v2.2) was **left unchanged**. The gravity-rate split should already resolve the flicker by keeping the gating signal closely tracked during braking/downhill excursions; if flicker persists, that threshold is the next thing to revisit.
+
+### Result
+
+**Adopted as the final firmware version.** Built to address the v2.3 flicker finding; the next drive should confirm the downhill flicker is gone (or much reduced), that sustained acceleration still holds its colour as well as v2.2/v2.3 did, and that genuine braking feels unchanged.
 
 ---
 
@@ -677,4 +696,4 @@ Branches from v3.0: the same acceleration response tuning as v2.1 (`acceleration
 
 Tested once, visually. Braking worked well. Acceleration briefly reached orange only under hard 1st-gear launches, fading back to blue in under a second even while still accelerating — noticeably faster than v2.1's fade, not slower. The timing closely matches the pitch drift seen in the original v3.0 log, strengthening (though not fully confirming, absent a controlled flat-ground test) the theory that the gyro is absorbing genuine acceleration as if it were a hill.
 
-**Parked, not pursued further.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggested the opposite. v2.x's line of tuning reached a good enough result with v2.3 (adopted as the final firmware version, see above), so the flat-ground test that would have properly settled the pitch-drift question was never needed and won't be pursued. Not deleted or considered a dead end in principle — just not required to finish this project.
+**Parked, not pursued further.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggested the opposite. v2.x's line of tuning reached a good enough result with v2.4 (adopted as the final firmware version, see above), so the flat-ground test that would have properly settled the pitch-drift question was never needed and won't be pursued. Not deleted or considered a dead end in principle — just not required to finish this project.
