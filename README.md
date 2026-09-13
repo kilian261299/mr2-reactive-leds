@@ -12,13 +12,13 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Project Status
 
-**Project complete.** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Firmware tuning concluded with `v2.4` (see [firmware/README.md](firmware/README.md)) — `v2.3` worked "almost perfectly" but flickered between red and blue on downhill slopes, traced to a side effect of earlier acceleration tuning and fixed in `v2.4` without giving that tuning back up.
+**Project complete.** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Firmware tuning concluded with `v2.4.1` (see [firmware/README.md](firmware/README.md)) — `v2.3` worked "almost perfectly" but flickered between red and blue on downhill slopes, traced to a side effect of earlier acceleration tuning; `v2.4` was a first fix attempt that turned out incomplete, and `v2.4.1` finishes it without giving that tuning back up.
 
 Completed:
 
 - Hardware selection
 - Breadboard prototype
-- Firmware development — see [firmware/README.md](firmware/README.md) for the full version history; `v2.4` adopted as the final version, with the gyroscope-based `v3.0`/`v3.1` line parked and not pursued further
+- Firmware development — see [firmware/README.md](firmware/README.md) for the full version history; `v2.4.1` adopted as the final version, with the gyroscope-based `v3.0`/`v3.1` line parked and not pursued further
 - Custom PCB design
 - PCB manufacturing
 - PCB assembly (including a GPIO fault investigation and replacement board)

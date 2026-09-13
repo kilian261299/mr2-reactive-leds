@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Status:** Project complete. Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). Rotary encoder brightness adjustment and LED strip output were confirmed working correctly in the car at this initial installation. The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — repeated cold-boot testing since confirms the replacement works reliably every time. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. **v2.4 is the final firmware version** — fixes a downhill red/blue flicker found on v2.3's drive test (traced to v2.2's acceleration-hold tuning, not an inherent accelerometer-only limitation as first believed). Built and adopted as final; **awaiting confirmation on its first drive** — see Stage 8. The parallel gyroscope-based v3.0/v3.1 branch is parked and not being pursued further.
+**Status:** Project complete. Physical installation is complete — control box, accelerometer (under the shift boot leather), rotary encoder (hole drilled into the dash trim), and LED strips (footwells) are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit, fused and spliced). Rotary encoder brightness adjustment and LED strip output were confirmed working correctly in the car at this initial installation. The original buck converter was replaced with a repurposed USB charger module after it caused intermittent cold-boot failures — repeated cold-boot testing since confirms the replacement works reliably every time. A minor USB-power backfeed to the car's radio circuit, and a barely-noticeable audio noise through the speakers, were both found and deliberately left unfixed — see Stage 8 for reasoning. Master power switch omitted from the build. **v2.4.1 is the final firmware version** — fixes a downhill red/blue flicker found on v2.3's drive test (traced to v2.2's acceleration-hold tuning, not an inherent accelerometer-only limitation as first believed). v2.4, a first attempt at this fix, was drive-tested and found to make no difference — it only fixed one of two coupled accelerometer axes; v2.4.1 fixes the second. Built and adopted as final; **awaiting confirmation on its first drive** — see Stage 8. The parallel gyroscope-based v3.0/v3.1 branch is parked and not being pursued further.
 
 Completed:
 
@@ -33,11 +33,13 @@ Completed:
 - v2.3 drive-tested: works well overall, higher gears now reach orange, Modes 1-4 confirmed noticeably livelier. One new issue found — flickering between red and blue going downhill, not present on earlier versions
 - Flicker root-caused to v2.1 → v2.2's `gravitySmoothing`/`baselineDynamicReentryThreshold` tuning (made to help acceleration hold its colour), not an inherent accelerometer-only limitation as first believed
 - v2.4 built: splits `gravitySmoothing` by direction (accelerating vs braking/downhill) so hills settle quickly again without giving back the acceleration-hold improvement
-- **v2.4 adopted as the final firmware version — awaiting confirmation on its first drive**
+- v2.4 drive-tested: no improvement — downhill flicker unchanged. Root cause found: only the forward axis (`gravityX`) was fixed; a hill pitch also shifts the vertical axis (`gravityZ`), which was left on the old slow rate and dominated the combined gating signal regardless
+- v2.4.1 built: extends the same direction-aware rate to `gravityZ`
+- **v2.4.1 adopted as the final firmware version — awaiting confirmation on its first drive**
 
 Next steps:
 
-- Flash and drive-test v2.4 — confirm the downhill flicker is resolved, and that acceleration-hold and braking both still feel unchanged. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
+- Flash and drive-test v2.4.1 — confirm the downhill flicker is resolved, and that acceleration-hold and braking both still feel unchanged. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
 
 ## Stage 1 — Planning
 
@@ -588,13 +590,15 @@ Completed so far:
 - v2.3 drive-tested: works well overall, but found a new issue not present on earlier versions — flickering between red and blue going downhill.
 - Flicker traced to v2.1 → v2.2's `gravitySmoothing`/`baselineDynamicReentryThreshold` tuning (made to help acceleration hold its colour longer), not an inherent accelerometer-only limitation as first assumed.
 - v2.4 built: splits `gravitySmoothing` by direction (accelerating vs braking/downhill) so hills settle quickly again, without giving back the acceleration-hold improvement — see Test Drive Results below.
+- v2.4 drive-tested: no improvement — downhill flicker unchanged, uphill and flat unchanged (both already fine). Root cause: this fix only made the forward axis (`gravityX`) direction-aware; a hill pitch also shifts the vertical axis (`gravityZ`) at the same time, which was left on the old slow rate and dominated the combined gating signal regardless.
+- v2.4.1 built: extends the same direction-aware rate to `gravityZ` as well — see Test Drive Results below.
 - Repeated cold-boot testing on vehicle power with the new charger module — confirmed reliable every time, resolving the intermittent boot issue.
 
-**All physical installation is complete** — control box, accelerometer, encoder, and LED strips are all mounted in their final positions, and the system runs on actual vehicle power. **v2.4 is the final firmware version**, built to resolve the flicker found on v2.3 — awaiting confirmation on its first drive. See Stage 9 below; the original plan assumed a separate "temporary test install, then permanent install" split that didn't end up matching how the build actually happened.
+**All physical installation is complete** — control box, accelerometer, encoder, and LED strips are all mounted in their final positions, and the system runs on actual vehicle power. **v2.4.1 is the final firmware version**, built to resolve the flicker found on v2.3 (v2.4 was a first attempt that didn't work) — awaiting confirmation on its first drive. See Stage 9 below; the original plan assumed a separate "temporary test install, then permanent install" split that didn't end up matching how the build actually happened.
 
 Not pursued further:
 
-- v3.0/v3.1's gyroscope + accelerometer sensor fusion (tuned acceleration response, plus a lowered `pitchComplementaryAlpha`) tested once — found to fade even faster than v2.1 during sustained acceleration, and left an unresolved question of whether the gyro absorbs genuine acceleration as if it were a hill. Documented as a deliberately parked, not-pursued-further branch — the same accelerometer-only line (v2.x) reached a good enough result via v2.4 that this wasn't needed to finish the project.
+- v3.0/v3.1's gyroscope + accelerometer sensor fusion (tuned acceleration response, plus a lowered `pitchComplementaryAlpha`) tested once — found to fade even faster than v2.1 during sustained acceleration, and left an unresolved question of whether the gyro absorbs genuine acceleration as if it were a hill. Documented as a deliberately parked, not-pursued-further branch — the same accelerometer-only line (v2.x) reached a good enough result via v2.4.1 that this wasn't needed to finish the project.
 
 ### Test Drive Results
 
@@ -626,13 +630,19 @@ Not pursued further:
 
 **v2.4 built:** rather than reverting `gravitySmoothing` (which would give back v2.2's acceleration-hold fix), the forward axis now picks its smoothing rate by direction each loop — the slow `0.003` rate stays for the *accelerating* direction (acceleration-hold untouched), while the original fast `0.008` rate (renamed `gravitySmoothingBraking`) is restored for the *braking/downhill* direction, which a hill grade shares. Real braking already ran fine at this fast rate across v2.0/v2.1, before v2.2 slowed it down for both directions at once. `baselineDynamicReentryThreshold` was left unchanged — the gravity-rate split should already resolve the flicker; that threshold is the next thing to try if it doesn't. Full detail in the firmware changelog's v2.4 entry.
 
-**Decision: v2.4 adopted as the final firmware version.** Built specifically to resolve the v2.3 flicker finding, without reverting the v2.2 acceleration-hold fix. Not yet drive-tested — the next drive should confirm the flicker is gone (or much reduced), and that both acceleration-hold and braking still feel the same as v2.2/v2.3. v3.0/v3.1's gyroscope approach remains parked, not being developed further; if v2.4 doesn't resolve this, `baselineDynamicReentryThreshold` is the next thing to try before reconsidering that branch.
+**Drive 6 (v2.4, visual check only):** No improvement. Downhill flicker unchanged from v2.3. Uphill and flat were also unchanged from v2.3 — but both were already fine, so that's not evidence the fix worked, just that it's consistent with the fix having no effect at all.
 
-**Status:** Project complete. Physical installation complete; v2.4 built and adopted as the final firmware version, awaiting confirmation on its first drive.
+**v2.4's fix investigated further:** a hill pitch doesn't only shift the forward axis — pitching the car nose-down/up redistributes gravity between the forward axis (X) *and* the vertical axis (Z) at once, since both are involved in the same rotation. v2.4 only made `gravityX` direction-aware; `gravityZ` was left on the plain, slow `gravitySmoothing` rate throughout. Since the state machine's gating signal (`dynamicMovementG`) is a combined magnitude across all three axes, `gravityZ`'s slow recovery kept that combined signal elevated for the old ~6-7s duration regardless of how fast `gravityX` alone recovered — so the baseline never got released to adapt any sooner than it did on v2.3. Fixing one of the two coupled axes did nothing on its own.
+
+**v2.4.1 built:** extends the same direction-aware rate to `gravityZ`, gated by the same forward-axis direction flag as `gravityX` (a hill/braking event is a forward-axis phenomenon; `gravityZ`'s shift is a side effect of it, not independent). `gravityY` (lateral/cornering) is left on the plain rate — a straight hill with no steering input shouldn't couple into that axis. Full detail in the firmware changelog's v2.4.1 entry.
+
+**Decision: v2.4.1 adopted as the final firmware version.** Built immediately following v2.4's failed drive test, extending the same direction-aware idea to the axis it missed rather than abandoning the approach. Not yet drive-tested — the next drive should confirm the flicker is actually resolved this time, and that both acceleration-hold and braking still feel the same as v2.2/v2.3. v3.0/v3.1's gyroscope approach remains parked, not being developed further; if v2.4.1 still doesn't resolve this, `baselineDynamicReentryThreshold` is the next thing to try before reconsidering that branch.
+
+**Status:** Project complete. Physical installation complete; v2.4.1 built and adopted as the final firmware version, awaiting confirmation on its first drive.
 
 **Testing notes:**
 
-See "Test Drive Results" above. Full Serial logs from Drive 1 (v3.0) retained; later drives (v2.0, v2.1, v2.2, v2.3, v3.1) were visual-only, no logs, since USB and vehicle power can't be connected simultaneously, and the board now runs permanently on vehicle power. v2.4 has not yet been driven.
+See "Test Drive Results" above. Full Serial logs from Drive 1 (v3.0) retained; later drives (v2.0, v2.1, v2.2, v2.3, v2.4, v3.1) were visual-only, no logs, since USB and vehicle power can't be connected simultaneously, and the board now runs permanently on vehicle power. v2.4.1 has not yet been driven.
 
 ## Stage 9 — Final Installation
 
@@ -651,7 +661,7 @@ What was actually done (all under Stage 8, see above for full detail):
 
 The master toggle switch listed in the original planning for this stage was not fitted — see Stage 8's "Build Change: Master Power Switch Removed."
 
-**Status:** Complete. All physical installation is finished, and firmware tuning concluded with v2.4 — see Stage 8 for the final test drive result. The project is complete.
+**Status:** Complete. All physical installation is finished, and firmware tuning concluded with v2.4.1 — see Stage 8 for the final test drive result. The project is complete.
 
 **Installation notes:**
 

@@ -647,7 +647,7 @@ Also reported from the same v2.2 drive: very steep downhill sections trigger hea
 
 **Root cause identified at the time:** a steep grade change freezes `driftBaseX/Y/Z` (see `updateSmartBaseline()`) the same way genuine braking does — and on a winding descent, repeated real braking can keep that baseline frozen for the whole hill, since each brake application resets the freeze/settle timer before the baseline ever catches up to the new pitch angle. The leftover gravity offset from the grade then stacks on top of genuine brake input, reading as harder and more frequent braking than the pedal alone caused.
 
-At the time, this was believed to be an inherent, unfixable ambiguity of the accelerometer-only approach. **That turned out to be incomplete** — see v2.3's Result below and v2.4, which found and fixed a specific contributor to this that had nothing to do with the fundamental hill-vs-braking ambiguity.
+At the time, this was believed to be an inherent, unfixable ambiguity of the accelerometer-only approach. **That turned out to be incomplete** — see v2.3's Result below and v2.4/v2.4.1, which found and fixed a specific contributor to this that had nothing to do with the fundamental hill-vs-braking ambiguity.
 
 ### Code Review Follow-Up (Before First Drive)
 
@@ -667,11 +667,11 @@ A code review of this file, run before it had been driven, found several issues 
 
 ---
 
-## v2.4 – Downhill Flicker Fix (Final Version)
+## v2.4 – Downhill Flicker Fix, Attempt 1 (Superseded)
 
 Branches from v2.3, fixing the downhill red/blue flicker found on that version's first drive (see v2.3's Result above).
 
-### Change: Direction-Aware Gravity Smoothing
+### Change: Direction-Aware Gravity Smoothing (Forward Axis Only)
 
 `gravitySmoothing` (0.003, the v2.2 rate that protects sustained acceleration from fading) is no longer applied uniformly to the forward axis. A new constant, `gravitySmoothingBraking` (`0.008`, the original pre-v2.2 rate), is used instead whenever the current forward-axis excursion is in the **braking direction** — which a downhill grade shares, since both show up as a sustained shift on the same axis, same sign.
 
@@ -686,7 +686,27 @@ This is a different kind of fix than the blunt mitigations considered and reject
 
 ### Result
 
-**Adopted as the final firmware version.** Built to address the v2.3 flicker finding; the next drive should confirm the downhill flicker is gone (or much reduced), that sustained acceleration still holds its colour as well as v2.2/v2.3 did, and that genuine braking feels unchanged.
+**Drive-tested: no improvement.** Downhill flicker unchanged from v2.3. Uphill and flat were both unchanged too — but they were already fine before this change, so that's not evidence the fix did anything; it's consistent with the fix having no effect at all.
+
+**Root cause of the fix not working:** a hill pitch doesn't only shift the forward axis (X) — it shifts the vertical axis (Z) at the same time, since both are involved in the same rotation. This version only made `gravityX` direction-aware; `gravityZ` was left on the plain, slow `gravitySmoothing` rate throughout. Since the state machine's gating signal (`dynamicMovementG`, in `updateSmartBaseline()`) is a combined magnitude across all three axes, `gravityZ`'s slow recovery kept that combined signal elevated for the old ~6-7s duration regardless of how fast `gravityX` alone recovered — so the baseline never got released to adapt any sooner than it did on v2.3. Fixing one of the two coupled axes did nothing on its own. Fixed in v2.4.1 below.
+
+---
+
+## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version)
+
+Branches from v2.4, extending the direction-aware fix to the axis it missed.
+
+### Change: Extend the Direction Split to gravityZ
+
+`gravityZ` now uses the same `gravitySmoothingForward` rate and the same direction flag as `gravityX` (not a separate one) — a hill/braking event is fundamentally a forward-axis phenomenon, and `gravityZ`'s shift is a side effect of that same event, not an independent one needing its own direction test. `gravityY` (the lateral/cornering axis) is left on the plain `gravitySmoothing` rate — a straight hill, with no steering input, shouldn't significantly couple into that axis, and cornering already has its own separate handling.
+
+With both coupled axes now settling quickly in the braking/downhill direction, the combined gating signal should drop below threshold at roughly the v2.1 rate again, letting `driftBaseX/Y/Z` resume adapting as soon as v2.4 intended it to.
+
+`baselineDynamicReentryThreshold` (`0.055`) is still unchanged. If flicker persists even with both axes fixed, that threshold — which governs how easily the state machine gets knocked back into "frozen" by any remaining noise or disturbance on the hill, independent of how fast the gravity trackers themselves recover — is the next and now more likely culprit.
+
+### Result
+
+**Adopted as the final firmware version.** Built immediately following v2.4's failed drive test; not yet tested. The next drive should confirm the downhill flicker is actually resolved this time, and that acceleration-hold and braking both still feel unchanged.
 
 ---
 
@@ -696,4 +716,4 @@ Branches from v3.0: the same acceleration response tuning as v2.1 (`acceleration
 
 Tested once, visually. Braking worked well. Acceleration briefly reached orange only under hard 1st-gear launches, fading back to blue in under a second even while still accelerating — noticeably faster than v2.1's fade, not slower. The timing closely matches the pitch drift seen in the original v3.0 log, strengthening (though not fully confirming, absent a controlled flat-ground test) the theory that the gyro is absorbing genuine acceleration as if it were a hill.
 
-**Parked, not pursued further.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggested the opposite. v2.x's line of tuning reached a good enough result with v2.4 (adopted as the final firmware version, see above), so the flat-ground test that would have properly settled the pitch-drift question was never needed and won't be pursued. Not deleted or considered a dead end in principle — just not required to finish this project.
+**Parked, not pursued further.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggested the opposite. v2.x's line of tuning reached a good enough result with v2.4.1 (adopted as the final firmware version, see above), so the flat-ground test that would have properly settled the pitch-drift question was never needed and won't be pursued. Not deleted or considered a dead end in principle — just not required to finish this project.

@@ -30,6 +30,7 @@ firmware/
     ├── v2.2/
     ├── v2.3/
     ├── v2.4/
+    ├── v2.4.1/
     └── v3.0/
 ```
 
@@ -92,7 +93,7 @@ The production firmware is located in:
 
 [mr2-reactive-leds/](mr2-reactive-leds/)
 
-The firmware was developed through fifteen versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
+The firmware was developed through sixteen versions, grouped below by what each one changed. Full detail on every version, including issues found and fixed along the way, is in [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md).
 
 ---
 
@@ -136,7 +137,7 @@ Replaces the accelerometer-only hill compensation with gyroscope + accelerometer
 
 Includes several fixes found during bench testing (gyro bias correction, accelerometer reliability gating, sign tuning, side-axis gating rework) — see the full changelog for details.
 
-Real-world testing found an unresolved question: the pitch estimate showed large swings during acceleration, which may mean the gyro is absorbing genuine acceleration as if it were a hill — or may simply reflect a real road gradient, since the test wasn't confirmed to be on flat ground. Not isolated — development focus moved to v2.1 (below) instead, and stayed there through v2.4 (adopted as the final firmware version). v3.0/v3.1 is parked and not being pursued further; see v3.1 in the full changelog.
+Real-world testing found an unresolved question: the pitch estimate showed large swings during acceleration, which may mean the gyro is absorbing genuine acceleration as if it were a hill — or may simply reflect a real road gradient, since the test wasn't confirmed to be on flat ground. Not isolated — development focus moved to v2.1 (below) instead, and stayed there through v2.4.1 (adopted as the final firmware version). v3.0/v3.1 is parked and not being pursued further; see v3.1 in the full changelog.
 
 ---
 
@@ -156,7 +157,7 @@ This remains a genuinely good, working version even without v2.2's further tunin
 
 Branches from the confirmed-clean v2.1 above. Slows down (rather than freezes) the tracker responsible for the premature-fade issue, and splits a previously shared smoothing constant into separate acceleration/braking/cornering/movement values, so tuning one no longer affects the others.
 
-**Confirmed on real driving**: works well overall, mainly noticeable accelerating in 1st and 2nd gear. Two issues found: higher gears rarely reach true orange (addressed in v2.3 below), and very steep downhill sections trigger heavy/frequent braking beyond what pedal input alone would cause (initially believed to be an inherent accelerometer-only limitation — turned out to be partly a side effect of this version's own tuning; see v2.4).
+**Confirmed on real driving**: works well overall, mainly noticeable accelerating in 1st and 2nd gear. Two issues found: higher gears rarely reach true orange (addressed in v2.3 below), and very steep downhill sections trigger heavy/frequent braking beyond what pedal input alone would cause (initially believed to be an inherent accelerometer-only limitation — turned out to be partly a side effect of this version's own tuning; see v2.4.1).
 
 ## v2.3 – Higher-Gear Acceleration Tuning
 
@@ -164,13 +165,19 @@ Branches from v2.2, based on its first real driving feedback. `accelerationRespo
 
 A code review of this file (before it had been driven) found and fixed several issues in place: Modes 1-4 were using a hardcoded brightness threshold that had silently fallen out of sync with three rounds of acceleration tuning (a genuine bug, now fixed), plus a moving-vehicle recalibration guard and some dead-code/duplication cleanup. See the changelog for the full list.
 
-**Confirmed on real driving — works "almost perfectly."** Higher gears now reach true orange, and Modes 1-4 are confirmed noticeably livelier. Braking and cornering unaffected, as expected. **One new issue found**: flickering between red and blue while going downhill, worse than the "heavy/frequent braking" originally reported on v2.2. Traced to v2.2's `gravitySmoothing`/`baselineDynamicReentryThreshold` tuning, not to this version's own changes — fixed in v2.4 below.
+**Confirmed on real driving — works "almost perfectly."** Higher gears now reach true orange, and Modes 1-4 are confirmed noticeably livelier. Braking and cornering unaffected, as expected. **One new issue found**: flickering between red and blue while going downhill, worse than the "heavy/frequent braking" originally reported on v2.2. Traced to v2.2's `gravitySmoothing`/`baselineDynamicReentryThreshold` tuning, not to this version's own changes — fixed in v2.4.1 below (v2.4 was a first attempt that didn't work).
 
-## v2.4 – Downhill Flicker Fix (Final Version)
+## v2.4 – Downhill Flicker Fix, Attempt 1 (Superseded)
 
 Branches from v2.3. Splits `gravitySmoothing` by direction instead of reverting it: the slow v2.2 rate (`0.003`) is kept for the *accelerating* direction (so the acceleration-hold fix is untouched), while a restored fast rate (`gravitySmoothingBraking = 0.008`, the original v2.1 value) is used for the *braking/downhill* direction — the direction a hill grade and real braking both share. This lets hills settle quickly again without dulling any braking response and without giving back v2.2's acceleration improvement.
 
-**Adopted as the final firmware version.** Built to fix the flicker found on v2.3's first drive; awaiting confirmation on the next drive that the flicker is resolved and both acceleration-hold and braking feel unchanged. See the changelog for the full root-cause trace and implementation detail.
+**Drive-tested: no improvement.** Downhill flicker was unchanged from v2.3. Uphill and flat also felt unchanged — but they were already fine, so that's not evidence this fix worked, just that it's consistent with it having no effect. Root cause: this version only made the forward axis (`gravityX`) direction-aware — a hill pitch also shifts the vertical axis (`gravityZ`) at the same time, which was left on the old slow rate throughout. Since the state machine's gating signal combines all three axes into one magnitude, `gravityZ`'s slow recovery kept that combined signal elevated regardless of how fast `gravityX` alone recovered, so the baseline never settled any sooner than it did on v2.3. Fixed in v2.4.1.
+
+## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version)
+
+Branches from v2.4. Extends the same direction-aware rate to `gravityZ`, using the same forward-axis direction flag as `gravityX` (a hill/braking event is a forward-axis phenomenon; `gravityZ`'s shift is a side effect of it, not independent). `gravityY` (lateral/cornering) is left untouched.
+
+**Adopted as the final firmware version.** Built immediately after v2.4's failed drive test; not yet tested. `baselineDynamicReentryThreshold` (unchanged since v2.2) is the next thing to try if flicker somehow persists even with both coupled axes now fixed. See the changelog for the full root-cause trace and implementation detail.
 
 For detailed version history and development notes, see:
 
