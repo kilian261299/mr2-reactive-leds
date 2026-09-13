@@ -124,7 +124,7 @@
   unnoticed bug fix, not a tuning change.
 
   ==================================================
-  V2.4 CHANGES
+  V2.4.0 CHANGES
   ==================================================
 
   Fixes a NEW issue found on the v2.3 drive test (not
@@ -171,16 +171,16 @@
   V2.4.1 CHANGES
   ==================================================
 
-  v2.4 was drive-tested and made NO noticeable difference:
-  downhill flicker unchanged, uphill and flat unchanged
-  (both were already fine). The direction-aware fix was
-  the right idea, but incomplete.
+  v2.4.0 was drive-tested and made NO noticeable
+  difference: downhill flicker unchanged, uphill and flat
+  unchanged (both were already fine). The direction-aware
+  fix was the right idea, but incomplete.
 
-  Root cause of v2.4's fix having no effect: a hill pitch
+  Root cause of v2.4.0's fix having no effect: a hill pitch
   doesn't only shift the forward axis (X) — pitching the
   car nose-down/up redistributes gravity between X AND
   the vertical axis (Z) at the same time, since both are
-  involved in the same rotation. v2.4 only made gravityX
+  involved in the same rotation. v2.4.0 only made gravityX
   direction-aware; gravityZ was left on the plain, slow
   gravitySmoothing rate throughout.
 
@@ -298,7 +298,7 @@
 
 
   ==================================================
-  V2.4.1 HILL COMPENSATION (see V2.4/V2.4.1 CHANGES above for the
+  V2.4.1 HILL COMPENSATION (see V2.4.0/V2.4.1 CHANGES above for the
   gravitySmoothingBraking fix; otherwise unchanged)
   ==================================================
 
@@ -691,7 +691,7 @@ const float movementSmoothing = 0.15;
 // partial-catch-up / re-trigger cycle that shows as a
 // red/blue flicker, with no braking input needed at all.
 //
-// v2.4 fixes this WITHOUT reverting the acceleration
+// v2.4.0 fixes this WITHOUT reverting the acceleration
 // benefit, by applying this slow rate only in the
 // ACCELERATING direction. See gravitySmoothingBraking
 // below for the braking/downhill direction.
@@ -705,7 +705,7 @@ const float gravitySmoothing = 0.003;
 // grade shares, since both show up as a sustained shift
 // on the forward axis, same sign — see FORWARD_SIGN).
 //
-// v2.4 applied this to gravityX only. That had no
+// v2.4.0 applied this to gravityX only. That had no
 // practical effect — a hill pitch shifts gravityZ at the
 // same time as gravityX (both axes are involved in the
 // same rotation), and the state machine's gating signal
@@ -1754,7 +1754,7 @@ void readAcceleration() {
   // at once (they're both involved in the same rotation),
   // so treating them as one combined "forward event" is
   // what actually gets the gating signal (which sums all
-  // three axes) to settle quickly — fixing X alone (v2.4)
+  // three axes) to settle quickly — fixing X alone (v2.4.0)
   // did nothing, since Z stayed slow and kept the combined
   // signal elevated regardless. gravityY (lateral/
   // cornering) is left on the plain rate — unrelated to a

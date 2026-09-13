@@ -29,7 +29,7 @@ firmware/
     ├── v2.1/
     ├── v2.2/
     ├── v2.3/
-    ├── v2.4/
+    ├── v2.4.0/
     ├── v2.4.1/
     └── v3.0/
 ```
@@ -165,9 +165,9 @@ Branches from v2.2, based on its first real driving feedback. `accelerationRespo
 
 A code review of this file (before it had been driven) found and fixed several issues in place: Modes 1-4 were using a hardcoded brightness threshold that had silently fallen out of sync with three rounds of acceleration tuning (a genuine bug, now fixed), plus a moving-vehicle recalibration guard and some dead-code/duplication cleanup. See the changelog for the full list.
 
-**Confirmed on real driving — works "almost perfectly."** Higher gears now reach true orange, and Modes 1-4 are confirmed noticeably livelier. Braking and cornering unaffected, as expected. **One new issue found**: flickering between red and blue while going downhill, worse than the "heavy/frequent braking" originally reported on v2.2. Traced to v2.2's `gravitySmoothing`/`baselineDynamicReentryThreshold` tuning, not to this version's own changes — fixed in v2.4.1 below (v2.4 was a first attempt that didn't work).
+**Confirmed on real driving — works "almost perfectly."** Higher gears now reach true orange, and Modes 1-4 are confirmed noticeably livelier. Braking and cornering unaffected, as expected. **One new issue found**: flickering between red and blue while going downhill, worse than the "heavy/frequent braking" originally reported on v2.2. Traced to v2.2's `gravitySmoothing`/`baselineDynamicReentryThreshold` tuning, not to this version's own changes — fixed in v2.4.1 below (v2.4.0 was a first attempt that didn't work).
 
-## v2.4 – Downhill Flicker Fix, Attempt 1 (Superseded)
+## v2.4.0 – Downhill Flicker Fix, Attempt 1 (Superseded)
 
 Branches from v2.3. Splits `gravitySmoothing` by direction instead of reverting it: the slow v2.2 rate (`0.003`) is kept for the *accelerating* direction (so the acceleration-hold fix is untouched), while a restored fast rate (`gravitySmoothingBraking = 0.008`, the original v2.1 value) is used for the *braking/downhill* direction — the direction a hill grade and real braking both share. This lets hills settle quickly again without dulling any braking response and without giving back v2.2's acceleration improvement.
 
@@ -175,9 +175,9 @@ Branches from v2.3. Splits `gravitySmoothing` by direction instead of reverting 
 
 ## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version)
 
-Branches from v2.4. Extends the same direction-aware rate to `gravityZ`, using the same forward-axis direction flag as `gravityX` (a hill/braking event is a forward-axis phenomenon; `gravityZ`'s shift is a side effect of it, not independent). `gravityY` (lateral/cornering) is left untouched.
+Branches from v2.4.0. Extends the same direction-aware rate to `gravityZ`, using the same forward-axis direction flag as `gravityX` (a hill/braking event is a forward-axis phenomenon; `gravityZ`'s shift is a side effect of it, not independent). `gravityY` (lateral/cornering) is left untouched.
 
-**Adopted as the final firmware version.** Built immediately after v2.4's failed drive test; not yet tested. `baselineDynamicReentryThreshold` (unchanged since v2.2) is the next thing to try if flicker somehow persists even with both coupled axes now fixed. See the changelog for the full root-cause trace and implementation detail.
+**Adopted as the final firmware version.** Built immediately after v2.4.0's failed drive test; not yet tested. `baselineDynamicReentryThreshold` (unchanged since v2.2) is the next thing to try if flicker somehow persists even with both coupled axes now fixed. See the changelog for the full root-cause trace and implementation detail.
 
 For detailed version history and development notes, see:
 

@@ -6,7 +6,7 @@
 
 /*
   ==================================================
-  MR2 REACTIVE LEDs — FINAL FIRMWARE V2.4
+  MR2 REACTIVE LEDs — FINAL FIRMWARE V2.4.0
   ==================================================
 
   Hardware:
@@ -124,7 +124,7 @@
   unnoticed bug fix, not a tuning change.
 
   ==================================================
-  V2.4 CHANGES
+  V2.4.0 CHANGES
   ==================================================
 
   Fixes a NEW issue found on the v2.3 drive test (not
@@ -216,7 +216,7 @@
 
 
   ==================================================
-  V2.4 FEATURES (unchanged from v2.3, apart from the
+  V2.4.0 FEATURES (unchanged from v2.3, apart from the
   gravitySmoothingBraking fix above)
   ==================================================
 
@@ -249,7 +249,7 @@
 
 
   ==================================================
-  V2.4 HILL COMPENSATION (see V2.4 CHANGES above for the
+  V2.4.0 HILL COMPENSATION (see V2.4.0 CHANGES above for the
   gravitySmoothingBraking fix; otherwise unchanged)
   ==================================================
 
@@ -642,7 +642,7 @@ const float movementSmoothing = 0.15;
 // partial-catch-up / re-trigger cycle that shows as a
 // red/blue flicker, with no braking input needed at all.
 //
-// v2.4 fixes this WITHOUT reverting the acceleration
+// v2.4.0 fixes this WITHOUT reverting the acceleration
 // benefit, by applying this slow rate only in the
 // ACCELERATING direction. See gravitySmoothingBraking
 // below for the braking/downhill direction.
@@ -3122,7 +3122,7 @@ void setup() {
 
 
   Serial.println(
-    "MR2 Reactive LEDs — FINAL FIRMWARE V2.4"
+    "MR2 Reactive LEDs — FINAL FIRMWARE V2.4.0"
   );
 
 

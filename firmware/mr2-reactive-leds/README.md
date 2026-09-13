@@ -647,7 +647,7 @@ Also reported from the same v2.2 drive: very steep downhill sections trigger hea
 
 **Root cause identified at the time:** a steep grade change freezes `driftBaseX/Y/Z` (see `updateSmartBaseline()`) the same way genuine braking does — and on a winding descent, repeated real braking can keep that baseline frozen for the whole hill, since each brake application resets the freeze/settle timer before the baseline ever catches up to the new pitch angle. The leftover gravity offset from the grade then stacks on top of genuine brake input, reading as harder and more frequent braking than the pedal alone caused.
 
-At the time, this was believed to be an inherent, unfixable ambiguity of the accelerometer-only approach. **That turned out to be incomplete** — see v2.3's Result below and v2.4/v2.4.1, which found and fixed a specific contributor to this that had nothing to do with the fundamental hill-vs-braking ambiguity.
+At the time, this was believed to be an inherent, unfixable ambiguity of the accelerometer-only approach. **That turned out to be incomplete** — see v2.3's Result below and v2.4.0/v2.4.1, which found and fixed a specific contributor to this that had nothing to do with the fundamental hill-vs-braking ambiguity.
 
 ### Code Review Follow-Up (Before First Drive)
 
@@ -663,11 +663,11 @@ A code review of this file, run before it had been driven, found several issues 
 
 **Confirmed on real driving.** Works "almost perfectly": higher gears now reach true orange (confirming the `0.12` tuning), and Modes 1-4 are confirmed noticeably livelier (confirming the code-review fix). Braking and cornering unaffected, as expected.
 
-**One new issue found, not present on earlier versions:** flickering between red (braking) and blue (idle) while going downhill, with no braking input needed at all — a different, more disruptive symptom than the "heavy/frequent braking" originally reported on v2.2. Traced back to **v2.1 → v2.2** (not this version's own acceleration-threshold change or code review): v2.2's `gravitySmoothing` and `baselineDynamicReentryThreshold` changes, made specifically to help sustained acceleration hold its colour, also slowed how fast a downhill grade gets absorbed and made the state machine easier to re-trigger before it settled — together producing a freeze/partial-catch-up/re-trigger cycle on hills. Fixed in v2.4 below, without reverting the acceleration benefit.
+**One new issue found, not present on earlier versions:** flickering between red (braking) and blue (idle) while going downhill, with no braking input needed at all — a different, more disruptive symptom than the "heavy/frequent braking" originally reported on v2.2. Traced back to **v2.1 → v2.2** (not this version's own acceleration-threshold change or code review): v2.2's `gravitySmoothing` and `baselineDynamicReentryThreshold` changes, made specifically to help sustained acceleration hold its colour, also slowed how fast a downhill grade gets absorbed and made the state machine easier to re-trigger before it settled — together producing a freeze/partial-catch-up/re-trigger cycle on hills. Fixed in v2.4.0 below, without reverting the acceleration benefit.
 
 ---
 
-## v2.4 – Downhill Flicker Fix, Attempt 1 (Superseded)
+## v2.4.0 – Downhill Flicker Fix, Attempt 1 (Superseded)
 
 Branches from v2.3, fixing the downhill red/blue flicker found on that version's first drive (see v2.3's Result above).
 
@@ -694,19 +694,19 @@ This is a different kind of fix than the blunt mitigations considered and reject
 
 ## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version)
 
-Branches from v2.4, extending the direction-aware fix to the axis it missed.
+Branches from v2.4.0, extending the direction-aware fix to the axis it missed.
 
 ### Change: Extend the Direction Split to gravityZ
 
 `gravityZ` now uses the same `gravitySmoothingForward` rate and the same direction flag as `gravityX` (not a separate one) — a hill/braking event is fundamentally a forward-axis phenomenon, and `gravityZ`'s shift is a side effect of that same event, not an independent one needing its own direction test. `gravityY` (the lateral/cornering axis) is left on the plain `gravitySmoothing` rate — a straight hill, with no steering input, shouldn't significantly couple into that axis, and cornering already has its own separate handling.
 
-With both coupled axes now settling quickly in the braking/downhill direction, the combined gating signal should drop below threshold at roughly the v2.1 rate again, letting `driftBaseX/Y/Z` resume adapting as soon as v2.4 intended it to.
+With both coupled axes now settling quickly in the braking/downhill direction, the combined gating signal should drop below threshold at roughly the v2.1 rate again, letting `driftBaseX/Y/Z` resume adapting as soon as v2.4.0 intended it to.
 
 `baselineDynamicReentryThreshold` (`0.055`) is still unchanged. If flicker persists even with both axes fixed, that threshold — which governs how easily the state machine gets knocked back into "frozen" by any remaining noise or disturbance on the hill, independent of how fast the gravity trackers themselves recover — is the next and now more likely culprit.
 
 ### Result
 
-**Adopted as the final firmware version.** Built immediately following v2.4's failed drive test; not yet tested. The next drive should confirm the downhill flicker is actually resolved this time, and that acceleration-hold and braking both still feel unchanged.
+**Adopted as the final firmware version.** Built immediately following v2.4.0's failed drive test; not yet tested. The next drive should confirm the downhill flicker is actually resolved this time, and that acceleration-hold and braking both still feel unchanged.
 
 ---
 
