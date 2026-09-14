@@ -680,12 +680,12 @@ Full circuit design, pinouts, and the four-phase build plan are documented in [d
 
 **Status:** Complete.
 
-- Build plan committed to the repo at `docs/audio-reactive-led-plan.md`.
+- Build plan committed to the repo at `docs/audio-reactive-led-plan.md`, including its four circuit images (`images/audio-circuit/`) — testing/production setup overviews and schematics.
 - New bench-test sketch added: `firmware/tests/04_audio_reactive_test/` — reads an audio envelope on an ADC pin, smooths it, and drives a real addressable LED strip on a full ESP32 dev board (not the ESP32-C3 installed in the car). Existing test sketches (encoder, accelerometer, full bench) and the production firmware were not touched.
 - New hardware documentation added: `hardware/audio-breakout.md` — the mono-summed RCA tap, resistor divider, diode rectifier, smoothing capacitor, and bias network, with placeholder component values pending Phase 2 bench confirmation.
 - This build-log section added.
 
-**Known gap:** the plan document references four circuit images (`images/audio-circuit/testing_setup_overview.png`, `testing_circuit_schematic.png`, `production_setup_overview.png`, `production_circuit_schematic.png`) that aren't yet in the repo — the plan was committed without them so Phase 1 wasn't blocked on sourcing image files. Add these in a follow-up commit once available; until then, the plan doc's embedded image links will show as broken on GitHub.
+**Design updates made after the initial plan was committed:** D1 (the rectifier diode) changed from 1N4148 to 1N4007, based on what was on hand — a general-purpose power rectifier switches much slower than a dedicated signal diode, but that's not a practical issue here since C1's smoothing already turns this into a hundreds-of-milliseconds envelope, not an audio-frequency signal path. The testing circuit was also updated to mono-sum stereo L/R via R1/R2 from the phone's 3.5mm jack, matching the production circuit's topology, rather than using a single channel. Both `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md` reflect these changes.
 
 ## Phase 2 — Build and Bench-Test
 
