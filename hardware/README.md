@@ -2,6 +2,8 @@
 
 This folder contains the hardware design files, manufacturing resources, and source files for the MR2 Reactive LEDs controller.
 
+**New, experimental addition:** an audio conditioning circuit for the optional audio-reactive LED mode, layered on top of this completed core hardware — see [audio-breakout.md](audio-breakout.md) and the [build plan](../docs/audio-reactive-led-plan.md). It does not change anything documented below.
+
 ---
 
 ## System Bill of Materials (BOM)

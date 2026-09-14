@@ -13,7 +13,8 @@ firmware/
 ├── tests/
 │   ├── 01_encoder_led_test/
 │   ├── 02_accelerometer_test/
-│   └── 03_full_bench_test/
+│   ├── 03_full_bench_test/
+│   └── 04_audio_reactive_test/
 │
 └── mr2-reactive-leds/
     ├── README.md
@@ -84,6 +85,22 @@ Tests the complete hardware system:
 Purpose:
 
 Validate full hardware integration before vehicle installation.
+
+---
+
+## 04_audio_reactive_test
+
+**New, experimental — not part of the core reactive-LED system above.** Bench-test sketch for the [audio-reactive LED feature](../docs/audio-reactive-led-plan.md), an optional addition layered on top of the completed core project. Runs on a full ESP32 dev board, not the ESP32-C3 installed in the car.
+
+Tests:
+
+- Reading a conditioned audio envelope on an ADC pin
+- Smoothing that envelope in firmware
+- Mapping it to LED brightness on a real addressable strip
+
+Purpose:
+
+Prove the audio-conditioning-circuit-to-LED pipeline works before any of it touches the real car firmware. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md) for the full build plan and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for the conditioning circuit this sketch reads from.
 
 ---
 

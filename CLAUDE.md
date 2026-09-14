@@ -2,7 +2,7 @@
 
 Reactive LED lighting controller (ESP32-C3 + MPU6050 + WS2812B) built and installed in a 1992 Toyota MR2 SW20. See [README.md](README.md) for what the system does.
 
-## Project Complete
+## Core Project Complete
 
 All physical installation is **complete** — control box, accelerometer, rotary encoder, and both LED strips are mounted in their final positions, running on real vehicle power (fused 12V from the cigarette lighter circuit). Rotary encoder brightness adjustment and LED strip output were confirmed working correctly in the car at this initial installation. Hardware/PCB work is done, including a GPIO4 fault on the first assembled board that was resolved by swapping to a spare PCB (root cause: damaged GPIO4 on that specific ESP32-C3 module, not a design fault).
 
@@ -20,8 +20,20 @@ Two known issues remain, deliberately left unfixed — accepted, permanent trade
 - USB power backfeeds enough current to power the car radio when connected with the key off (no reverse-blocking diode on the charger module). Not a safety/drain issue since it doesn't cross the ignition switch. Rule: never connect USB and vehicle power at the same time.
 - Minor audible noise through the speakers when LED brightness changes — typical WS2812B PWM noise, barely noticeable.
 
+## Audio-Reactive LED Addition (In Progress)
+
+A new, optional mode layered on top of the completed core project above: LEDs also react to music from the car radio, via an RCA tap → conditioning circuit → spare ADC pin (`GPIO1` on the production ESP32-C3). Independent of the v2.x firmware — doesn't touch or depend on it. Full plan: [docs/audio-reactive-led-plan.md](docs/audio-reactive-led-plan.md).
+
+**Phase 1 (GitHub/bench-test sketch setup): complete.** Plan doc and its four circuit images committed, `firmware/tests/04_audio_reactive_test/` bench-test sketch added (full ESP32 dev board only — not the production ESP32-C3), `hardware/audio-breakout.md` added, and a new build-log section tracking this separately from the numbered core-project Stages.
+
+Design updated after the initial plan: D1 (rectifier diode) is a 1N4007, not the originally-planned 1N4148, based on what was on hand — fine here since the smoothing capacitor already makes this a hundreds-of-milliseconds envelope, not audio-frequency work. The testing circuit sums stereo L/R via R1/R2 from a phone's 3.5mm jack, mirroring the production circuit's RCA summing.
+
+**Phases 2–4 (bench-test, permanent circuit, firmware integration): not started.**
+
 ## Key Docs
 
 - [docs/build-log.md](docs/build-log.md) — full project/build history by stage
 - [firmware/README.md](firmware/README.md) — firmware version history (v1.0–v3.1)
 - [docs/wiring-plan.md](docs/wiring-plan.md) — wiring diagram and pinouts
+- [docs/audio-reactive-led-plan.md](docs/audio-reactive-led-plan.md) — audio-reactive LED addition: circuit design and four-phase build plan
+- [hardware/audio-breakout.md](hardware/audio-breakout.md) — audio conditioning circuit hardware detail

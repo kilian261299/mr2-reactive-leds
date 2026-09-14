@@ -12,7 +12,9 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 ## Project Status
 
-**Project complete.** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Firmware tuning concluded with `v2.4.1` (see [firmware/README.md](firmware/README.md)) — `v2.3` worked "almost perfectly" but flickered between red and blue on downhill slopes, traced to a side effect of earlier acceleration tuning; `v2.4.0` was a first fix attempt that turned out incomplete, and `v2.4.1` finishes it without giving that tuning back up.
+**Core project complete.** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Firmware tuning concluded with `v2.4.1` (see [firmware/README.md](firmware/README.md)) — `v2.3` worked "almost perfectly" but flickered between red and blue on downhill slopes, traced to a side effect of earlier acceleration tuning; `v2.4.0` was a first fix attempt that turned out incomplete, and `v2.4.1` finishes it without giving that tuning back up.
+
+**In progress, on top of the completed core project:** an optional audio-reactive LED mode — LEDs also reacting to music from the car radio, via an RCA tap and conditioning circuit into a spare ADC pin. This is a separate, independent addition; it doesn't touch or depend on the v2.x firmware above. See the [Audio-Reactive LED Plan](docs/audio-reactive-led-plan.md) — Phase 1 (GitHub/bench-test sketch setup) complete; Phase 2 (breadboard + bench-test) not yet started.
 
 Completed:
 
@@ -30,6 +32,13 @@ Completed:
 - Vehicle 12V power connected (buck converter replaced with a USB charger module)
 - Several real-world test drives, firmware tuning based on results
 - Hardware documentation
+
+In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-plan.md)):
+
+- Phase 1: GitHub/bench-test sketch setup — complete
+- Phase 2: Breadboard + bench-test the conditioning circuit — not started
+- Phase 3: Build the permanent circuit — not started
+- Phase 4: Install and integrate into the firmware — not started
 
 ## Features
 
@@ -129,3 +138,5 @@ Full wiring details are available in [`docs/wiring-plan.md`](docs/wiring-plan.md
 - [Firmware Notes](firmware/README.md) - Test sketches, firmware behaviour and version history.
 - [PCB Design Documentation](docs/pcb-design.md)
 - [Hardware Files](hardware/README.md)
+- [Audio-Reactive LED Plan](docs/audio-reactive-led-plan.md) - New, optional addition: LEDs reacting to car audio. Circuit design, pinouts, and build plan.
+- [Audio Conditioning Breakout](hardware/audio-breakout.md) - Hardware detail for the audio feature's conditioning circuit.
