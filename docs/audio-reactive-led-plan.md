@@ -30,13 +30,13 @@ WS2812B LED strips (existing LEFT_LED_PIN / RIGHT_LED_PIN)
 
 ### Testing setup — full pipeline
 
-![Testing setup overview](images/audio-circuit/testing_setup_overview.png)
+![Testing setup overview](../images/audio-circuit/testing_setup_overview.png)
 
 This is the complete bench-test signal path: iPhone headphone output (both L and R channels), summed and conditioned, into the full ESP32 dev board, driving the addressable LED strip. This is the testing configuration only — the production install uses the car's actual RCA tap and the ESP32-C3, not an iPhone or the dev board.
 
 ### Testing circuit — schematic
 
-![Testing circuit schematic](images/audio-circuit/testing_circuit_schematic.png)
+![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
 ### Testing circuit — component list
 
@@ -63,13 +63,13 @@ Values are starting points for Phase 2 — expect to retune R3/R4 (divider ratio
 
 ### Production setup — full pipeline
 
-![Production setup overview](images/audio-circuit/production_setup_overview.png)
+![Production setup overview](../images/audio-circuit/production_setup_overview.png)
 
 Same Y-split concept as the testing pipeline, now with the real components: the radio's Front L/R RCA (plus shield/ground) splits to the amplifier, completely unchanged, and separately to the new conditioning circuit → ESP32-C3 → the existing LED strips. No new strip or amp wiring — everything downstream of the ESP32-C3 already exists.
 
 ### Production circuit — schematic
 
-![Production circuit schematic](images/audio-circuit/production_circuit_schematic.png)
+![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
 ### Production circuit — component list
 
