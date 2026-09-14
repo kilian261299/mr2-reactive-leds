@@ -36,7 +36,7 @@ Completed:
 In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-plan.md)):
 
 - Phase 1: GitHub/bench-test sketch setup — complete
-- Phase 2: Breadboard + bench-test the conditioning circuit — not started
+- Phase 2: Breadboard + bench-test the conditioning circuit — in progress (breadboarded, bench-testing not yet done)
 - Phase 3: Build the permanent circuit — not started
 - Phase 4: Install and integrate into the firmware — not started
 

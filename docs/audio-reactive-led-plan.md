@@ -30,11 +30,17 @@ WS2812B LED strips (existing LEFT_LED_PIN / RIGHT_LED_PIN)
 
 ### Testing setup — full pipeline
 
+**⚠ Image below is out of date** — it shows the original full-ESP32-dev-board setup (`GPIO34`/`GPIO5`). Testing now uses a spare ESP32-C3 module instead (see "Testing board update" note below); the image needs regenerating with `GPIO1`/`GPIO7` before it's accurate again.
+
 ![Testing setup overview](../images/audio-circuit/testing_setup_overview.png)
 
-This is the complete bench-test signal path: iPhone headphone output (both L and R channels), summed and conditioned, into the full ESP32 dev board, driving the addressable LED strip. This is the testing configuration only — the production install uses the car's actual RCA tap and the ESP32-C3, not an iPhone or the dev board.
+This is the complete bench-test signal path: iPhone headphone output (both L and R channels), summed and conditioned, into a spare ESP32-C3 module, driving the addressable LED strip. This is the testing configuration only — the production install uses the car's actual RCA tap and the ESP32-C3 installed in the car, not an iPhone or this spare board.
+
+**Testing board update:** originally planned around a full ESP32 dev board (hence the `GPIO34` references elsewhere in this doc's history). A spare ESP32-C3 module turned out to be available instead, which is actually simpler: it's the same chip as production, so the audio ADC pin (`GPIO1`) is identical on both, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. See the updated pinout table below.
 
 ### Testing circuit — schematic
+
+**⚠ Image below is out of date** — labelled `ESP32 GPIO34 (dev board)`; needs regenerating as `ESP32-C3 GPIO1 (test module)`.
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
@@ -56,7 +62,7 @@ Node B → C1 (2.2µF) → GND
 Node B → R5 (10kΩ) → 3.3V
 Node B → R6 (10kΩ) → GND
 
-Node B → ESP32 dev board GPIO34 (ADC input)
+Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 ```
 
 Values are starting points for Phase 2 — expect to retune R3/R4 (divider ratio) and C1 (smoothing) once you're actually watching the LED respond to real music.
@@ -96,24 +102,26 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 `*` marks values expected to change once Phase 2 bench testing confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** R5/R6 (bias network) aren't marked, since they're unlikely to need tuning.
 
-The only topology difference from the testing circuit: two summing resistors (R1, R2) instead of one, since the real radio has separate front L and front R RCAs rather than a single phone headphone jack, and the final ADC pin is the ESP32-C3's `GPIO1` rather than the dev board's `GPIO34`.
+Now that testing uses a spare ESP32-C3 module (see "Testing board update" above), this circuit and the testing circuit are topologically identical, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
 
 **Ground note:** the conditioning circuit's ground must trace back to the RCA tap's own ground/shield connection — not a separate chassis ground point used elsewhere in the car (e.g. the 12V system's ground). Referencing two different chassis points that aren't at exactly the same potential is a classic source of audible ground-loop hum in the actual audio system, not just an LED-behaviour issue.
 
 **Tap method:** bridge off both signal wires and the ground in parallel at the radio's RCA harness. Never cut into the cable and route the circuit in series — that would interrupt the original signal to the amplifier.
 
-### Pinout — testing board (full ESP32 dev board)
+### Pinout — testing board (spare ESP32-C3 module)
 
-Used for bench testing only — not installed in the car.
+Used for bench testing only — a separate, spare ESP32-C3 module, not the one installed in the car.
 
 | Pin/net | Connects to | Purpose |
 |---|---|---|
-| `GPIO34` | Conditioning circuit output (Node B) | ADC audio input — input-only pin, ADC1 (avoids WiFi/ADC2 conflicts) |
-| `GPIO5` | LED strip `DIN` | LED data output — confirm against your specific board's silkscreen, varies slightly by dev board model |
+| `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin the production board uses |
+| `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
 | `3.3V` | Conditioning circuit bias network (R5/R6), LED strip `5V`* | Power |
-| `GND` | Conditioning circuit ground, LED strip `GND`, ESP32 `GND` | Common ground — all must share this one reference |
+| `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
-*Most addressable strips want 5V for reliable operation; running directly off the dev board's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement — the real install uses proper level shifting (below).
+*Most addressable strips want 5V for reliable operation; running directly off the module's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement — the real install uses proper level shifting (below).
+
+The 3.3V choice here is deliberate, not just "good enough": powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Power the strip at 5V instead (also an option — most ESP32-C3 modules break out a `5V`/`VIN` pin) and the data line's 3.3V logic may not reliably clear the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has one (SN74AHCT125N). Trade-off either way: 3.3V power slightly under-drives the LED chips (usually just dimmer/less accurate colour, not broken); 5V power without a level shifter risks flicker or no response, more likely as the strip/wire gets longer.
 
 ### Pinout — production board (ESP32-C3, already installed)
 
@@ -173,17 +181,17 @@ originally validated before joining the real firmware.
 
 ## Phase 2: Build and bench-test
 
-Using the full ESP32 dev board and the real addressable LED strip found for testing — **the production ESP32-C3 in the car is not touched during this phase**, avoiding any risk to the already-working, installed v2.2 firmware.
+Using a spare ESP32-C3 module and the real addressable LED strip found for testing — **the ESP32-C3 installed in the car is not touched during this phase**, avoiding any risk to the already-working, installed v2.4.1 firmware. (Originally planned around a full ESP32 dev board — see the "Testing board update" note above for why a spare ESP32-C3 module is used instead.)
 
 **Stage A — initial tuning, phone audio:**
 - [ ] Breadboard the conditioning circuit using the component list above
-- [ ] Wire audio output to `GPIO34`, LED data to `GPIO5` (or confirmed equivalents)
+- [ ] Wire audio output to `GPIO1`, LED data to `GPIO7` (or confirmed equivalents)
 - [ ] Flash the Phase 1 test sketch
 - [ ] Feed it phone headphone audio (line-level output, good first stand-in for the radio)
 - [ ] Tune R3/R4 (divider ratio) and C1 (smoothing) by watching how the LED actually responds
 
-**Stage B — validate against the real car radio, still on the dev board:**
-- [ ] With the breadboard circuit still on the dev board (not the production board), temporarily clip onto the car's actual Front L/R RCA connectors and ground — alligator clip leads, not a permanent splice yet
+**Stage B — validate against the real car radio, still on the spare test module:**
+- [ ] With the breadboard circuit still on the spare ESP32-C3 module (not the one installed in the car), temporarily clip onto the car's actual Front L/R RCA connectors and ground — alligator clip leads, not a permanent splice yet
 - [ ] Re-check the tuning with real music through the car's actual radio and amp — car head units can output different line-level voltages than a phone, and real music behaves differently than a phone test track, so this can reveal a need for further adjustment
 - [ ] **Record the final working component values** — carries directly into Phase 3
 - [ ] Update the production schematic image and component list above with confirmed values (replace the `*`-marked placeholders) and remove the asterisks
@@ -204,6 +212,6 @@ Using the full ESP32 dev board and the real addressable LED strip found for test
 
 - [ ] Mount the breakout board in the control box
 - [ ] Route the RCA tap wires to the radio harness
-- [ ] Add a new mode to the real firmware (new version, e.g. v2.3), using Phase 2's tuned values, driving the actual strips through the existing `setStrip()` / NeoPixel functions
+- [ ] Add a new mode to the real firmware (new version, e.g. v2.5, branching from the current final v2.4.1), using Phase 2's tuned values, driving the actual strips through the existing `setStrip()` / NeoPixel functions
 - [ ] Test in the car with real music — expect some retuning against real strips, cabin acoustics, and road noise
 - [ ] Update `docs/build-log.md` and the firmware changelog with results

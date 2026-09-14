@@ -30,9 +30,11 @@ ESP32 ADC pin (0–3.3V audio envelope)
 
 ---
 
-## Testing Circuit (Bench, Full ESP32 Dev Board)
+## Testing Circuit (Bench, Spare ESP32-C3 Module)
 
-Used for Phase 2 bench testing only — not installed in the car. Input is a phone's 3.5mm headphone jack (both L and R channels, mono-summed via R1/R2) rather than the car's RCA outputs, as a convenient stand-in for early tuning — the same summing topology as the production circuit, just with a phone jack instead of RCAs.
+Used for Phase 2 bench testing only — a separate, spare ESP32-C3 module, not the one installed in the car. Originally planned around a full ESP32 dev board; a spare ESP32-C3 module turned out to be available instead, which is actually simpler, since it's the same chip as production — the audio ADC pin (`GPIO1`) is identical on both, so Phase 2 tuning carries straight into Phase 4 with no pin remapping.
+
+Input is a phone's 3.5mm headphone jack (both L and R channels, mono-summed via R1/R2) rather than the car's RCA outputs, as a convenient stand-in for early tuning — the same summing topology as the production circuit, just with a phone jack instead of RCAs.
 
 ```
 Phone 3.5mm tip (L)    → R1 (2.2kΩ) ──┐
@@ -50,8 +52,10 @@ Node B → C1 (2.2µF) → GND
 Node B → R5 (10kΩ) → 3.3V
 Node B → R6 (10kΩ) → GND
 
-Node B → ESP32 dev board GPIO34 (ADC input)
+Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 ```
+
+**⚠ Image below is out of date** — labelled `ESP32 GPIO34 (dev board)`; needs regenerating as `ESP32-C3 GPIO1 (test module)`.
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
@@ -67,22 +71,22 @@ Node B → ESP32 dev board GPIO34 (ADC input)
 
 R3/R4 (divider ratio) and C1 (smoothing) are the values expected to need retuning once real audio is flowing — everything else is a reasonable starting point unlikely to need changing.
 
-### Testing pinout (full ESP32 dev board)
+### Testing pinout (spare ESP32-C3 module)
 
 | Pin/net | Connects to | Purpose |
 |---|---|---|
-| `GPIO34` | Conditioning circuit output (Node B) | ADC audio input — input-only pin, ADC1 (avoids WiFi/ADC2 conflicts) |
-| `GPIO5` | LED strip `DIN` | LED data output — confirm against your specific board's silkscreen |
+| `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin production uses |
+| `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
 | `3.3V` | Conditioning circuit bias network (R5/R6), LED strip `5V`* | Power |
-| `GND` | Conditioning circuit ground, LED strip `GND`, ESP32 `GND` | Common ground — all must share this one reference |
+| `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
-\*Most addressable strips want 5V for reliable operation; running directly off the dev board's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement.
+\*Most addressable strips want 5V for reliable operation; running directly off the module's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement. This choice is deliberate, not just "good enough": powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Powering at 5V instead (most ESP32-C3 modules break out a `5V`/`VIN` pin) risks the data line's 3.3V logic not reliably clearing the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has one (SN74AHCT125N).
 
 ---
 
 ## Production Circuit (Car, ESP32-C3)
 
-Same topology as the testing circuit — R1/R2 mono-sum the two channels in both cases, phone jack here vs. RCA in production. Only real differences: real Front L/R RCA inputs instead of a phone jack, and the output pin is the production ESP32-C3's `GPIO1` rather than the dev board's `GPIO34`.
+Now that testing uses a spare ESP32-C3 module, this circuit is topologically identical to the testing circuit, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
 
 ```
 Front Left RCA  → R1 (2.2kΩ*) ──┐

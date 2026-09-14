@@ -90,7 +90,7 @@ Validate full hardware integration before vehicle installation.
 
 ## 04_audio_reactive_test
 
-**New, experimental — not part of the core reactive-LED system above.** Bench-test sketch for the [audio-reactive LED feature](../docs/audio-reactive-led-plan.md), an optional addition layered on top of the completed core project. Runs on a full ESP32 dev board, not the ESP32-C3 installed in the car.
+**New, experimental — not part of the core reactive-LED system above.** Bench-test sketch for the [audio-reactive LED feature](../docs/audio-reactive-led-plan.md), an optional addition layered on top of the completed core project. Runs on a spare ESP32-C3 module — not the ESP32-C3 installed in the car — using the same `GPIO1` audio ADC pin the production plan uses, since it's the same chip.
 
 Tests:
 

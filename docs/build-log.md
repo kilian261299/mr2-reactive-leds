@@ -681,17 +681,21 @@ Full circuit design, pinouts, and the four-phase build plan are documented in [d
 **Status:** Complete.
 
 - Build plan committed to the repo at `docs/audio-reactive-led-plan.md`, including its four circuit images (`images/audio-circuit/`) — testing/production setup overviews and schematics.
-- New bench-test sketch added: `firmware/tests/04_audio_reactive_test/` — reads an audio envelope on an ADC pin, smooths it, and drives a real addressable LED strip on a full ESP32 dev board (not the ESP32-C3 installed in the car). Existing test sketches (encoder, accelerometer, full bench) and the production firmware were not touched.
+- New bench-test sketch added: `firmware/tests/04_audio_reactive_test/` — reads an audio envelope on an ADC pin, smooths it, and drives a real addressable LED strip on a spare ESP32-C3 module (not the ESP32-C3 installed in the car). Existing test sketches (encoder, accelerometer, full bench) and the production firmware were not touched.
 - New hardware documentation added: `hardware/audio-breakout.md` — the mono-summed RCA tap, resistor divider, diode rectifier, smoothing capacitor, and bias network, with placeholder component values pending Phase 2 bench confirmation.
 - This build-log section added.
 
 **Design updates made after the initial plan was committed:** D1 (the rectifier diode) changed from 1N4148 to 1N4007, based on what was on hand — a general-purpose power rectifier switches much slower than a dedicated signal diode, but that's not a practical issue here since C1's smoothing already turns this into a hundreds-of-milliseconds envelope, not an audio-frequency signal path. The testing circuit was also updated to mono-sum stereo L/R via R1/R2 from the phone's 3.5mm jack, matching the production circuit's topology, rather than using a single channel. Both `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md` reflect these changes.
 
+**Testing board changed:** originally planned around a generic full ESP32 dev board; a spare ESP32-C3 module turned out to be available instead. This is actually simpler — same chip as production, so the audio ADC pin (`GPIO1`) is now identical on both test and production boards, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. LED data moved to `GPIO7` on the test board (arbitrary/free pin, no bus conflicts on this spare board). The test sketch and both docs were updated to match.
+
+**Known gap:** the two testing-specific circuit images (`testing_setup_overview.png`, `testing_circuit_schematic.png`) still show the old `GPIO34`/`GPIO5` labelling and are now out of date — flagged inline in both docs. PNG image content can't be edited directly; these need regenerating with `GPIO1`/`GPIO7` and "spare ESP32-C3 module" in place of "ESP32 dev board". The two production images are unaffected (production was already `GPIO1` on an ESP32-C3).
+
 ## Phase 2 — Build and Bench-Test
 
-**Status:** Not started.
+**Status:** In progress. The conditioning circuit has been breadboarded on the bench; Stage A tuning (flashing the test sketch, feeding phone audio, watching Serial output) not yet done.
 
-Uses the full ESP32 dev board and a real addressable LED strip on the bench — **the production ESP32-C3 in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (phone-audio tuning) / Stage B (real car radio validation) checklist.
+Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — **the ESP32-C3 installed in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (phone-audio tuning) / Stage B (real car radio validation) checklist.
 
 ## Phase 3 — Build the Permanent Circuit
 
