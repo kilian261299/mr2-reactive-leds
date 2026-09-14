@@ -143,10 +143,14 @@ void updateAudioReactiveLEDs() {
 
   int brightness = (int)(level * maxBrightness);
 
-  // Cyan test colour -- deliberately different from any colour
-  // used by the main firmware (blue/orange/red), so it's obvious
-  // on the bench which system is driving the strip.
-  setAllPixels(0, 200, 200, brightness);
+  // Dark cyan-blue test colour -- deliberately different from any
+  // colour used by the main firmware (blue/orange/red), so it's
+  // obvious on the bench which system is driving the strip. More
+  // blue than green and capped well under 255 so it reads as a
+  // deep cyan-blue rather than a bright neon cyan, even before
+  // the brightness scaling below darkens it further. Adjust the
+  // ratio here if you want more green (more cyan) or more blue.
+  setAllPixels(0, 90, 160, brightness);
 
   // Print raw + smoothed values regularly so the conditioning
   // circuit (R3/R4, C1) can be tuned against real numbers, per
