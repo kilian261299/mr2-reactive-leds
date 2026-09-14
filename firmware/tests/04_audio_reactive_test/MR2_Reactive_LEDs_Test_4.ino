@@ -5,16 +5,18 @@
 // Audio-reactive LED test (bench only)
 //
 // Hardware used:
-// - Full ESP32 dev board (NOT the ESP32-C3 installed in the car)
+// - A SPARE ESP32-C3 module (NOT the one installed in the car)
 // - Audio conditioning circuit (see docs/audio-reactive-led-plan.md)
 // - One WS2812B LED strip
 //
-// IMPORTANT: this test runs on a full ESP32 dev board, not the
-// ESP32-C3 that's already installed as the production controller.
-// GPIO34 in particular does NOT exist on the ESP32-C3 -- do not
-// reuse these pin numbers when this feature eventually moves into
-// the real firmware (Phase 4). This board is bench-only and is
-// never installed in the car.
+// IMPORTANT: this is a separate, spare ESP32-C3 module for bench
+// testing only -- it is never installed in the car, and is not the
+// production controller. It happens to be the same CHIP as the
+// production board though, which is why AUDIO_PIN below is the
+// same GPIO1 the production plan already uses: no pin remapping
+// needed when this moves into the real firmware in Phase 4.
+// LED_PIN (GPIO7) is arbitrary -- this bench board doesn't share a
+// bus with anything else, so any free, non-strapping pin works.
 //
 // Purpose of this test:
 // 1. Confirm the conditioning circuit produces a usable 0-3.3V
@@ -36,18 +38,18 @@
 // ==================================================
 
 // Conditioning circuit output (Node B) into the ADC.
-// GPIO34 is input-only and sits on ADC1, which avoids the
-// conflicts ADC2 can have with WiFi on the ESP32. Input-only
-// also means no internal pull-up/pull-down is available on this
-// pin, which is fine here since the conditioning circuit's own
-// bias network (R5/R6) already sets the resting voltage.
-#define AUDIO_PIN 34
+// GPIO1 is ADC1_CH1 on the ESP32-C3 -- stick to ADC1 pins (GPIO0-4)
+// rather than ADC2, which is best avoided on the C3 regardless of
+// WiFi use. Same pin the production plan uses on the real board,
+// so this test's tuning carries straight over.
+#define AUDIO_PIN 1
 
 // LED data pin, into the strip's DIN directly (or through a
 // level shifter if you're using one on the bench -- the main
 // firmware always does, this test may or may not depending on
-// what you've got wired up).
-#define LED_PIN 5
+// what you've got wired up). GPIO7 is free and not a strapping
+// pin -- confirm against your specific board's silkscreen.
+#define LED_PIN 7
 
 
 // ==================================================
@@ -180,8 +182,8 @@ void setup() {
   delay(500);
 
   Serial.println("MR2 Reactive LEDs - Test 4");
-  Serial.println("Audio-reactive LED test (bench only, full ESP32 dev board)");
-  Serial.println("Not the production ESP32-C3 -- pin numbers here do not carry over.");
+  Serial.println("Audio-reactive LED test (bench only, spare ESP32-C3 module)");
+  Serial.println("Not the ESP32-C3 installed in the car -- this board is bench-only.");
 
   // No pinMode() call needed for an ADC read on the ESP32 --
   // analogRead() configures the pin itself.
