@@ -666,3 +666,37 @@ The master toggle switch listed in the original planning for this stage was not 
 **Installation notes:**
 
 See Stage 8 for full detail on each installed component and the reasoning behind build decisions made along the way.
+
+---
+---
+
+# Audio-Reactive LED Feature (Experimental Addition)
+
+**This is a new, optional addition layered on top of the completed core project (Stages 1–9 above, concluding with firmware v2.4.1) — not a continuation of it, and not a numbered Stage.** The core acceleration/braking/cornering reactive system is finished and installed; this section tracks a separate, independent feature: LEDs that also react to music from the car radio. It does not touch, replace, or depend on the existing v2.x firmware line.
+
+Full circuit design, pinouts, and the four-phase build plan are documented in [docs/audio-reactive-led-plan.md](audio-reactive-led-plan.md). Hardware detail on the conditioning circuit specifically is in [hardware/audio-breakout.md](../hardware/audio-breakout.md).
+
+## Phase 1 — GitHub Setup
+
+**Status:** Complete.
+
+- Build plan committed to the repo at `docs/audio-reactive-led-plan.md`.
+- New bench-test sketch added: `firmware/tests/04_audio_reactive_test/` — reads an audio envelope on an ADC pin, smooths it, and drives a real addressable LED strip on a full ESP32 dev board (not the ESP32-C3 installed in the car). Existing test sketches (encoder, accelerometer, full bench) and the production firmware were not touched.
+- New hardware documentation added: `hardware/audio-breakout.md` — the mono-summed RCA tap, resistor divider, diode rectifier, smoothing capacitor, and bias network, with placeholder component values pending Phase 2 bench confirmation.
+- This build-log section added.
+
+**Known gap:** the plan document references four circuit images (`images/audio-circuit/testing_setup_overview.png`, `testing_circuit_schematic.png`, `production_setup_overview.png`, `production_circuit_schematic.png`) that aren't yet in the repo — the plan was committed without them so Phase 1 wasn't blocked on sourcing image files. Add these in a follow-up commit once available; until then, the plan doc's embedded image links will show as broken on GitHub.
+
+## Phase 2 — Build and Bench-Test
+
+**Status:** Not started.
+
+Uses the full ESP32 dev board and a real addressable LED strip on the bench — **the production ESP32-C3 in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (phone-audio tuning) / Stage B (real car radio validation) checklist.
+
+## Phase 3 — Build the Permanent Circuit
+
+**Status:** Not started. Depends on confirmed component values from Phase 2.
+
+## Phase 4 — Install and Integrate the Firmware
+
+**Status:** Not started. Depends on Phase 3. This is the only phase that will touch the real firmware — as a new version, added on top of the current final version (v2.4.1), not a modification to it.
