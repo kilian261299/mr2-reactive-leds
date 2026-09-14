@@ -30,27 +30,24 @@ WS2812B LED strips (existing LEFT_LED_PIN / RIGHT_LED_PIN)
 
 ### Testing setup — full pipeline
 
-**⚠ Image below is out of date** — it shows the original full-ESP32-dev-board setup (`GPIO34`/`GPIO5`). Testing now uses a spare ESP32-C3 module instead (see "Testing board update" note below); the image needs regenerating with `GPIO1`/`GPIO7` before it's accurate again.
-
 ![Testing setup overview](../images/audio-circuit/testing_setup_overview.png)
 
-This is the complete bench-test signal path: iPhone headphone output (both L and R channels), summed and conditioned, into a spare ESP32-C3 module, driving the addressable LED strip. This is the testing configuration only — the production install uses the car's actual RCA tap and the ESP32-C3 installed in the car, not an iPhone or this spare board.
+This is the complete bench-test signal path: a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit), summed and conditioned, into a spare ESP32-C3 module, driving the addressable LED strip. This is the testing configuration only — the production install uses the car's actual RCA tap and the ESP32-C3 installed in the car, not a phone/PC or this spare board.
 
-**Testing board update:** originally planned around a full ESP32 dev board (hence the `GPIO34` references elsewhere in this doc's history). A spare ESP32-C3 module turned out to be available instead, which is actually simpler: it's the same chip as production, so the audio ADC pin (`GPIO1`) is identical on both, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. See the updated pinout table below.
+**Testing board update:** originally planned around a full ESP32 dev board (hence the `GPIO34` references still in the historical Phase 1 prompt below). A spare ESP32-C3 module turned out to be available instead, which is actually simpler: it's the same chip as production, so the audio ADC pin (`GPIO1`) is identical on both, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. See the updated pinout table below.
 
 ### Testing circuit — schematic
-
-**⚠ Image below is out of date** — labelled `ESP32 GPIO34 (dev board)`; needs regenerating as `ESP32-C3 GPIO1 (test module)`.
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
 ### Testing circuit — component list
 
 ```
-Phone 3.5mm tip (L)    → R1 (2.2kΩ) ──┐
-Phone 3.5mm ring (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
-Phone 3.5mm sleeve (ground) → GND
-   (shared ground reference for the whole circuit)
+White wire (L) → R1 (2.2kΩ) ──┐
+Red wire (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
+Shield wire (ground) → GND
+   (shared ground reference for the whole circuit — from a 3.5mm
+   breakout cable, standard RCA-style white=L/red=R colour coding)
 
 Node S → R3 (10kΩ) → Node A
 Node A → R4 (1kΩ) → GND

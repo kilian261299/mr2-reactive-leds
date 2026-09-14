@@ -689,7 +689,7 @@ Full circuit design, pinouts, and the four-phase build plan are documented in [d
 
 **Testing board changed:** originally planned around a generic full ESP32 dev board; a spare ESP32-C3 module turned out to be available instead. This is actually simpler — same chip as production, so the audio ADC pin (`GPIO1`) is now identical on both test and production boards, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. LED data moved to `GPIO7` on the test board (arbitrary/free pin, no bus conflicts on this spare board). The test sketch and both docs were updated to match.
 
-**Known gap:** the two testing-specific circuit images (`testing_setup_overview.png`, `testing_circuit_schematic.png`) still show the old `GPIO34`/`GPIO5` labelling and are now out of date — flagged inline in both docs. PNG image content can't be edited directly; these need regenerating with `GPIO1`/`GPIO7` and "spare ESP32-C3 module" in place of "ESP32 dev board". The two production images are unaffected (production was already `GPIO1` on an ESP32-C3).
+The two testing-specific circuit images (`testing_setup_overview.png`, `testing_circuit_schematic.png`) have since been regenerated with `GPIO1`/`GPIO7` and "ESP32-C3 test board" in place of the old `GPIO34`/`GPIO5`/"ESP32 dev board" labelling — closing the gap noted above. They also picked up a wiring refinement: the audio input is now described as a 3.5mm breakout cable with White(L)/Red(R)/Shield(GND) wiring (standard RCA-style colour coding), replacing the earlier "phone headphone jack tip/ring/sleeve" framing — both docs' text was updated to match.
 
 ## Phase 2 — Build and Bench-Test
 

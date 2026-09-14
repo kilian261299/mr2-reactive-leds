@@ -34,13 +34,14 @@ ESP32 ADC pin (0–3.3V audio envelope)
 
 Used for Phase 2 bench testing only — a separate, spare ESP32-C3 module, not the one installed in the car. Originally planned around a full ESP32 dev board; a spare ESP32-C3 module turned out to be available instead, which is actually simpler, since it's the same chip as production — the audio ADC pin (`GPIO1`) is identical on both, so Phase 2 tuning carries straight into Phase 4 with no pin remapping.
 
-Input is a phone's 3.5mm headphone jack (both L and R channels, mono-summed via R1/R2) rather than the car's RCA outputs, as a convenient stand-in for early tuning — the same summing topology as the production circuit, just with a phone jack instead of RCAs.
+Input is a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit — both L and R channels, mono-summed via R1/R2) rather than the car's RCA outputs, as a convenient stand-in for early tuning — the same summing topology as the production circuit, just with a phone/PC headphone output instead of RCAs.
 
 ```
-Phone 3.5mm tip (L)    → R1 (2.2kΩ) ──┐
-Phone 3.5mm ring (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
-Phone 3.5mm sleeve (ground) → GND
-   (shared ground reference for the whole circuit)
+White wire (L) → R1 (2.2kΩ) ──┐
+Red wire (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
+Shield wire (ground) → GND
+   (shared ground reference for the whole circuit — standard
+   RCA-style white=L/red=R colour coding on the breakout cable)
 
 Node S → R3 (10kΩ) → Node A
 Node A → R4 (1kΩ) → GND
@@ -54,8 +55,6 @@ Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 ```
-
-**⚠ Image below is out of date** — labelled `ESP32 GPIO34 (dev board)`; needs regenerating as `ESP32-C3 GPIO1 (test module)`.
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
