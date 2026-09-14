@@ -6,6 +6,8 @@ A new, optional mode for the MR2 Reactive LEDs project: LEDs react to music from
 
 ## Circuit Design
 
+**Note on D1 (the rectifier diode):** using a 1N4007 rather than the more typical small-signal choice (e.g. 1N4148) for this role, based on what was already on hand. The 1N4007 is a general-purpose power rectifier with much slower switching than a dedicated signal diode — normally a mismatch for audio-frequency work, but not a practical problem here, since the smoothing capacitor (C1) is deliberately the slow part of this circuit already, turning the rectified signal into a "how loud is the music right now" envelope over hundreds of milliseconds. The diode's speed was never going to be the limiting factor for something changing that slowly.
+
 ### Signal path overview
 
 ```
@@ -39,13 +41,15 @@ This is the complete bench-test signal path: iPhone headphone output (both L and
 ### Testing circuit — component list
 
 ```
-Phone headphone jack (L or R channel, one side only for mono)
-→ R1 (2.2kΩ) → Node S
+Phone 3.5mm tip (L)    → R1 (2.2kΩ) ──┐
+Phone 3.5mm ring (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
+Phone 3.5mm sleeve (ground) → GND
+   (shared ground reference for the whole circuit)
 
 Node S → R3 (10kΩ) → Node A
 Node A → R4 (1kΩ) → GND
 
-Node A → D1 (1N4148) → Node B
+Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
 
@@ -80,7 +84,7 @@ RCA shield/ground → GND
 Node S → R3 (10kΩ*) → Node A
 Node A → R4 (1kΩ*) → GND
 
-Node A → D1 (1N4148) → Node B
+Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF*) → GND
 
