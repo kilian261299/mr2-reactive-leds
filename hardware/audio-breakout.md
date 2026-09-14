@@ -32,16 +32,18 @@ ESP32 ADC pin (0–3.3V audio envelope)
 
 ## Testing Circuit (Bench, Full ESP32 Dev Board)
 
-Used for Phase 2 bench testing only — not installed in the car. Input is a phone headphone jack (one channel, mono) rather than the car's RCA outputs, as a convenient stand-in for early tuning.
+Used for Phase 2 bench testing only — not installed in the car. Input is a phone's 3.5mm headphone jack (both L and R channels, mono-summed via R1/R2) rather than the car's RCA outputs, as a convenient stand-in for early tuning — the same summing topology as the production circuit, just with a phone jack instead of RCAs.
 
 ```
-Phone headphone jack (L or R channel, one side only for mono)
-→ R1 (2.2kΩ) → Node S
+Phone 3.5mm tip (L)    → R1 (2.2kΩ) ──┐
+Phone 3.5mm ring (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
+Phone 3.5mm sleeve (ground) → GND
+   (shared ground reference for the whole circuit)
 
 Node S → R3 (10kΩ) → Node A
 Node A → R4 (1kΩ) → GND
 
-Node A → D1 (1N4148) → Node B
+Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
 
@@ -51,13 +53,17 @@ Node B → R6 (10kΩ) → GND
 Node B → ESP32 dev board GPIO34 (ADC input)
 ```
 
+![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
+
 | Component | Role |
 |---|---|
-| R1 (2.2kΩ) | Series input resistor, limits current from the audio source |
+| R1 / R2 (2.2kΩ) | Series input resistors, sum L+R to mono and limit current from the audio source |
 | R3 / R4 (10kΩ / 1kΩ) | Voltage divider, scales the line-level signal down before rectification |
-| D1 (1N4148) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
+| D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
 | R5 / R6 (10kΩ / 10kΩ) | Bias network — centres the resting (silent) voltage within the ADC's readable range |
+
+**On D1's part choice:** a 1N4007 (general-purpose power rectifier) is used here rather than the more typical small-signal choice (e.g. 1N4148), based on what was already on hand. The 1N4007 switches much slower than a dedicated signal diode — normally a mismatch for audio-frequency work, but not a practical problem here, since C1 is deliberately the slow part of this circuit already, turning the rectified signal into a "how loud is the music right now" envelope over hundreds of milliseconds. The diode's speed was never the limiting factor for something changing that slowly.
 
 R3/R4 (divider ratio) and C1 (smoothing) are the values expected to need retuning once real audio is flowing — everything else is a reasonable starting point unlikely to need changing.
 
@@ -76,7 +82,7 @@ R3/R4 (divider ratio) and C1 (smoothing) are the values expected to need retunin
 
 ## Production Circuit (Car, ESP32-C3)
 
-Same topology as the testing circuit, with two changes: a second summing resistor for the real stereo RCA pair (rather than one mono headphone channel), and the output pin is the production ESP32-C3's `GPIO1` rather than the dev board's `GPIO34`.
+Same topology as the testing circuit — R1/R2 mono-sum the two channels in both cases, phone jack here vs. RCA in production. Only real differences: real Front L/R RCA inputs instead of a phone jack, and the output pin is the production ESP32-C3's `GPIO1` rather than the dev board's `GPIO34`.
 
 ```
 Front Left RCA  → R1 (2.2kΩ*) ──┐
@@ -89,7 +95,7 @@ RCA shield/ground → GND
 Node S → R3 (10kΩ*) → Node A
 Node A → R4 (1kΩ*) → GND
 
-Node A → D1 (1N4148) → Node B
+Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF*) → GND
 
@@ -98,6 +104,8 @@ Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 GPIO1 (ADC input, production board)
 ```
+
+![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
 `*` = expected to change once Phase 2 confirms real values. R5/R6 aren't marked — the bias network is unlikely to need tuning.
 
@@ -128,4 +136,4 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 - [ ] Confirm R1/R2 (summing resistors), R3/R4 (divider ratio), and C1 (smoothing cap) against real music through the car's actual radio and amp — see the build plan's Phase 2, Stage B
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
-- [ ] Confirm the diode part (1N4148 assumed here as a reasonable general-purpose signal diode; unlikely to need changing, but not yet bench-verified)
+- [ ] Confirm D1 (1N4007, chosen for availability rather than being a purpose-picked signal diode — see the note above for why that's expected to be fine, but not yet bench-verified)
