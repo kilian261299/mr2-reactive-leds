@@ -692,7 +692,7 @@ This is a different kind of fix than the blunt mitigations considered and reject
 
 ---
 
-## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version)
+## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version, Confirmed)
 
 Branches from v2.4.0, extending the direction-aware fix to the axis it missed.
 
@@ -706,7 +706,9 @@ With both coupled axes now settling quickly in the braking/downhill direction, t
 
 ### Result
 
-**Adopted as the final firmware version.** Built immediately following v2.4.0's failed drive test; not yet tested. The next drive should confirm the downhill flicker is actually resolved this time, and that acceleration-hold and braking both still feel unchanged.
+**Confirmed on real driving.** Built immediately following v2.4.0's failed drive test; the next drive confirmed it worked — the downhill flicker is gone, and acceleration-hold and braking both feel unchanged from v2.2/v2.3, exactly as expected since this fix only touched how fast the hill-compensation baseline settles.
+
+**v2.4.1 is confirmed as the final firmware version — the core reactive-LED project is complete.** `baselineDynamicReentryThreshold` was flagged as the next thing to try if this didn't work; since it did, that's no longer a live concern. v3.0/v3.1's gyroscope approach remains parked, not needed after all.
 
 ---
 

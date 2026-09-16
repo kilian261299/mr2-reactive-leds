@@ -190,11 +190,11 @@ Branches from v2.3. Splits `gravitySmoothing` by direction instead of reverting 
 
 **Drive-tested: no improvement.** Downhill flicker was unchanged from v2.3. Uphill and flat also felt unchanged — but they were already fine, so that's not evidence this fix worked, just that it's consistent with it having no effect. Root cause: this version only made the forward axis (`gravityX`) direction-aware — a hill pitch also shifts the vertical axis (`gravityZ`) at the same time, which was left on the old slow rate throughout. Since the state machine's gating signal combines all three axes into one magnitude, `gravityZ`'s slow recovery kept that combined signal elevated regardless of how fast `gravityX` alone recovered, so the baseline never settled any sooner than it did on v2.3. Fixed in v2.4.1.
 
-## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version)
+## v2.4.1 – Downhill Flicker Fix, Attempt 2 (Final Version, Confirmed)
 
 Branches from v2.4.0. Extends the same direction-aware rate to `gravityZ`, using the same forward-axis direction flag as `gravityX` (a hill/braking event is a forward-axis phenomenon; `gravityZ`'s shift is a side effect of it, not independent). `gravityY` (lateral/cornering) is left untouched.
 
-**Adopted as the final firmware version.** Built immediately after v2.4.0's failed drive test; not yet tested. `baselineDynamicReentryThreshold` (unchanged since v2.2) is the next thing to try if flicker somehow persists even with both coupled axes now fixed. See the changelog for the full root-cause trace and implementation detail.
+**Confirmed on real driving — the downhill flicker is gone.** Acceleration-hold and braking both feel unchanged from v2.2/v2.3, as expected. **v2.4.1 is confirmed as the final firmware version — the core reactive-LED project is complete.** See the changelog for the full root-cause trace and implementation detail.
 
 For detailed version history and development notes, see:
 

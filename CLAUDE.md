@@ -14,13 +14,15 @@ That flicker was traced to **v2.1 → v2.2**, not to v2.3's own changes: v2.2 sl
 
 **`v2.4.0`** attempted the fix by splitting `gravitySmoothing` by direction on the forward axis — the slow rate stays for accelerating (so the acceleration-hold fix is untouched), while the original fast v2.1 rate is restored for braking/downhill (which share a sign on the forward axis). **Drive-tested and found to make no difference at all** — downhill flicker unchanged, uphill/flat unchanged (both were already fine, so that's not evidence of success). Root cause: a hill pitch shifts gravity on the forward axis (X) *and* the vertical axis (Z) at once, since both are involved in the same rotation — v2.4.0 only made `gravityX` direction-aware, and `gravityZ`'s unchanged slow rate kept the combined gating signal (which sums all three axes) elevated regardless, so the baseline never settled any faster than on v2.3.
 
-**`v2.4.1` is the final firmware version.** It extends the same direction-aware rate to `gravityZ` as well (same forward-axis direction flag; `gravityY`, the lateral/cornering axis, is untouched). This directly targets the flicker without the blunt trade-offs considered earlier (e.g. dulling `brakingDeadZone` globally). **Built and adopted as final; not yet confirmed on a real drive.** If it still doesn't resolve the flicker, `baselineDynamicReentryThreshold` (unchanged since v2.2) is the next thing to try.
+**`v2.4.1` is the final firmware version, confirmed on real driving.** It extends the same direction-aware rate to `gravityZ` as well (same forward-axis direction flag; `gravityY`, the lateral/cornering axis, is untouched) — this directly targeted the flicker without the blunt trade-offs considered earlier (e.g. dulling `brakingDeadZone` globally), and the next drive confirmed it worked: **the downhill flicker is gone**, acceleration-hold and braking both feel unchanged from v2.2/v2.3. `baselineDynamicReentryThreshold` (the fallback if this hadn't worked) is no longer a live concern.
 
-Two known issues remain, deliberately left unfixed — accepted, permanent trade-offs, not bugs to chase:
+**The core reactive-LED project is finished.** Two known issues remain, deliberately left unfixed — accepted, permanent trade-offs, not bugs to chase:
 - USB power backfeeds enough current to power the car radio when connected with the key off (no reverse-blocking diode on the charger module). Not a safety/drain issue since it doesn't cross the ignition switch. Rule: never connect USB and vehicle power at the same time.
 - Minor audible noise through the speakers when LED brightness changes — typical WS2812B PWM noise, barely noticeable.
 
-## Audio-Reactive LED Addition (In Progress)
+**Active project work has moved on to the audio-reactive LED addition below.**
+
+## Audio-Reactive LED Addition (Active — Current Focus)
 
 A new, optional mode layered on top of the completed core project above: LEDs also react to music from the car radio, via an RCA tap → conditioning circuit → spare ADC pin (`GPIO1` on the production ESP32-C3). Independent of the v2.x firmware — doesn't touch or depend on it. Full plan: [docs/audio-reactive-led-plan.md](docs/audio-reactive-led-plan.md).
 
