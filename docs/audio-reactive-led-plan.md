@@ -42,8 +42,6 @@ A small monitoring speaker is also tapped across the R wire and shared ground (n
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list below.
-
 ### Testing circuit — component list
 
 ```
@@ -80,8 +78,6 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 ### Production circuit — schematic
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
-
-**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list below.
 
 ### Production circuit — component list
 
