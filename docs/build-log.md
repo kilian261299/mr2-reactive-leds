@@ -701,7 +701,7 @@ The two testing images were updated again to add a monitoring speaker, tapped ac
 
 **Status:** In progress. The conditioning circuit has been breadboarded on the bench, with a monitoring speaker added; Stage A tuning (flashing the test sketch, feeding phone audio, watching Serial output) not yet done.
 
-Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — **the ESP32-C3 installed in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (phone-audio tuning) / Stage B (real car radio validation) checklist.
+Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — **the ESP32-C3 installed in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (laptop/phone-audio tuning) checklist — real-radio validation has moved to Phase 3, since the car's actual RCA wiring isn't practically accessible without opening up the already-installed system.
 
 ## Phase 3 — Remanufacture the PCB with the Audio Circuit Integrated
 

@@ -147,18 +147,20 @@ The repo scaffolding is done: this plan document and its images are committed at
 
 Using a spare ESP32-C3 module and the real addressable LED strip found for testing — **the ESP32-C3 installed in the car is not touched during this phase**, avoiding any risk to the already-working, installed v2.4.1 firmware. (Originally planned around a full ESP32 dev board — see the "Testing board update" note above for why a spare ESP32-C3 module is used instead.)
 
-**Stage A — initial tuning, phone audio:**
+**Stage A — initial tuning, laptop/phone audio (the only validation available before Phase 3):**
 - [ ] Breadboard the conditioning circuit using the component list above
 - [ ] Wire audio output to `GPIO1`, LED data to `GPIO7` (or confirmed equivalents)
 - [ ] Flash the Phase 1 test sketch
-- [ ] Feed it phone headphone audio (line-level output, good first stand-in for the radio)
+- [ ] Feed it laptop/phone headphone audio (line-level output, good first stand-in for the radio)
 - [ ] Tune R3/R4 (divider ratio) and C1 (smoothing) by watching how the LED actually responds
 
-**Stage B — validate against the real car radio, still on the spare test module:**
-- [ ] With the breadboard circuit still on the spare ESP32-C3 module (not the one installed in the car), temporarily clip onto the car's actual Front L/R RCA connectors and ground — alligator clip leads, not a permanent splice yet
-- [ ] Re-check the tuning with real music through the car's actual radio and amp — car head units can output different line-level voltages than a phone, and real music behaves differently than a phone test track, so this can reveal a need for further adjustment
-- [ ] **Record the final working component values** — carries directly into Phase 3
-- [ ] Update the production schematic image and component list above with confirmed values (replace the `*`-marked placeholders) and remove the asterisks
+**Real-radio validation moved to Phase 3.** The car's actual RCA wiring isn't practically accessible without opening up the already-installed system — not worth the risk to a working install just to bench-test. Two consequences, both accepted:
+
+- **The head unit's actual preamp output voltage is unknown.** A Kenwood DPX-07MD (this car's radio) — no confirmed spec found for this exact model; car head units generally range ~2–4V RMS, against a laptop/phone's ~0.3–1V. Switching the head unit's internal amp off (already done here, since an external amp is used) doesn't affect this — RCA preamp outs are a separate signal path from the internal amp regardless of that setting.
+- **R3/R4 should be tuned for headroom, not precision.** Aim for loud laptop content to land around the middle of the ADC's range, not near the top — deliberately leaving margin in case the real radio runs hotter. Undershooting the range only costs resolution (`audioFloor`/`audioCeiling` in firmware can rescale around that later); overshooting it clips at the ADC's 3.3V ceiling, which firmware cannot recover — every loud moment reads identically "maxed out," losing exactly the dynamics this feature cares about. See Phase 3 for validating and correcting this once real hardware is available.
+
+- [ ] **Record the working component values from Stage A** — carries into Phase 3 as a starting point, not a final answer
+- [ ] Update the production schematic image and component list above with these values (replace the `*`-marked placeholders), noting they're laptop-derived and may still need correction per Phase 3
 
 ---
 
@@ -174,6 +176,8 @@ Decided against a standalone breakout board — the audio conditioning circuit w
 - [ ] Run design checks (ERC/DRC) same as the original board
 - [ ] Submit Gerbers to JLCPCB
 - [ ] Assemble the new board once manufactured, bench-test before installing (same validation approach used for the original PCB and its replacement)
+- [ ] **First real validation against the actual car radio happens here**, on the assembled board, before permanent (re)install — this is the earliest point real RCA access is practical. Confirm R3/R4 aren't clipping (a maxed-out, unresponsive-to-volume reading is the signature) and C1's smoothing still feels right against real music.
+- [ ] If R3/R4/C1 need correction, hand-swap those specific parts on the assembled board — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
 - [ ] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout
 
 ---

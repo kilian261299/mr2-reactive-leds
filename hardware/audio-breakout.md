@@ -137,6 +137,6 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 ## Open Items (Before Phase 3)
 
-- [ ] Confirm R1/R2 (summing resistors), R3/R4 (divider ratio), and C1 (smoothing cap) against real music through the car's actual radio and amp — see the build plan's Phase 2, Stage B
+- [ ] Confirm R1/R2 (summing resistors), R3/R4 (divider ratio), and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
 - [ ] Confirm D1 (1N4007, chosen for availability rather than being a purpose-picked signal diode — see the note above for why that's expected to be fine, but not yet bench-verified)
