@@ -78,7 +78,7 @@ The PCB manufacturing files and editable design files are available below.
 
 Manufacturing files generated from EasyEDA:
 
-[Gerber Files](../hardware/pcb/gerbers/)
+[Gerber Files](../hardware/pcb/v1/gerbers/)
 
 The Gerber files contain the manufacturing data required to produce the physical circuit boards.
 
@@ -90,7 +90,7 @@ The PCB BOM contains the components and reference designators used during PCB as
 
 The PCB was manufactured as a bare board. Components were sourced separately and manually soldered during assembly.
 
-[PCB BOM Files](../hardware/pcb/bom/)
+[PCB BOM Files](../hardware/pcb/v1/bom/)
 
 ---
 
@@ -106,7 +106,7 @@ The complete project BOM includes components outside of the PCB assembly, includ
 
 Original editable PCB design source:
 
-[EasyEDA Source Files](../hardware/pcb/easyeda/)
+[EasyEDA Source Files](../hardware/pcb/v1/easyeda/)
 
 The EasyEDA source files allow the schematic and PCB layout to be reviewed or modified.
 
