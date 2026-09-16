@@ -37,8 +37,8 @@ In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-
 
 - Phase 1: GitHub/bench-test sketch setup — complete
 - Phase 2: Breadboard + bench-test the conditioning circuit — in progress (breadboarded, bench-testing not yet done)
-- Phase 3: Build the permanent circuit — not started
-- Phase 4: Install and integrate into the firmware — not started
+- Phase 3: Remanufacture the PCB with the audio circuit integrated (changed from an earlier standalone-breakout-board plan) — not started
+- Phase 4: Install the new PCB revision and integrate into the firmware — not started
 
 ## Features
 
@@ -139,4 +139,4 @@ Full wiring details are available in [`docs/wiring-plan.md`](docs/wiring-plan.md
 - [PCB Design Documentation](docs/pcb-design.md)
 - [Hardware Files](hardware/README.md)
 - [Audio-Reactive LED Plan](docs/audio-reactive-led-plan.md) - New, optional addition: LEDs reacting to car audio. Circuit design, pinouts, and build plan.
-- [Audio Conditioning Breakout](hardware/audio-breakout.md) - Hardware detail for the audio feature's conditioning circuit.
+- [Audio Conditioning Breakout](hardware/audio-breakout.md) - Circuit design detail for the audio feature (originally planned as a standalone board; now being integrated into a new PCB revision instead — see the plan's Phase 3).

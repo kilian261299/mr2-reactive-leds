@@ -678,7 +678,7 @@ See Stage 8 for full detail on each installed component and the reasoning behind
 
 **This is a new, optional addition layered on top of the completed core project (Stages 1–9 above, concluding with firmware v2.4.1) — not a continuation of it, and not a numbered Stage.** The core acceleration/braking/cornering reactive system is finished and installed; this section tracks a separate, independent feature: LEDs that also react to music from the car radio. It does not touch, replace, or depend on the existing v2.x firmware line.
 
-Full circuit design, pinouts, and the four-phase build plan are documented in [docs/audio-reactive-led-plan.md](audio-reactive-led-plan.md). Hardware detail on the conditioning circuit specifically is in [hardware/audio-breakout.md](../hardware/audio-breakout.md).
+Full circuit design, pinouts, and the four-phase build plan are documented in [docs/audio-reactive-led-plan.md](audio-reactive-led-plan.md). Hardware detail on the conditioning circuit specifically is in [hardware/audio-breakout.md](../hardware/audio-breakout.md) — written for the original standalone-breakout-board plan, now superseded by the PCB-remanufacture decision in Phase 3 below; still accurate for the circuit design itself, just not the "separate board" framing.
 
 ## Phase 1 — GitHub Setup
 
@@ -695,16 +695,24 @@ Full circuit design, pinouts, and the four-phase build plan are documented in [d
 
 The two testing-specific circuit images (`testing_setup_overview.png`, `testing_circuit_schematic.png`) have since been regenerated with `GPIO1`/`GPIO7` and "ESP32-C3 test board" in place of the old `GPIO34`/`GPIO5`/"ESP32 dev board" labelling — closing the gap noted above. They also picked up a wiring refinement: the audio input is now described as a 3.5mm breakout cable with White(L)/Red(R)/Shield(GND) wiring (standard RCA-style colour coding), replacing the earlier "phone headphone jack tip/ring/sleeve" framing — both docs' text was updated to match.
 
+The two testing images were updated again to add a monitoring speaker, tapped across the R wire and shared ground (not part of the conditioning circuit itself), so audio content can be heard directly while watching the LED/Serial response during Stage A/B tuning. The production schematic's ground labelling was also clarified (no functional change).
+
 ## Phase 2 — Build and Bench-Test
 
-**Status:** In progress. The conditioning circuit has been breadboarded on the bench; Stage A tuning (flashing the test sketch, feeding phone audio, watching Serial output) not yet done.
+**Status:** In progress. The conditioning circuit has been breadboarded on the bench, with a monitoring speaker added; Stage A tuning (flashing the test sketch, feeding phone audio, watching Serial output) not yet done.
 
 Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — **the ESP32-C3 installed in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (phone-audio tuning) / Stage B (real car radio validation) checklist.
 
-## Phase 3 — Build the Permanent Circuit
+## Phase 3 — Remanufacture the PCB with the Audio Circuit Integrated
 
 **Status:** Not started. Depends on confirmed component values from Phase 2.
 
+**Decision changed from the original plan:** rather than a standalone breakout board wired to the existing PCB, the audio conditioning circuit (R1–R6, D1, C1) will be added directly to a new PCB revision, alongside a new RCA input connector matching the existing J2–J5 connector style. Same EasyEDA → JLCPCB process already used for the original board, including its GPIO4-fault replacement revision. See the build plan's Phase 3 for the full checklist.
+
+`hardware/audio-breakout.md` (which documents the now-superseded standalone-breakout design) will need revisiting once this phase starts.
+
+**Hardware files are now organised by PCB revision**, the same way firmware versions are: the original board's files moved from `hardware/pcb/{gerbers,bom,easyeda}/` to `hardware/pcb/v1/{gerbers,bom,easyeda}/`, making room for `hardware/pcb/v2/` once the new revision is designed. `docs/pcb-design.md` and `hardware/README.md` were updated to match — no other changes to the `v1` files or history.
+
 ## Phase 4 — Install and Integrate the Firmware
 
-**Status:** Not started. Depends on Phase 3. This is the only phase that will touch the real firmware — as a new version, added on top of the current final version (v2.4.1), not a modification to it.
+**Status:** Not started. Depends on Phase 3. This is the only phase that will touch the real firmware — as a new version, added on top of the current final version (v2.4.1), not a modification to it. Installing the new PCB revision (replacing the currently-installed `v1` board) also happens in this phase, alongside the firmware change — see the build plan's Phase 4.

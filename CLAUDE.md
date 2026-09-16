@@ -28,9 +28,13 @@ A new, optional mode layered on top of the completed core project above: LEDs al
 
 **Phase 1 (GitHub/bench-test sketch setup): complete.** Plan doc and its four circuit images committed, `firmware/tests/04_audio_reactive_test/` bench-test sketch added (a spare ESP32-C3 module — not the ESP32-C3 installed in the car), `hardware/audio-breakout.md` added, and a new build-log section tracking this separately from the numbered core-project Stages.
 
-Design updated after the initial plan: D1 (rectifier diode) is a 1N4007, not the originally-planned 1N4148, based on what was on hand — fine here since the smoothing capacitor already makes this a hundreds-of-milliseconds envelope, not audio-frequency work. The testing circuit sums stereo L/R via R1/R2 from a 3.5mm breakout cable (White=L/Red=R/Shield=GND), mirroring the production circuit's RCA summing. **Testing board also changed**, from a generic full ESP32 dev board to a spare ESP32-C3 module — since that's the same chip as production, the audio ADC pin (`GPIO1`) is now identical on both test and production, so Phase 2 tuning carries straight into Phase 4 with no pin remapping (LED data uses `GPIO7` on the test board, arbitrary/free). The two testing-specific circuit images have been regenerated to match.
+Design updated after the initial plan: D1 (rectifier diode) is a 1N4007, not the originally-planned 1N4148, based on what was on hand — fine here since the smoothing capacitor already makes this a hundreds-of-milliseconds envelope, not audio-frequency work. The testing circuit sums stereo L/R via R1/R2 from a 3.5mm breakout cable (White=L/Red=R/Shield=GND), mirroring the production circuit's RCA summing, and now also has a monitoring speaker tapped in so audio content can be heard while tuning. **Testing board also changed**, from a generic full ESP32 dev board to a spare ESP32-C3 module — since that's the same chip as production, the audio ADC pin (`GPIO1`) is now identical on both test and production, so Phase 2 tuning carries straight into Phase 4 with no pin remapping (LED data uses `GPIO7` on the test board, arbitrary/free).
 
-**Phases 2–4 (bench-test, permanent circuit, firmware integration): not started.**
+**Phase 2 (bench-test): in progress.** Conditioning circuit breadboarded; Stage A tuning (flash sketch, feed phone audio, watch Serial output) not yet done.
+
+**Phase 3 changed from the original plan.** Rather than a standalone breakout board, the audio circuit will be integrated directly into a new PCB revision (`v2`) — same EasyEDA → JLCPCB process as the original board. **PCB files are now organised by revision**: `hardware/pcb/v1/{gerbers,bom,easyeda}/` (currently installed) and `hardware/pcb/v2/` (planned, not yet designed) — mirrors how firmware versions are folder-organised. `hardware/audio-breakout.md` documents the now-superseded standalone-breakout circuit design (still accurate on the circuit itself, just not the "separate board" framing) and will need revisiting once Phase 3 starts.
+
+**Phase 4 (firmware integration): not started**, depends on Phase 3.
 
 ## Key Docs
 
@@ -38,4 +42,5 @@ Design updated after the initial plan: D1 (rectifier diode) is a 1N4007, not the
 - [firmware/README.md](firmware/README.md) — firmware version history (v1.0–v3.1)
 - [docs/wiring-plan.md](docs/wiring-plan.md) — wiring diagram and pinouts
 - [docs/audio-reactive-led-plan.md](docs/audio-reactive-led-plan.md) — audio-reactive LED addition: circuit design and four-phase build plan
-- [hardware/audio-breakout.md](hardware/audio-breakout.md) — audio conditioning circuit hardware detail
+- [hardware/audio-breakout.md](hardware/audio-breakout.md) — audio conditioning circuit design detail (superseded "standalone board" framing — see Phase 3 above)
+- [hardware/README.md](hardware/README.md) — PCB revision structure (`v1`/`v2`)
