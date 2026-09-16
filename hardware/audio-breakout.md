@@ -43,7 +43,7 @@ Shield wire (ground) → GND
    (shared ground reference for the whole circuit — standard
    RCA-style white=L/red=R colour coding on the breakout cable)
 
-Node S → R3 (10kΩ) → Node A
+Node S → R3 (1kΩ) → Node A
 Node A → R4 (1kΩ) → GND
 
 Node A → D1 (1N4007) → Node B
@@ -57,12 +57,12 @@ Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list above (R5 removed).
+**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list above.
 
 | Component | Role |
 |---|---|
 | R1 / R2 (2.2kΩ) | Series input resistors, sum L+R to mono and limit current from the audio source |
-| R3 / R4 (10kΩ / 1kΩ) | Voltage divider, scales the line-level signal down before rectification |
+| R3 / R4 (1kΩ / 1kΩ) | Voltage divider, scales the line-level signal down before rectification |
 | D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
 | R6 (10kΩ) | Discharge/bias resistor to GND — sets both the resting (silent) voltage (~0V) and, together with C1, the envelope's decay rate |
@@ -70,6 +70,8 @@ Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 **On D1's part choice:** a 1N4007 (general-purpose power rectifier) is used here rather than the more typical small-signal choice (e.g. 1N4148), based on what was already on hand. The 1N4007 switches much slower than a dedicated signal diode — normally a mismatch for audio-frequency work, but not a practical problem here, since C1 is deliberately the slow part of this circuit already, turning the rectified signal into a "how loud is the music right now" envelope over hundreds of milliseconds. The diode's speed was never the limiting factor for something changing that slowly.
 
 **On dropping R5 (design correction):** earlier versions of this circuit paired R6 with a second resistor, R5, pulling Node B up to 3.3V — a two-resistor bias network centring the resting voltage at their midpoint, 1.65V. Checked numerically against the R3/R4 divider's realistic output, that's incompatible: D1 only conducts once Node A exceeds Node B by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A — but Node A's realistic peak after R3/R4 attenuation is only ~0.14–0.51V. The diode would essentially never conduct, and the circuit would sit at a fixed ~1.65V regardless of music. Removing R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V, so D1 only needs to clear its own ~0.3–0.6V forward drop — achievable with the signal actually available, and also just the standard single-resistor diode-envelope-detector topology. Secondary effect: R6 is now the sole discharge path (previously R5 || R6), so the decay time constant is slower than before — worth factoring into C1 retuning below.
+
+**On changing R3 10kΩ → 1kΩ (second correction, same root cause):** the original 10kΩ:1kΩ divider (~11× attenuation) was sized to protect the ADC pin's hard 3.3V maximum against an unconfirmed, possibly-hot car radio signal — but the actual protection goal only needs roughly 2× attenuation (a ~1:1 ratio gets a worst-case ~5.6V peak estimate safely under 3.3V with margin), not 11×. With R5 gone and D1's threshold down to just its own forward drop, that leftover over-attenuation became the new bottleneck: the old ratio left even a laptop's peak too small (~0.14V at Node A) to reliably clear the diode. R3 = R4 = 1kΩ brings laptop peaks to ~0.75V and low-estimate car-radio peaks to ~1.4V, both clearing D1 with real margin, while the worst-case estimate still lands around 2.8V, under the 3.3V ceiling. The 5.6V worst-case itself is unconfirmed, so treat this the same as every other `*`-marked value — a bench starting point, not final.
 
 R3/R4 (divider ratio) and C1 (smoothing, now jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
 
@@ -98,7 +100,7 @@ RCA shield/ground → GND
    note below, must be the RCA tap's own shield, not a separate
    chassis point)
 
-Node S → R3 (10kΩ*) → Node A
+Node S → R3 (1kΩ*) → Node A
 Node A → R4 (1kΩ*) → GND
 
 Node A → D1 (1N4007) → Node B
@@ -112,7 +114,7 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list above (R5 removed).
+**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list above.
 
 `*` = expected to change once Phase 2 confirms real values. R6 isn't marked — see the R5-removal note above for why the old two-resistor bias network was dropped in favour of R6 alone.
 

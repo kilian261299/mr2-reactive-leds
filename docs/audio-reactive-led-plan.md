@@ -42,7 +42,7 @@ A small monitoring speaker is also tapped across the R wire and shared ground (n
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list below (R5 removed).
+**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list below.
 
 ### Testing circuit — component list
 
@@ -53,7 +53,7 @@ Shield wire (ground) → GND
    (shared ground reference for the whole circuit — from a 3.5mm
    breakout cable, standard RCA-style white=L/red=R colour coding)
 
-Node S → R3 (10kΩ) → Node A
+Node S → R3 (1kΩ) → Node A
 Node A → R4 (1kΩ) → GND
 
 Node A → D1 (1N4007) → Node B
@@ -67,6 +67,8 @@ Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 
 **R5 removed (design correction):** the original two-resistor bias network (R5 to 3.3V, R6 to GND) set Node B's resting/silent voltage at their midpoint, 1.65V. Worked through numerically against the R3/R4 divider's realistic output, that's a problem: D1 only conducts once Node A exceeds Node B's voltage by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A just to register anything — but Node A's actual peak, after R3/R4 attenuation, is only ~0.14–0.51V for realistic laptop/car-radio signal levels. The diode would essentially never conduct; the circuit would sit at a fixed ~1.65V regardless of music. Dropping R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V instead, so D1 only needs to clear its own ~0.3–0.6V forward drop — well within reach of the signal actually available. This is also just the standard, single-resistor diode-envelope-detector topology; R5 wasn't buying anything a plain design doesn't already handle better. One secondary effect: removing R5 also removes it as a parallel discharge path, so the decay time constant becomes R6 × C1 alone (slower than before) — a minor factor folded into the R3/R4/C1 retuning already planned for Phase 2.
 
+**R3 changed 10kΩ → 1kΩ (second design correction, same root cause):** the original 10kΩ:1kΩ divider (a ~0.09 ratio, ~11× attenuation) was sized to protect the ADC pin against an unconfirmed, possibly-hot car radio signal — the ESP32's ADC pin has a hard 3.3V maximum, and exceeding it risks damaging the chip, not just producing a bad reading. But worked through the actual numbers, that ratio is far more conservative than the protection goal needs: against a worst-case estimated ~5.6V peak (unconfirmed, from the ~4V RMS car-radio-voltage upper estimate), landing safely under 3.3V with real margin only requires roughly a 1:1 ratio (~0.45), not 11×. With R5 now gone and D1's threshold down to just its own ~0.3–0.6V forward drop, this leftover over-attenuation became the new bottleneck: the old ratio put a laptop's ~1.5V peak at only ~0.14V at Node A — likely still below the diode's threshold, making even bench testing marginal. R3 = R4 = 1kΩ (~0.5 ratio, ~2× attenuation) brings laptop peaks to ~0.75V and a low car-radio estimate (~2.8V peak) to ~1.4V, both clearing D1 comfortably, while the worst-case ~5.6V estimate still lands around 2.8V — under the 3.3V ceiling with margin. **Caveat:** the 5.6V worst-case itself is unconfirmed (the Kenwood DPX-07MD's actual preamp voltage was never measured), so treat this the same as every other `*`-marked value — a reasoned bench starting point, not a final answer; watch for ADC clipping once real radio access is available in Phase 3, per the headroom-tuning guidance below.
+
 Values are starting points for Phase 2 — expect to retune R3/R4 (divider ratio) and C1 (smoothing, now also jointly setting decay rate with R6) once you're actually watching the LED respond to real music.
 
 ### Production setup — full pipeline
@@ -79,7 +81,7 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list below (R5 removed).
+**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list below.
 
 ### Production circuit — component list
 
@@ -91,7 +93,7 @@ RCA shield/ground → GND
    note below, this must be the RCA tap's own shield, not a
    separate chassis point)
 
-Node S → R3 (10kΩ*) → Node A
+Node S → R3 (1kΩ*) → Node A
 Node A → R4 (1kΩ*) → GND
 
 Node A → D1 (1N4007) → Node B
