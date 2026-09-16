@@ -34,7 +34,9 @@ WS2812B LED strips (existing LEFT_LED_PIN / RIGHT_LED_PIN)
 
 This is the complete bench-test signal path: a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit), summed and conditioned, into a spare ESP32-C3 module, driving the addressable LED strip. This is the testing configuration only — the production install uses the car's actual RCA tap and the ESP32-C3 installed in the car, not a phone/PC or this spare board.
 
-**Testing board update:** originally planned around a full ESP32 dev board (hence the `GPIO34` references still in the historical Phase 1 prompt below). A spare ESP32-C3 module turned out to be available instead, which is actually simpler: it's the same chip as production, so the audio ADC pin (`GPIO1`) is identical on both, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. See the updated pinout table below.
+A small monitoring speaker is also tapped across the R wire and shared ground (not part of the conditioning circuit itself) so you can hear what's actually playing while watching the LED/Serial response — useful for correlating specific sounds (bass hits, vocals, silence) with the tuned behaviour during Stage A/B below.
+
+**Testing board update:** originally planned around a full ESP32 dev board (`GPIO34`/`GPIO5`). A spare ESP32-C3 module turned out to be available instead, which is actually simpler: it's the same chip as production, so the audio ADC pin (`GPIO1`) is identical on both, and Phase 2 tuning carries straight into Phase 4 with no pin remapping. See the updated pinout table below.
 
 ### Testing circuit — schematic
 
@@ -120,59 +122,24 @@ Used for bench testing only — a separate, spare ESP32-C3 module, not the one i
 
 The 3.3V choice here is deliberate, not just "good enough": powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Power the strip at 5V instead (also an option — most ESP32-C3 modules break out a `5V`/`VIN` pin) and the data line's 3.3V logic may not reliably clear the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has one (SN74AHCT125N). Trade-off either way: 3.3V power slightly under-drives the LED chips (usually just dimmer/less accurate colour, not broken); 5V power without a level shifter risks flicker or no response, more likely as the strip/wire gets longer.
 
-### Pinout — production board (ESP32-C3, already installed)
+### Pinout — production board (ESP32-C3, new PCB revision)
 
 | Pin/net | Connects to | Purpose |
 |---|---|---|
-| `GPIO1` | Breakout board's conditioning circuit output (Node B) | ADC audio input — **new addition**, currently free |
+| `GPIO1` | Conditioning circuit output (Node B), routed directly on the new PCB | ADC audio input — **new addition**, currently free |
 | `LEFT_LED_PIN` / `RIGHT_LED_PIN` | Existing LED strips | **Unchanged** — reuses the current output path, no new strip or data pin |
-| `3.3V` (existing PCB net) | Breakout board's `3.3V` in | Powers the new conditioning circuit |
-| `GND` (existing PCB net) | Breakout board's `GND` — **which must trace to the RCA tap's own ground/shield**, not a separate chassis point | Common ground — see Ground note above |
+| `3V3` (existing board net) | Conditioning circuit's bias network (R5/R6) | Powers the new conditioning circuit — same net the rest of the board already uses |
+| `GND` (existing board net) | Conditioning circuit ground — **which must trace to the RCA tap's own ground/shield**, tied into the board's single shared ground plane | Common ground — see Ground note above |
 
-The only genuinely new wiring on the production board is three connections to the breakout: `3.3V`, `GND`, and `GPIO1`. Everything else (LED strips, level shifter, encoder, accelerometer) is completely untouched.
+The audio circuit is now part of the same PCB as everything else — R1–R6, D1, and C1 sit alongside the existing components, with a new connector for the RCA input (matching the J2–J5 style already used for the LED outputs, MPU6050, and encoder). Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
 
 ---
 
-## Phase 1: GitHub setup
+## Phase 1: GitHub setup — Complete
 
-Prompt for Claude Code:
+The repo scaffolding is done: this plan document and its images are committed at `docs/audio-reactive-led-plan.md`, the bench-test sketch exists at `firmware/tests/04_audio_reactive_test/`, `hardware/audio-breakout.md` documents the conditioning circuit, and a new build log section tracks this as a separate addition on top of the completed core project. The v2.x firmware line was left untouched throughout.
 
-```
-I want to add a new audio-reactive LED feature to this project.
-Read docs/build-log.md and firmware/README.md first for context
-on how this repo is organized.
-
-First, add this plan document to the repo at
-docs/audio-reactive-plan.md, including its images at
-images/audio-circuit/testing_setup_overview.png,
-images/audio-circuit/testing_circuit_schematic.png,
-images/audio-circuit/production_setup_overview.png, and
-images/audio-circuit/production_circuit_schematic.png. Commit it.
-
-Then set up:
-1. firmware/tests/04_audio_reactive_test/ — a new bench-test
-   sketch that reads an audio envelope on an ADC pin, smooths it,
-   and drives a real addressable LED strip using the same
-   Adafruit_NeoPixel approach as the main firmware. This test
-   runs on a full ESP32 dev board, not the ESP32-C3 the main
-   controller uses (that board is installed in the car) — note
-   this clearly in the sketch so pin numbers aren't confused with
-   the production board later.
-2. hardware/audio-breakout.md — a new file documenting the audio
-   conditioning circuit: mono-summed front L/R RCA tap, resistor
-   divider, diode rectifier, smoothing capacitor, bias network.
-   I'll fill in exact component values once bench-tested.
-3. A new section in docs/build-log.md, clearly separated from the
-   existing stages — this is a new experimental addition on top
-   of the completed core project, not a continuation of it.
-
-Commit each piece separately with a clear message, so the history
-stays readable.
-
-Don't touch the main firmware versions (v2.2 etc) — this is
-bench-test-first, same as how the encoder and accelerometer were
-originally validated before joining the real firmware.
-```
+**Note:** `hardware/audio-breakout.md`'s content will need revisiting once Phase 3 begins, since it currently describes a standalone breakout board — Phase 3 below has since changed to a full PCB integration instead.
 
 ---
 
@@ -195,20 +162,26 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 
 ---
 
-## Phase 3: Build the permanent circuit
+## Phase 3: Remanufacture the PCB with the audio circuit integrated
+
+Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision).
 
 - [ ] Confirm the RGB/addressable LED and conditioning circuit values from Phase 2
-- [ ] Solder the confirmed values onto a small perfboard/breakout board
-- [ ] Tap Front Left + Front Right RCA, plus ground/shield, in parallel at the radio harness (see Ground note above)
-- [ ] Connect breakout GND to the existing PCB's ground net (same single ground path — see note above)
-- [ ] Connect breakout 3.3V and signal output to the existing PCB's 3.3V and `GPIO1`
+- [ ] In the EasyEDA project, add R1–R6, D1, and C1 as new components, matching the confirmed values
+- [ ] Add a new connector for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
+- [ ] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
+- [ ] Tie the new circuit's ground and 3.3V into the board's existing GND and 3V3 nets — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane
+- [ ] Run design checks (ERC/DRC) same as the original board
+- [ ] Submit Gerbers to JLCPCB
+- [ ] Assemble the new board once manufactured, bench-test before installing (same validation approach used for the original PCB and its replacement)
+- [ ] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout
 
 ---
 
 ## Phase 4: Install and integrate the firmware
 
-- [ ] Mount the breakout board in the control box
-- [ ] Route the RCA tap wires to the radio harness
+- [ ] Install the new PCB revision in the control box, replacing the currently-installed board
+- [ ] Tap Front Left + Front Right RCA, plus ground/shield, in parallel at the radio harness (see Ground note above)
 - [ ] Add a new mode to the real firmware (new version, e.g. v2.5, branching from the current final v2.4.1), using Phase 2's tuned values, driving the actual strips through the existing `setStrip()` / NeoPixel functions
 - [ ] Test in the car with real music — expect some retuning against real strips, cabin acoustics, and road noise
-- [ ] Update `docs/build-log.md` and the firmware changelog with results
+- [ ] Update `docs/build-log.md` and the firmware changelog with results, including documenting the new PCB revision (matching how the original GPIO4-fault replacement was documented)
