@@ -289,14 +289,6 @@ All major system functions operated correctly with the PCB and buck converter in
 
 The buck converter is installed inside the control box but will be tested using the vehicle's 12V supply during vehicle installation.
 
-### Control Box Photos
+### Control Box Photo
 
-Photos documenting the completed control box and PCB installation are included below.
-
-![Completed Control Box Outside](../images/control-box/control_box.jpg)
-
-![Completed Control Box Inside](../images/control-box/pcb_mounted.jpg)
-
-![Buck Converter and Control Box Wiring](../images/control-box/control_box_wiring.jpg)
-
-![Completed Control Box](../images/control-box/control_box_complete.jpg)
+![Completed Control Box](../images/control-box/control_box.jpeg)
