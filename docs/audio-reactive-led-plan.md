@@ -42,6 +42,8 @@ A small monitoring speaker is also tapped across the R wire and shared ground (n
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
+**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list below (R5 removed).
+
 ### Testing circuit — component list
 
 ```
@@ -58,13 +60,14 @@ Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
 
-Node B → R5 (10kΩ) → 3.3V
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 ```
 
-Values are starting points for Phase 2 — expect to retune R3/R4 (divider ratio) and C1 (smoothing) once you're actually watching the LED respond to real music.
+**R5 removed (design correction):** the original two-resistor bias network (R5 to 3.3V, R6 to GND) set Node B's resting/silent voltage at their midpoint, 1.65V. Worked through numerically against the R3/R4 divider's realistic output, that's a problem: D1 only conducts once Node A exceeds Node B's voltage by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A just to register anything — but Node A's actual peak, after R3/R4 attenuation, is only ~0.14–0.51V for realistic laptop/car-radio signal levels. The diode would essentially never conduct; the circuit would sit at a fixed ~1.65V regardless of music. Dropping R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V instead, so D1 only needs to clear its own ~0.3–0.6V forward drop — well within reach of the signal actually available. This is also just the standard, single-resistor diode-envelope-detector topology; R5 wasn't buying anything a plain design doesn't already handle better. One secondary effect: removing R5 also removes it as a parallel discharge path, so the decay time constant becomes R6 × C1 alone (slower than before) — a minor factor folded into the R3/R4/C1 retuning already planned for Phase 2.
+
+Values are starting points for Phase 2 — expect to retune R3/R4 (divider ratio) and C1 (smoothing, now also jointly setting decay rate with R6) once you're actually watching the LED respond to real music.
 
 ### Production setup — full pipeline
 
@@ -75,6 +78,8 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 ### Production circuit — schematic
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
+
+**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list below (R5 removed).
 
 ### Production circuit — component list
 
@@ -93,13 +98,12 @@ Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF*) → GND
 
-Node B → R5 (10kΩ) → 3.3V
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 GPIO1 (ADC input, production board)
 ```
 
-`*` marks values expected to change once Phase 2 bench testing confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** R5/R6 (bias network) aren't marked, since they're unlikely to need tuning.
+`*` marks values expected to change once Phase 2 bench testing confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** R6 isn't marked, since it's unlikely to need a value change beyond what the R3/R4/C1 retuning already covers — but see the R5-removal note above: earlier versions of this doc paired R6 with an R5 pull-up to 3.3V that turned out to make D1 never conduct at realistic signal levels, so R5 has been dropped from the design entirely.
 
 Now that testing uses a spare ESP32-C3 module (see "Testing board update" above), this circuit and the testing circuit are topologically identical, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
 
@@ -115,7 +119,7 @@ Used for bench testing only — a separate, spare ESP32-C3 module, not the one i
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin the production board uses |
 | `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
-| `3.3V` | Conditioning circuit bias network (R5/R6), LED strip `5V`* | Power |
+| `3.3V` | LED strip `5V`* (conditioning circuit no longer draws from 3.3V — R6 alone returns to GND) | Power |
 | `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
 *Most addressable strips want 5V for reliable operation; running directly off the module's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement — the real install uses proper level shifting (below).
@@ -128,10 +132,9 @@ The 3.3V choice here is deliberate, not just "good enough": powering the strip a
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B), routed directly on the new PCB | ADC audio input — **new addition**, currently free |
 | `LEFT_LED_PIN` / `RIGHT_LED_PIN` | Existing LED strips | **Unchanged** — reuses the current output path, no new strip or data pin |
-| `3V3` (existing board net) | Conditioning circuit's bias network (R5/R6) | Powers the new conditioning circuit — same net the rest of the board already uses |
-| `GND` (existing board net) | Conditioning circuit ground — **which must trace to the RCA tap's own ground/shield**, tied into the board's single shared ground plane | Common ground — see Ground note above |
+| `GND` (existing board net) | Conditioning circuit ground — **which must trace to the RCA tap's own ground/shield**, tied into the board's single shared ground plane, and is R6's return path (the discharge/bias resistor) | Common ground — see Ground note above |
 
-The audio circuit is now part of the same PCB as everything else — R1–R6, D1, and C1 sit alongside the existing components, with a new connector for the RCA input (matching the J2–J5 style already used for the LED outputs, MPU6050, and encoder). Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
+The audio circuit is now part of the same PCB as everything else — R1–R4, R6, D1, and C1 sit alongside the existing components, with a new connector for the RCA input (matching the J2–J5 style already used for the LED outputs, MPU6050, and encoder). No `3V3` connection is needed for the conditioning circuit itself — R5 was dropped from the design (see the component list note above), so nothing in this circuit draws from the 3.3V rail. Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
 
 ---
 
@@ -169,10 +172,10 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision).
 
 - [ ] Confirm the RGB/addressable LED and conditioning circuit values from Phase 2
-- [ ] In the EasyEDA project, add R1–R6, D1, and C1 as new components, matching the confirmed values
+- [ ] In the EasyEDA project, add R1–R4, R6, D1, and C1 as new components, matching the confirmed values (R5 dropped from the design — see the component list note above)
 - [ ] Add a new connector for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
 - [ ] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
-- [ ] Tie the new circuit's ground and 3.3V into the board's existing GND and 3V3 nets — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane
+- [ ] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
 - [ ] Run design checks (ERC/DRC) same as the original board
 - [ ] Submit Gerbers to JLCPCB
 - [ ] Assemble the new board once manufactured, bench-test before installing (same validation approach used for the original PCB and its replacement)

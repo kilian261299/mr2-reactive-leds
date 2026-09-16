@@ -50,7 +50,6 @@ Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
 
-Node B → R5 (10kΩ) → 3.3V
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
@@ -58,17 +57,21 @@ Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
+**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list above (R5 removed).
+
 | Component | Role |
 |---|---|
 | R1 / R2 (2.2kΩ) | Series input resistors, sum L+R to mono and limit current from the audio source |
 | R3 / R4 (10kΩ / 1kΩ) | Voltage divider, scales the line-level signal down before rectification |
 | D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
-| R5 / R6 (10kΩ / 10kΩ) | Bias network — centres the resting (silent) voltage within the ADC's readable range |
+| R6 (10kΩ) | Discharge/bias resistor to GND — sets both the resting (silent) voltage (~0V) and, together with C1, the envelope's decay rate |
 
 **On D1's part choice:** a 1N4007 (general-purpose power rectifier) is used here rather than the more typical small-signal choice (e.g. 1N4148), based on what was already on hand. The 1N4007 switches much slower than a dedicated signal diode — normally a mismatch for audio-frequency work, but not a practical problem here, since C1 is deliberately the slow part of this circuit already, turning the rectified signal into a "how loud is the music right now" envelope over hundreds of milliseconds. The diode's speed was never the limiting factor for something changing that slowly.
 
-R3/R4 (divider ratio) and C1 (smoothing) are the values expected to need retuning once real audio is flowing — everything else is a reasonable starting point unlikely to need changing.
+**On dropping R5 (design correction):** earlier versions of this circuit paired R6 with a second resistor, R5, pulling Node B up to 3.3V — a two-resistor bias network centring the resting voltage at their midpoint, 1.65V. Checked numerically against the R3/R4 divider's realistic output, that's incompatible: D1 only conducts once Node A exceeds Node B by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A — but Node A's realistic peak after R3/R4 attenuation is only ~0.14–0.51V. The diode would essentially never conduct, and the circuit would sit at a fixed ~1.65V regardless of music. Removing R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V, so D1 only needs to clear its own ~0.3–0.6V forward drop — achievable with the signal actually available, and also just the standard single-resistor diode-envelope-detector topology. Secondary effect: R6 is now the sole discharge path (previously R5 || R6), so the decay time constant is slower than before — worth factoring into C1 retuning below.
+
+R3/R4 (divider ratio) and C1 (smoothing, now jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
 
 ### Testing pinout (spare ESP32-C3 module)
 
@@ -76,7 +79,7 @@ R3/R4 (divider ratio) and C1 (smoothing) are the values expected to need retunin
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin production uses |
 | `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
-| `3.3V` | Conditioning circuit bias network (R5/R6), LED strip `5V`* | Power |
+| `3.3V` | LED strip `5V`* (conditioning circuit no longer draws from 3.3V — R6 alone returns to GND) | Power |
 | `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
 \*Most addressable strips want 5V for reliable operation; running directly off the module's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement. This choice is deliberate, not just "good enough": powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Powering at 5V instead (most ESP32-C3 modules break out a `5V`/`VIN` pin) risks the data line's 3.3V logic not reliably clearing the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has one (SN74AHCT125N).
@@ -102,7 +105,6 @@ Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF*) → GND
 
-Node B → R5 (10kΩ) → 3.3V
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 GPIO1 (ADC input, production board)
@@ -110,7 +112,9 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-`*` = expected to change once Phase 2 confirms real values. R5/R6 aren't marked — the bias network is unlikely to need tuning.
+**⚠ Out of date:** this image still shows R5. Needs regenerating to match the component list above (R5 removed).
+
+`*` = expected to change once Phase 2 confirms real values. R6 isn't marked — see the R5-removal note above for why the old two-resistor bias network was dropped in favour of R6 alone.
 
 ### Production pinout (ESP32-C3, already installed)
 
@@ -118,10 +122,9 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 |---|---|---|
 | `GPIO1` | Breakout board's conditioning circuit output (Node B) | ADC audio input — **new addition**, currently free |
 | `LEFT_LED_PIN` / `RIGHT_LED_PIN` | Existing LED strips | **Unchanged** — reuses the current output path, no new strip or data pin |
-| `3.3V` (existing PCB net) | Breakout board's `3.3V` in | Powers the new conditioning circuit |
-| `GND` (existing PCB net) | Breakout board's `GND` — **which must trace to the RCA tap's own ground/shield**, not a separate chassis point | Common ground — see Ground note below |
+| `GND` (existing PCB net) | Breakout board's `GND` — **which must trace to the RCA tap's own ground/shield**, not a separate chassis point, and is R6's return path | Common ground — see Ground note below |
 
-The only genuinely new wiring on the production board is three connections to the breakout: `3.3V`, `GND`, and `GPIO1`. Everything else (LED strips, level shifter, encoder, accelerometer) is completely untouched.
+The only genuinely new wiring on the production board is two connections to the breakout: `GND` and `GPIO1`. No `3.3V` connection is needed — R5 was dropped from the design (see the component list note above). Everything else (LED strips, level shifter, encoder, accelerometer) is completely untouched.
 
 ---
 
@@ -140,3 +143,4 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 - [ ] Confirm R1/R2 (summing resistors), R3/R4 (divider ratio), and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
 - [ ] Confirm D1 (1N4007, chosen for availability rather than being a purpose-picked signal diode — see the note above for why that's expected to be fine, but not yet bench-verified)
+- [ ] Regenerate the testing and production schematic images — both still show the now-removed R5

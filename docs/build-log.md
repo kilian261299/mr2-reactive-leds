@@ -703,11 +703,13 @@ The two testing images were updated again to add a monitoring speaker, tapped ac
 
 Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — **the ESP32-C3 installed in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (laptop/phone-audio tuning) checklist — real-radio validation has moved to Phase 3, since the car's actual RCA wiring isn't practically accessible without opening up the already-installed system.
 
+**Design correction, found before any bench-testing began:** working through the circuit and firmware numerically (not yet on the bench) surfaced a bias-point problem in the originally-specified R5/R6 network. R5 (10kΩ to 3.3V) and R6 (10kΩ to GND) together set the envelope's resting voltage at 1.65V, but the diode D1 only conducts once Node A exceeds that resting voltage by its own forward drop (~0.3–0.6V) — and Node A's realistic peak, after the R3/R4 divider, is only ~0.14–0.51V for laptop or car-radio-level signals. Roughly 4–15x too small to ever clear the threshold; the circuit would have sat at a fixed ~1.65V regardless of music, an unresponsive constant brightness. **Fix: R5 removed from the design.** R6 alone now returns Node B to GND, bringing the resting point down to ~0V — the standard single-resistor diode-envelope-detector topology, and well within reach of D1's own forward drop. Documented in `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md`; the two schematic images still show R5 and are pending regeneration.
+
 ## Phase 3 — Remanufacture the PCB with the Audio Circuit Integrated
 
 **Status:** Not started. Depends on confirmed component values from Phase 2.
 
-**Decision changed from the original plan:** rather than a standalone breakout board wired to the existing PCB, the audio conditioning circuit (R1–R6, D1, C1) will be added directly to a new PCB revision, alongside a new RCA input connector matching the existing J2–J5 connector style. Same EasyEDA → JLCPCB process already used for the original board, including its GPIO4-fault replacement revision. See the build plan's Phase 3 for the full checklist.
+**Decision changed from the original plan:** rather than a standalone breakout board wired to the existing PCB, the audio conditioning circuit (R1–R4, R6, D1, C1 — R5 dropped, see the design-correction note above) will be added directly to a new PCB revision, alongside a new RCA input connector matching the existing J2–J5 connector style. Same EasyEDA → JLCPCB process already used for the original board, including its GPIO4-fault replacement revision. See the build plan's Phase 3 for the full checklist.
 
 `hardware/audio-breakout.md` (which documents the now-superseded standalone-breakout design) will need revisiting once this phase starts.
 
