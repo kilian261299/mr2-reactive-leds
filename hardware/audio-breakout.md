@@ -34,17 +34,12 @@ ESP32 ADC pin (0–3.3V audio envelope)
 
 Used for Phase 2 bench testing only — a separate, spare ESP32-C3 module, not the one installed in the car. Originally planned around a full ESP32 dev board; a spare ESP32-C3 module turned out to be available instead, which is actually simpler, since it's the same chip as production — the audio ADC pin (`GPIO1`) is identical on both, so Phase 2 tuning carries straight into Phase 4 with no pin remapping.
 
-Input is a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit — both L and R channels, mono-summed via R1/R2) rather than the car's RCA outputs, as a convenient stand-in for early tuning — the same summing topology as the production circuit, just with a phone/PC headphone output instead of RCAs.
+Input is a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit) rather than the car's RCA outputs, as a convenient stand-in for early tuning — same topology as the production circuit, just with a phone/PC headphone output instead of RCAs. Currently mono (red/R2 only) — see the white-wire note below for why.
 
 ```
-White wire (L) → R1 (2.2kΩ) ──┐
-Red wire (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
-Shield wire (ground) → GND
-   (shared ground reference for the whole circuit — standard
-   RCA-style white=L/red=R colour coding on the breakout cable)
-
-Node S → R3 (1kΩ) → Node A
-Node A → R4 (1kΩ) → GND
+Red wire (signal) → R2 (470Ω) ──┐
+White wire (ground — see note) ─┤
+Shield wire (ground) ───────────┴── GND
 
 Node A → D1 (1N4007) → Node B
 
@@ -53,29 +48,37 @@ Node B → C1 (2.2µF) → GND
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
+
+(R1, 470Ω: present for a future true left-channel input,
+ currently unconnected — see white-wire note below)
 ```
+
+A small monitoring speaker taps directly across the red wire and shield, *before* R2 — a separate parallel branch, not part of the conditioning circuit's signal path.
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list above.
+**⚠ Out of date:** this image still shows R5, R3/R4, and the old R1/R2 value (2.2kΩ). Needs regenerating to match the component list above.
 
 | Component | Role |
 |---|---|
-| R1 / R2 (2.2kΩ) | Series input resistors, sum L+R to mono and limit current from the audio source |
-| R3 / R4 (1kΩ / 1kΩ) | Voltage divider, scales the line-level signal down before rectification |
+| R1 / R2 (470Ω) | Series input resistors, isolate L+R during summing and protect the source from a dead short — not for signal attenuation (see notes below) |
 | D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
 | R6 (10kΩ) | Discharge/bias resistor to GND — sets both the resting (silent) voltage (~0V) and, together with C1, the envelope's decay rate |
 
+**White wire note:** on this particular breakout cable, "white" turned out to have continuity with the shield — a second ground/drain wire, not a real left-channel conductor (cheap 3.5mm pigtail cables don't reliably follow RCA's white=L/red=R convention). It ties to the same GND node as the shield. R1 stays in the circuit for a future genuine stereo source; its input is unconnected for now, so testing runs mono through R2 only.
+
 **On D1's part choice:** a 1N4007 (general-purpose power rectifier) is used here rather than the more typical small-signal choice (e.g. 1N4148), based on what was already on hand. The 1N4007 switches much slower than a dedicated signal diode — normally a mismatch for audio-frequency work, but not a practical problem here, since C1 is deliberately the slow part of this circuit already, turning the rectified signal into a "how loud is the music right now" envelope over hundreds of milliseconds. The diode's speed was never the limiting factor for something changing that slowly.
 
-**On dropping R5 (design correction):** earlier versions of this circuit paired R6 with a second resistor, R5, pulling Node B up to 3.3V — a two-resistor bias network centring the resting voltage at their midpoint, 1.65V. Checked numerically against the R3/R4 divider's realistic output, that's incompatible: D1 only conducts once Node A exceeds Node B by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A — but Node A's realistic peak after R3/R4 attenuation is only ~0.14–0.51V. The diode would essentially never conduct, and the circuit would sit at a fixed ~1.65V regardless of music. Removing R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V, so D1 only needs to clear its own ~0.3–0.6V forward drop — achievable with the signal actually available, and also just the standard single-resistor diode-envelope-detector topology. Secondary effect: R6 is now the sole discharge path (previously R5 || R6), so the decay time constant is slower than before — worth factoring into C1 retuning below.
+**On dropping R5 (design correction):** earlier versions of this circuit paired R6 with a second resistor, R5, pulling Node B up to 3.3V — a two-resistor bias network centring the resting voltage at their midpoint, 1.65V. That's incompatible with D1 ever conducting at realistic signal levels: D1 only conducts once Node A exceeds Node B by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A just to register anything. Removing R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V, so D1 only needs to clear its own ~0.3–0.6V forward drop — the standard single-resistor diode-envelope-detector topology. Secondary effect: R6 is now the sole discharge path (previously R5 || R6), so the decay time constant is slower than before.
 
-**On changing R3 10kΩ → 1kΩ (second correction, same root cause):** the original 10kΩ:1kΩ divider (~11× attenuation) was sized to protect the ADC pin's hard 3.3V maximum against an unconfirmed, possibly-hot car radio signal — but the actual protection goal only needs roughly 2× attenuation, not 11×. With R5 gone and D1's threshold down to just its own forward drop, that leftover over-attenuation became the new bottleneck: the old ratio left even a laptop's peak too small (~0.14V at Node A) to reliably clear the diode. R3 = R4 = 1kΩ brings laptop peaks to ~0.75V, both clearing D1 with real margin.
+**R3/R4 removed entirely, R1/R2 reduced 2.2kΩ → 470Ω (further correction, same root cause):** R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, each time sized as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed no response to music at all — the combined attenuation through R2 (2.2kΩ) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1/R2 to 470Ω (still enough for channel isolation and short-circuit protection, without adding unnecessary attenuation) restored a real response on the bench.
 
-**Car radio preout voltage — now confirmed, not estimated:** the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS, which works out to roughly 2.55V peak (1.8V × √2), replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess. With R3 = R4 = 1kΩ, the real radio's worst-case Node A peak lands around ~1.27V — comfortably under the 3.3V ADC ceiling and comfortably clearing D1's threshold. Treat this the same as every other `*`-marked value in the sense that final bench/in-car confirmation is still good practice, but the ADC-protection question specifically is no longer a guess.
+**Car radio preout voltage — now confirmed, not estimated:** the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS, which works out to roughly 2.55V peak (1.8V × √2), replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess. With R3/R4 gone, Node A sees close to that full peak directly (470Ω is too small to meaningfully attenuate it) — but C1 only ever charges to `peak − D1's forward drop`, landing around ~1.95–2.25V at Node B, still comfortably under the 3.3V ADC ceiling. The ADC-protection question is no longer a guess, and no dedicated divider is needed to provide it.
 
-R3/R4 (divider ratio) and C1 (smoothing, now jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
+**A DC-blocking coupling capacitor was considered and tested, but not adopted.** Bench testing showed a large, non-audio baseline jump the instant the laptop's cable was connected — most likely a DC bias specific to that laptop's headphone output (ground loops and a cable fault were both ruled out). A coupling capacitor plus a bleed resistor would filter that out, and is standard practice for audio inputs generally, but wasn't adopted here: a proper automotive RCA preout is almost always internally AC-coupled already, so the production circuit likely doesn't have this problem, and it proved fiddly to get working reliably on a breadboard. Whether to add it as cheap protective margin on the `v2` PCB is an open decision for Phase 3 — it is *not* part of the current circuit.
+
+R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
 
 ### Testing pinout (spare ESP32-C3 module)
 
@@ -95,15 +98,12 @@ R3/R4 (divider ratio) and C1 (smoothing, now jointly setting decay rate with R6)
 Now that testing uses a spare ESP32-C3 module, this circuit is topologically identical to the testing circuit, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
 
 ```
-Front Left RCA  → R1 (2.2kΩ*) ──┐
-Front Right RCA → R2 (2.2kΩ*) ──┼── Node S (mono sum)
+Front Left RCA  → R1 (470Ω*) ──┐
+Front Right RCA → R2 (470Ω*) ──┼── Node A
 RCA shield/ground → GND
    (shared ground reference for the whole circuit — see Ground
    note below, must be the RCA tap's own shield, not a separate
    chassis point)
-
-Node S → R3 (1kΩ*) → Node A
-Node A → R4 (1kΩ*) → GND
 
 Node A → D1 (1N4007) → Node B
 
@@ -116,9 +116,9 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5 and the old R3 value (10kΩ). Needs regenerating to match the component list above.
+**⚠ Out of date:** this image still shows R5, R3/R4, and the old R1/R2 value (2.2kΩ). Needs regenerating to match the component list above.
 
-`*` = expected to change once Phase 2 confirms real values. R6 isn't marked — see the R5-removal note above for why the old two-resistor bias network was dropped in favour of R6 alone.
+`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R1/R2 exist only for channel isolation and short-circuit protection. R6 isn't marked — see the R5-removal note above for why the old two-resistor bias network was dropped in favour of R6 alone.
 
 ### Production pinout (ESP32-C3, already installed)
 
@@ -144,7 +144,8 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 ## Open Items (Before Phase 3)
 
-- [ ] Confirm R1/R2 (summing resistors), R3/R4 (divider ratio), and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
+- [ ] Confirm R1/R2 (summing/isolation resistors) and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
 - [ ] Confirm D1 (1N4007, chosen for availability rather than being a purpose-picked signal diode — see the note above for why that's expected to be fine, but not yet bench-verified)
-- [ ] Regenerate the testing and production schematic images — both still show the now-removed R5
+- [ ] Decide whether to add the DC-blocking coupling capacitor + bleed resistor considered but not adopted during Phase 2 (see the note above)
+- [ ] Regenerate the testing and production schematic images — both still show R5, R3/R4, and the old R1/R2 value

@@ -45,14 +45,9 @@ A small monitoring speaker is also tapped across the R wire and shared ground (n
 ### Testing circuit — component list
 
 ```
-White wire (L) → R1 (2.2kΩ) ──┐
-Red wire (R)   → R2 (2.2kΩ) ──┼── Node S (mono sum)
-Shield wire (ground) → GND
-   (shared ground reference for the whole circuit — from a 3.5mm
-   breakout cable, standard RCA-style white=L/red=R colour coding)
-
-Node S → R3 (1kΩ) → Node A
-Node A → R4 (1kΩ) → GND
+Red wire (signal) → R2 (470Ω) ──┐
+White wire (ground — see note) ─┤
+Shield wire (ground) ───────────┴── GND
 
 Node A → D1 (1N4007) → Node B
 
@@ -61,15 +56,24 @@ Node B → C1 (2.2µF) → GND
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
+
+(R1, 470Ω: present for a future true left-channel input,
+ currently unconnected — see white-wire note below)
 ```
 
-**R5 removed (design correction):** the original two-resistor bias network (R5 to 3.3V, R6 to GND) set Node B's resting/silent voltage at their midpoint, 1.65V. Worked through numerically against the R3/R4 divider's realistic output, that's a problem: D1 only conducts once Node A exceeds Node B's voltage by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A just to register anything — but Node A's actual peak, after R3/R4 attenuation, is only ~0.14–0.51V for realistic laptop/car-radio signal levels. The diode would essentially never conduct; the circuit would sit at a fixed ~1.65V regardless of music. Dropping R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V instead, so D1 only needs to clear its own ~0.3–0.6V forward drop — well within reach of the signal actually available. This is also just the standard, single-resistor diode-envelope-detector topology; R5 wasn't buying anything a plain design doesn't already handle better. One secondary effect: removing R5 also removes it as a parallel discharge path, so the decay time constant becomes R6 × C1 alone (slower than before) — a minor factor folded into the R3/R4/C1 retuning already planned for Phase 2.
+A small monitoring speaker taps directly across the red wire and shield, *before* R2 — a separate parallel branch off the raw source connection, not part of the conditioning circuit's signal path.
 
-**R3 changed 10kΩ → 1kΩ (second design correction, same root cause):** the original 10kΩ:1kΩ divider (a ~0.09 ratio, ~11× attenuation) was sized to protect the ADC pin against an unconfirmed, possibly-hot car radio signal — the ESP32's ADC pin has a hard 3.3V maximum, and exceeding it risks damaging the chip, not just producing a bad reading. But worked through the actual numbers, that ratio is far more conservative than the protection goal needs. R3 = R4 = 1kΩ (~0.5 ratio, ~2× attenuation) brings laptop peaks to ~0.75V and a low car-radio estimate (~2.8V peak) to ~1.4V, both clearing D1 comfortably.
+**White wire note:** on this particular breakout cable, the "white" wire turned out to have continuity with the shield — it's a second ground/drain wire, not a real left-channel conductor (common on cheap 3.5mm pigtail cables, which don't follow RCA's white=L/red=R convention). It ties to the same GND node as the shield. R1 stays in the circuit for whenever a genuine stereo source is available, but its input side is unconnected for now — testing currently runs mono, through R2 only.
 
-**Car radio preout voltage — now confirmed, not estimated:** the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout level of 1.8V RMS into a 10kΩ load. That's the output stage's own voltage-swing ceiling (the same hardware drives every source — CD, MD, AUX, tuner — the "(FM)" just notes the test condition used to rate it), so a full-scale peak works out to roughly 1.8V × √2 ≈ **2.55V peak** — replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess entirely, and landing well inside what was assumed. With R3 = R4 = 1kΩ, that puts the real radio's worst-case Node A peak at only ~1.27V — comfortably under the 3.3V ADC ceiling (2V+ margin) and comfortably clearing D1's forward-drop threshold. The production circuit's ADC-protection margin is no longer a guess. **Caveat:** the laptop bench-testing margin (~0.75V peak vs. D1's estimated ~0.3–0.6V forward drop) is a separate question, still worth watching in Stage A — this confirmed spec only resolves the real-radio side.
+**R5 removed (design correction):** the original two-resistor bias network (R5 to 3.3V, R6 to GND) set Node B's resting/silent voltage at their midpoint, 1.65V. Worked through numerically against the divider's realistic output at the time, that's a problem: D1 only conducts once Node A exceeds Node B's voltage by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A just to register anything — but Node A's actual peak was nowhere near that. The diode would essentially never conduct; the circuit would sit at a fixed ~1.65V regardless of music. Dropping R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V instead, so D1 only needs to clear its own ~0.3–0.6V forward drop. This is also just the standard, single-resistor diode-envelope-detector topology; R5 wasn't buying anything a plain design doesn't already handle better.
 
-Values are starting points for Phase 2 — expect to retune R3/R4 (divider ratio) and C1 (smoothing, now also jointly setting decay rate with R6) once you're actually watching the LED respond to real music.
+**R3/R4 removed entirely, R1/R2 reduced 2.2kΩ → 470Ω (further design correction, same root cause):** R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, sized each time as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed the circuit essentially dead — no response to music at all — because the combined attenuation through R2 (2.2kΩ) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1/R2 to 470Ω (still enough to isolate the two channels during summing and protect the source from a dead short, just without adding unnecessary attenuation on top) restored a real, visible response on the bench. This is safe for the production circuit too: with no divider at all, the ADC is protected purely by D1's own forward drop — see the confirmed radio-voltage note below for the resulting margin.
+
+**Car radio preout voltage — now confirmed, not estimated:** the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout level of 1.8V RMS into a 10kΩ load. That's the output stage's own voltage-swing ceiling (the same hardware drives every source — CD, MD, AUX, tuner — the "(FM)" just notes the test condition used to rate it), so a full-scale peak works out to roughly 1.8V × √2 ≈ **2.55V peak** — replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess entirely. With R3/R4 now removed, Node A sees close to that full 2.55V peak directly (R1/R2 at 470Ω is too small to meaningfully attenuate it) — but C1 only ever charges to `peak − D1's forward drop`, landing around **1.95–2.25V** at Node B, still comfortably under the ADC's 3.3V ceiling (1V+ margin). The production circuit's ADC-protection margin is no longer a guess, and no dedicated divider is needed to provide it.
+
+**A DC-blocking coupling capacitor was considered and tested, but not adopted.** Bench testing surfaced a large, non-audio baseline jump the instant the laptop's audio cable was connected (before any music played), most likely a DC bias specific to that laptop's headphone output — ruled out ground loops and cable faults as the cause. A coupling capacitor (paired with a bleed resistor to give the post-cap node a defined reference) would filter that out, and is genuinely standard practice for audio inputs. It wasn't adopted here because: (1) a proper automotive RCA preout is almost always internally AC-coupled already, so the production circuit likely doesn't have this problem at all — nothing in the confirmed Kenwood spec suggests otherwise; (2) it proved fiddly to get working reliably on a breadboard. Whether to add this as cheap protective margin on the `v2` PCB is left as an open decision for Phase 3, not resolved here — it is *not* part of the current circuit.
+
+Values are starting points for Phase 2 — expect to retune R1/R2 and C1 (smoothing, jointly setting decay rate with R6) once you're actually watching the LED respond to real music.
 
 ### Production setup — full pipeline
 
@@ -84,15 +88,12 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 ### Production circuit — component list
 
 ```
-Front Left RCA  → R1 (2.2kΩ*) ──┐
-Front Right RCA → R2 (2.2kΩ*) ──┼── Node S (mono sum)
+Front Left RCA  → R1 (470Ω*) ──┐
+Front Right RCA → R2 (470Ω*) ──┼── Node A
 RCA shield/ground → GND
    (shared ground reference for the whole circuit — see Ground
    note below, this must be the RCA tap's own shield, not a
    separate chassis point)
-
-Node S → R3 (1kΩ*) → Node A
-Node A → R4 (1kΩ*) → GND
 
 Node A → D1 (1N4007) → Node B
 
@@ -103,7 +104,7 @@ Node B → R6 (10kΩ) → GND
 Node B → ESP32-C3 GPIO1 (ADC input, production board)
 ```
 
-`*` marks values expected to change once Phase 2 bench testing confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** R3/R4's ADC-protection margin is now backed by the Kenwood DPX-07MD's confirmed preout spec (see the note above) rather than a guess, so these are unlikely to need changing for safety — the `*` is kept mainly as a formality pending an actual bench/in-car check, not because the values are expected to move. R6 isn't marked, since it's unlikely to need a value change beyond what the R3/R4/C1 retuning already covers — but see the R5-removal note above: earlier versions of this doc paired R6 with an R5 pull-up to 3.3V that turned out to make D1 never conduct at realistic signal levels, so R5 has been dropped from the design entirely.
+`*` marks values expected to move once Phase 2 bench testing (and Phase 3's real-radio check) confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** There is no longer a dedicated divider stage (R3/R4 removed — see the note above); R1/R2 exist only to isolate the two channels during summing and protect the source from a dead short, not to attenuate the signal, and the ADC-protection margin now comes purely from D1's own forward drop against the Kenwood DPX-07MD's confirmed preout spec. R6 isn't marked, since it's unlikely to need a value change beyond what the R1/R2/C1 retuning already covers — but see the R5-removal note above: earlier versions of this doc paired R6 with an R5 pull-up to 3.3V that turned out to make D1 never conduct at realistic signal levels, so R5 has been dropped from the design entirely.
 
 Now that testing uses a spare ESP32-C3 module (see "Testing board update" above), this circuit and the testing circuit are topologically identical, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
 
@@ -134,7 +135,7 @@ The 3.3V choice here is deliberate, not just "good enough": powering the strip a
 | `LEFT_LED_PIN` / `RIGHT_LED_PIN` | Existing LED strips | **Unchanged** — reuses the current output path, no new strip or data pin |
 | `GND` (existing board net) | Conditioning circuit ground — **which must trace to the RCA tap's own ground/shield**, tied into the board's single shared ground plane, and is R6's return path (the discharge/bias resistor) | Common ground — see Ground note above |
 
-The audio circuit is now part of the same PCB as everything else — R1–R4, R6, D1, and C1 sit alongside the existing components, with a new connector for the RCA input (matching the J2–J5 style already used for the LED outputs, MPU6050, and encoder). No `3V3` connection is needed for the conditioning circuit itself — R5 was dropped from the design (see the component list note above), so nothing in this circuit draws from the 3.3V rail. Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
+The audio circuit is now part of the same PCB as everything else — R1, R2, R6, D1, and C1 sit alongside the existing components, with a new connector for the RCA input (matching the J2–J5 style already used for the LED outputs, MPU6050, and encoder). No `3V3` connection is needed for the conditioning circuit itself — R5 was dropped from the design (see the component list note above), so nothing in this circuit draws from the 3.3V rail. Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
 
 ---
 
@@ -155,14 +156,14 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 - [ ] Wire audio output to `GPIO1`, LED data to `GPIO7` (or confirmed equivalents)
 - [ ] Flash the Phase 1 test sketch
 - [ ] Feed it laptop/phone headphone audio (line-level output, good first stand-in for the radio)
-- [ ] Tune R3/R4 (divider ratio) and C1 (smoothing) by watching how the LED actually responds
+- [ ] Tune R1/R2 and C1 (smoothing) by watching how the LED actually responds
 
 **Real-radio validation moved to Phase 3.** The car's actual RCA wiring isn't practically accessible without opening up the already-installed system — not worth the risk to a working install just to bench-test. Two consequences, both accepted:
 
-- **The head unit's actual preamp output voltage is now confirmed.** The Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS (~2.55V peak), well inside what was previously assumed (~2–4V RMS). Switching the head unit's internal amp off (already done here, since an external amp is used) doesn't affect this — RCA preamp outs are a separate signal path from the internal amp regardless of that setting. See the R3/R4 divider note above for what this means for ADC-protection margin.
-- **R3/R4 should still be tuned for headroom, not precision, on the bench.** Aim for loud laptop content to land around the middle of the ADC's range, not near the top — even with the confirmed spec giving comfortable margin, it's still good practice, and laptop/phone levels don't necessarily match the real radio's. Undershooting the range only costs resolution (`audioFloor`/`audioCeiling` in firmware can rescale around that later); overshooting it clips at the ADC's 3.3V ceiling, which firmware cannot recover — every loud moment reads identically "maxed out," losing exactly the dynamics this feature cares about. See Phase 3 for validating this in the car once real hardware is available.
+- **The head unit's actual preamp output voltage is now confirmed.** The Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS (~2.55V peak), well inside what was previously assumed (~2–4V RMS). Switching the head unit's internal amp off (already done here, since an external amp is used) doesn't affect this — RCA preamp outs are a separate signal path from the internal amp regardless of that setting. See the confirmed-voltage note above for what this means for ADC-protection margin now that there's no dedicated divider.
+- **R1/R2 and C1 should still be tuned by ear/Serial-monitor on the bench.** Watch how loud laptop content lands on the ADC's range and adjust `audioFloor`/`audioCeiling` in firmware to match what you actually see, rather than trusting the placeholder 200/3000 defaults — the confirmed spec means overshoot/clipping risk is low, but the real radio's exact levels can still differ from a laptop's. See Phase 3 for validating this in the car once real hardware is available.
 
-- [ ] **Record the working component values from Stage A** — carries into Phase 3 as a starting point, not a final answer
+- [ ] **Record the working component values and firmware `audioFloor`/`audioCeiling` from Stage A** — carries into Phase 3 as a starting point, not a final answer
 - [ ] Update the production schematic image and component list above with these values (replace the `*`-marked placeholders), noting they're laptop-derived and may still need correction per Phase 3
 
 ---
@@ -172,15 +173,16 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision).
 
 - [ ] Confirm the RGB/addressable LED and conditioning circuit values from Phase 2
-- [ ] In the EasyEDA project, add R1–R4, R6, D1, and C1 as new components, matching the confirmed values (R5 dropped from the design — see the component list note above)
+- [ ] In the EasyEDA project, add R1, R2, R6, D1, and C1 as new components, matching the confirmed values (R5, R3, and R4 all dropped from the design — see the component list note above)
+- [ ] Decide whether to add the DC-blocking coupling capacitor + bleed resistor considered but not adopted during Phase 2 bench testing (see the note above) — a cheap protective addition, not required by anything confirmed so far
 - [ ] Add a new connector for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
 - [ ] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
 - [ ] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
 - [ ] Run design checks (ERC/DRC) same as the original board
 - [ ] Submit Gerbers to JLCPCB
 - [ ] Assemble the new board once manufactured, bench-test before installing (same validation approach used for the original PCB and its replacement)
-- [ ] **First real validation against the actual car radio happens here**, on the assembled board, before permanent (re)install — this is the earliest point real RCA access is practical. Confirm R3/R4 aren't clipping (a maxed-out, unresponsive-to-volume reading is the signature) and C1's smoothing still feels right against real music.
-- [ ] If R3/R4/C1 need correction, hand-swap those specific parts on the assembled board — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
+- [ ] **First real validation against the actual car radio happens here**, on the assembled board, before permanent (re)install — this is the earliest point real RCA access is practical. Confirm the ADC isn't clipping (a maxed-out, unresponsive-to-volume reading is the signature) and C1's smoothing still feels right against real music.
+- [ ] If R1/R2/C1 need correction, hand-swap those specific parts on the assembled board — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
 - [ ] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout
 
 ---

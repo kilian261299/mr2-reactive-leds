@@ -39,7 +39,7 @@ The custom PCB was designed in EasyEDA to replace the breadboard prototype and p
 
 The PCB was designed as a two-layer FR4 board and verified against the breadboard prototype before manufacture. Full history — including the GPIO4 fault on the first assembled `v1` board and its replacement — is in [docs/pcb-design.md](../docs/pcb-design.md) and [docs/build-log.md](../docs/build-log.md).
 
-**`v2` (planned) adds the audio-reactive circuit** — R1–R4, R6, D1, C1, and a new RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist. Not yet designed.
+**`v2` (planned) adds the audio-reactive circuit** — R1, R2, R6, D1, C1, and a new RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist. Not yet designed.
 
 ---
 
