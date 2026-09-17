@@ -41,9 +41,6 @@ Red wire (signal) → R2 (470Ω) ──┐
 White wire (ground — see note) ─┤
 Shield wire (ground) ───────────┴── GND
 
-Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
-Node A → R7 (100kΩ) → GND
-
 Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
@@ -63,8 +60,6 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 | Component | Role |
 |---|---|
 | R1 / R2 (470Ω) | Series input resistors, isolate L+R during summing and protect the source from a dead short — not for signal attenuation (see notes below) |
-| C2 (~2.2–4.7µF, non-polarized) | Coupling capacitor — blocks any DC bias from the source, passes the real audio content through |
-| R7 (100kΩ) | Reference resistor for C2 — gives the post-cap node a defined path to ground instead of leaving it floating |
 | D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
 | R6 (10kΩ) | Discharge/bias resistor to GND — sets both the resting (silent) voltage (~0V) and, together with C1, the envelope's decay rate |
@@ -78,10 +73,6 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 **R3/R4 removed entirely, R1/R2 reduced 2.2kΩ → 470Ω (further correction, same root cause):** R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, each time sized as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed no response to music at all — the combined attenuation through R2 (2.2kΩ) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1/R2 to 470Ω (still enough for channel isolation and short-circuit protection, without adding unnecessary attenuation) restored a real response on the bench.
 
 **Car radio preout voltage — now confirmed, not estimated:** the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS, which works out to roughly 2.55V peak (1.8V × √2), replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess. With R3/R4 gone, Node A sees close to that full peak directly (470Ω is too small to meaningfully attenuate it) — but C1 only ever charges to `peak − D1's forward drop`, landing around ~1.95–2.25V at Node B, still comfortably under the 3.3V ADC ceiling. The ADC-protection question is no longer a guess, and no dedicated divider is needed to provide it.
-
-**C2/R7 — DC-blocking coupling capacitor, adopted for the `v2` PCB.** Bench testing showed a large, non-audio baseline jump the instant the laptop's cable was connected — most likely a DC bias specific to that laptop's headphone output (ground loops and a cable fault were both tested and ruled out). C2 blocks that steady bias while passing real audio through essentially untouched; R7 gives the post-cap node a defined reference instead of leaving it floating. Standard practice for audio inputs generally — while a proper automotive RCA preout is usually already internally AC-coupled (so the real radio may not have needed this), it's cheap insurance on a board being re-fabbed anyway.
-
-**Component choice matters: a first attempt using two polarized electrolytics wired back-to-back failed and stayed failed, even after reseating.** That trick only works for signals that are purely symmetric AC with no sustained DC offset — the opposite of what's needed here, since blocking a *sustained* bias puts one of the two caps under continuous reverse bias rather than the brief, symmetric reverse-bias the trick tolerates. Sustained reverse bias degrades an electrolytic's leakage behaviour over time, which likely explains the reproducible failure — a wrong component choice, not a wiring fault. **C2 must be genuinely non-polarized** (ceramic or film) — no reverse-bias concern at all. Not yet re-tested on the bench with a proper non-polarized part; the `v2` PCB is the next validation point, alongside the real radio.
 
 R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
 
@@ -126,9 +117,33 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 **Note: resistor/capacitor designators were renumbered for the production schematic.** The testing-circuit list above uses R1, R2, R6, R7, C1, C2; the production list uses R3–R6, C3, C4 instead. This is deliberate — the testing circuit is breadboard-only and never gets loaded into EasyEDA, but the production designators have to avoid colliding with names `v1`'s real board already uses elsewhere (`R1`/`R2` = 330Ω, `C1`/`C2` = 1000µF/100nF), so they continue numbering straight on from `v1`'s existing `R1`/`R2` instead. (One quirk worth flagging: production's `R5` here is unrelated to "R5" in the R5-removal note above, which refers to a different, testing-circuit-only component from earlier in this circuit's history.)
 
-`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (the old testing-circuit divider, removed entirely); R3/R4 exist only for channel isolation and short-circuit protection. C4/R5 (coupling cap and its reference resistor) and R6 aren't marked — see the notes above for why they're protective/topology choices rather than level-tuned values.
+`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (the old testing-circuit divider, removed entirely); R3/R4 exist only for channel isolation and short-circuit protection. C4/R5 (coupling cap and its reference resistor) and R6 aren't marked — see the notes below for why they're protective/topology choices rather than level-tuned values.
+
+**C4/R5 — DC-blocking coupling capacitor, added for production.** Bench testing (with the testing circuit's original C2/R7 naming, before the production renumbering) showed a large, non-audio baseline jump the instant the laptop's cable was connected — most likely a DC bias specific to that laptop's headphone output (ground loops and a cable fault were both tested and ruled out). C4 blocks that steady bias while passing real audio through essentially untouched; R5 gives the post-cap node a defined reference instead of leaving it floating. Standard practice for audio inputs generally — while a proper automotive RCA preout is usually already internally AC-coupled (so the real radio may not have needed this), it's cheap insurance on a board being re-fabbed anyway.
+
+**The maths:** R5 (100kΩ) dominates the divider so thoroughly that adding C4 in series barely changes anything. The transfer function from Node S to Node A is `H(f) = R5 / √[(R5 + R_series)² + (1/(2πfC4))²]`, where R_series is R3 or R4 (470Ω). At 20Hz — the worst case, since a capacitor's impedance peaks at low frequency, using C4's smallest recommended value (2.2µF) for the most conservative check:
+
+```
+Z_C4(20Hz) = 1 / (2π × 20 × 0.0000022) ≈ 3,617Ω
+R5 + R_series = 100,000 + 470 = 100,470
+H(20Hz) = 100,000 / √(100,470² + 3,617²) ≈ 0.9947
+```
+
+About 99.5% of the signal passes through even at 20Hz — negligible cost for the protection it buys. Applied to the confirmed radio peak: 2.55V × 0.9947 ≈ 2.54V reaches Node A, essentially unchanged from the no-C4 case.
+
+**Component choice matters for C4 — a first attempt using two polarized electrolytics wired back-to-back failed and stayed failed, even after reseating.** That trick only works for signals that are purely symmetric AC with no sustained DC offset — the opposite of what's needed here, since blocking a *sustained* bias puts one of the two caps under continuous reverse bias rather than the brief, symmetric reverse-bias the trick tolerates. Sustained reverse bias degrades an electrolytic's leakage behaviour over time, which likely explains the reproducible failure — a wrong component choice, not a wiring fault. **C4 must be genuinely non-polarized** (ceramic or film) — no reverse-bias concern at all. Not yet re-tested on the bench with a proper non-polarized part; the `v2` PCB is the next validation point, alongside the real radio.
 
 **D1 upgraded to a BAT85 Schottky diode for production**, replacing the 1N4007 the testing circuit still uses. The 1N4007 was picked purely for being on hand, not for suiting this job — it's a general-purpose power rectifier, not a signal diode. BAT85's much lower forward voltage (~0.15–0.3V vs. the 1N4007's estimated ~0.3–0.6V at these currents) isn't needed for loud content to clear the threshold, but it lets quieter passages register more faithfully — a standard choice for this kind of low-level envelope-detector duty. Cheap, through-hole, easy to hand-solder.
+
+**The maths:** taking the 2.54V that reaches Node A (from the C4/R5 calculation above), C1 only ever charges to `peak − D1's forward drop`:
+
+```
+Node B (BAT85, low estimate):    2.54V − 0.15V = 2.39V
+Node B (BAT85, high estimate):   2.54V − 0.30V = 2.24V
+Node B (1N4007, for comparison): 2.54V − 0.30 to 0.60V = 2.24V to 1.94V
+```
+
+Both diodes clear the 3.3V ADC ceiling with real margin — that question was already settled once the old divider was removed. What BAT85 buys is at the *quiet* end: a lower threshold means less signal is needed before D1 conducts at all, so quiet passages register instead of vanishing below the diode's turn-on point.
 
 ### Production pinout (ESP32-C3, already installed)
 
@@ -162,4 +177,4 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 - [ ] Source a genuinely non-polarized capacitor for C4 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above
 - [ ] Source a JST-XH 3-pin connector set for the new RCA input (`J7`), matching the board's existing J2–J5 style
 - [ ] Clone the `v1` EasyEDA project rather than editing it in place, and remove `J6_SWITCH` (never populated — see the note above)
-- [ ] Regenerate the production schematic image to show D1 as BAT85 (currently drawn as 1N4007) and the renumbered R3/R4/R5/C3/C4 designators — the testing schematic is already current and doesn't need this renumbering, since it isn't built from real EasyEDA designators
+- [x] Regenerate the production schematic image to show D1 as BAT85 and the renumbered R3/R4/R5/C3/C4 designators — the testing schematic is already current and doesn't need this renumbering, since it isn't built from real EasyEDA designators
