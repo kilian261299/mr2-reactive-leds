@@ -41,6 +41,9 @@ Red wire (signal) → R2 (470Ω) ──┐
 White wire (ground — see note) ─┤
 Shield wire (ground) ───────────┴── GND
 
+Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
+Node A → R7 (100kΩ) → GND
+
 Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
@@ -57,11 +60,13 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5, R3/R4, and the old R1/R2 value (2.2kΩ). Needs regenerating to match the component list above.
+**⚠ Out of date:** this image shows R5, R3/R4, and the old R1/R2 value (2.2kΩ), and predates C2/R7 entirely. Needs regenerating to match the component list above.
 
 | Component | Role |
 |---|---|
 | R1 / R2 (470Ω) | Series input resistors, isolate L+R during summing and protect the source from a dead short — not for signal attenuation (see notes below) |
+| C2 (~2.2–4.7µF, non-polarized) | Coupling capacitor — blocks any DC bias from the source, passes the real audio content through |
+| R7 (100kΩ) | Reference resistor for C2 — gives the post-cap node a defined path to ground instead of leaving it floating |
 | D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
 | R6 (10kΩ) | Discharge/bias resistor to GND — sets both the resting (silent) voltage (~0V) and, together with C1, the envelope's decay rate |
@@ -76,7 +81,9 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 **Car radio preout voltage — now confirmed, not estimated:** the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS, which works out to roughly 2.55V peak (1.8V × √2), replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess. With R3/R4 gone, Node A sees close to that full peak directly (470Ω is too small to meaningfully attenuate it) — but C1 only ever charges to `peak − D1's forward drop`, landing around ~1.95–2.25V at Node B, still comfortably under the 3.3V ADC ceiling. The ADC-protection question is no longer a guess, and no dedicated divider is needed to provide it.
 
-**A DC-blocking coupling capacitor was considered and tested, but not adopted.** Bench testing showed a large, non-audio baseline jump the instant the laptop's cable was connected — most likely a DC bias specific to that laptop's headphone output (ground loops and a cable fault were both ruled out). A coupling capacitor plus a bleed resistor would filter that out, and is standard practice for audio inputs generally, but wasn't adopted here: a proper automotive RCA preout is almost always internally AC-coupled already, so the production circuit likely doesn't have this problem, and it proved fiddly to get working reliably on a breadboard. Whether to add it as cheap protective margin on the `v2` PCB is an open decision for Phase 3 — it is *not* part of the current circuit.
+**C2/R7 — DC-blocking coupling capacitor, adopted for the `v2` PCB.** Bench testing showed a large, non-audio baseline jump the instant the laptop's cable was connected — most likely a DC bias specific to that laptop's headphone output (ground loops and a cable fault were both tested and ruled out). C2 blocks that steady bias while passing real audio through essentially untouched; R7 gives the post-cap node a defined reference instead of leaving it floating. Standard practice for audio inputs generally — while a proper automotive RCA preout is usually already internally AC-coupled (so the real radio may not have needed this), it's cheap insurance on a board being re-fabbed anyway.
+
+**Component choice matters: a first attempt using two polarized electrolytics wired back-to-back failed and stayed failed, even after reseating.** That trick only works for signals that are purely symmetric AC with no sustained DC offset — the opposite of what's needed here, since blocking a *sustained* bias puts one of the two caps under continuous reverse bias rather than the brief, symmetric reverse-bias the trick tolerates. Sustained reverse bias degrades an electrolytic's leakage behaviour over time, which likely explains the reproducible failure — a wrong component choice, not a wiring fault. **C2 must be genuinely non-polarized** (ceramic or film) — no reverse-bias concern at all. Not yet re-tested on the bench with a proper non-polarized part; the `v2` PCB is the next validation point, alongside the real radio.
 
 R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
 
@@ -99,11 +106,14 @@ Now that testing uses a spare ESP32-C3 module, this circuit is topologically ide
 
 ```
 Front Left RCA  → R1 (470Ω*) ──┐
-Front Right RCA → R2 (470Ω*) ──┼── Node A
+Front Right RCA → R2 (470Ω*) ──┼── Node S
 RCA shield/ground → GND
    (shared ground reference for the whole circuit — see Ground
    note below, must be the RCA tap's own shield, not a separate
    chassis point)
+
+Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
+Node A → R7 (100kΩ) → GND
 
 Node A → D1 (1N4007) → Node B
 
@@ -116,9 +126,9 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**⚠ Out of date:** this image still shows R5, R3/R4, and the old R1/R2 value (2.2kΩ). Needs regenerating to match the component list above.
+**⚠ Out of date:** this image shows R5, R3/R4, and the old R1/R2 value (2.2kΩ), and predates C2/R7 entirely. Needs regenerating to match the component list above.
 
-`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R1/R2 exist only for channel isolation and short-circuit protection. R6 isn't marked — see the R5-removal note above for why the old two-resistor bias network was dropped in favour of R6 alone.
+`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R1/R2 exist only for channel isolation and short-circuit protection. C2/R7 (coupling cap and its reference resistor) and R6 aren't marked — see the notes above for why they're protective/topology choices rather than level-tuned values.
 
 ### Production pinout (ESP32-C3, already installed)
 
@@ -147,5 +157,6 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 - [ ] Confirm R1/R2 (summing/isolation resistors) and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
 - [ ] Confirm D1 (1N4007, chosen for availability rather than being a purpose-picked signal diode — see the note above for why that's expected to be fine, but not yet bench-verified)
-- [ ] Decide whether to add the DC-blocking coupling capacitor + bleed resistor considered but not adopted during Phase 2 (see the note above)
-- [ ] Regenerate the testing and production schematic images — both still show R5, R3/R4, and the old R1/R2 value
+- [ ] Source a genuinely non-polarized capacitor for C2 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above
+- [ ] Source a JST-XH 3-pin connector set for the new RCA input, matching the board's existing J2–J5 style
+- [ ] Regenerate the testing and production schematic images — both still show R5, R3/R4, and the old R1/R2 value, and predate C2/R7 entirely
