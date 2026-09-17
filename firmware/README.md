@@ -95,12 +95,12 @@ Validate full hardware integration before vehicle installation.
 Tests:
 
 - Reading a conditioned audio envelope on an ADC pin
-- Smoothing that envelope in firmware
-- Mapping it to LED brightness on a real addressable strip
+- Smoothing that envelope in firmware, with separate fast-attack/slow-release rates for a natural bounce
+- Driving a bar-graph audio visualizer on a real addressable strip — a growing/shrinking bar of lit LEDs with a bouncing peak-hold marker, not just uniform brightness
 
 Purpose:
 
-Prove the audio-conditioning-circuit-to-LED pipeline works before any of it touches the real car firmware. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md) for the full build plan and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for the conditioning circuit this sketch reads from.
+Prove the audio-conditioning-circuit-to-LED pipeline works before any of it touches the real car firmware. **Validated and working** — confirmed responding correctly to real music, with `audioFloor`/`audioCeiling` calibrated from real Serial readings. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md) for the full build plan and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for the conditioning circuit this sketch reads from.
 
 ---
 

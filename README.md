@@ -14,7 +14,7 @@ The controller is built around a custom PCB and includes adjustable brightness, 
 
 **Core project complete and confirmed.** Fully installed in the MR2 — control box, accelerometer, rotary encoder, and LED strips are all mounted in their final positions, running on actual vehicle power (12V from the cigarette lighter circuit). The originally specified buck converter was replaced with a repurposed USB charger module after reliability issues on cold boot — see [Build Log](docs/build-log.md) for details. Firmware tuning concluded with `v2.4.1` (see [firmware/README.md](firmware/README.md)), confirmed on real driving — `v2.3` worked "almost perfectly" but flickered between red and blue on downhill slopes, traced to a side effect of earlier acceleration tuning; `v2.4.0` was a first fix attempt that turned out incomplete, and `v2.4.1` finishes it without giving that tuning back up, with the flicker confirmed gone on the next drive.
 
-**Active project work has now moved to an optional audio-reactive LED mode**, layered on top of the completed core project above: LEDs also reacting to music from the car radio, via an RCA tap and conditioning circuit into a spare ADC pin. This is a separate, independent addition; it doesn't touch or depend on the v2.x firmware above. See the [Audio-Reactive LED Plan](docs/audio-reactive-led-plan.md) — Phase 1 (GitHub/bench-test sketch setup) complete; Phase 2 (breadboard + bench-test) in progress.
+**Active project work has now moved to an optional audio-reactive LED mode**, layered on top of the completed core project above: LEDs also reacting to music from the car radio, via an RCA tap and conditioning circuit into a spare ADC pin. This is a separate, independent addition; it doesn't touch or depend on the v2.x firmware above. See the [Audio-Reactive LED Plan](docs/audio-reactive-led-plan.md) — Phase 1 (GitHub/bench-test sketch setup) complete; Phase 2 (breadboard + bench-test) complete and validated; Phase 3 (PCB re-fab) ready to start.
 
 Completed:
 
@@ -36,8 +36,8 @@ Completed:
 In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-plan.md)):
 
 - Phase 1: GitHub/bench-test sketch setup — complete
-- Phase 2: Breadboard + bench-test the conditioning circuit — in progress (breadboarded, bench-testing not yet done)
-- Phase 3: Remanufacture the PCB with the audio circuit integrated (changed from an earlier standalone-breakout-board plan) — not started
+- Phase 2: Breadboard + bench-test the conditioning circuit — complete, validated with real music; component values, the coupling capacitor, and the diode swap to BAT85 all confirmed for production
+- Phase 3: Remanufacture the PCB with the audio circuit integrated (changed from an earlier standalone-breakout-board plan) — ready to start, a few parts still need sourcing
 - Phase 4: Install the new PCB revision and integrate into the firmware — not started
 
 ## Features

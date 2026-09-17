@@ -2,7 +2,7 @@
 
 This folder contains the hardware design files, manufacturing resources, and source files for the MR2 Reactive LEDs controller.
 
-**New, in-progress addition:** an audio-reactive LED mode. Originally planned as a standalone breakout board wired to the existing PCB (see [audio-breakout.md](audio-breakout.md), now superseded); the decision since Phase 2 bench testing is to instead remanufacture the PCB itself with the audio conditioning circuit integrated directly — see [the build plan](../docs/audio-reactive-led-plan.md) for the full reasoning and Phase 3 checklist. This is why PCB files below are now organised by revision (`v1`, `v2`) rather than as a single flat set.
+**New addition, ready for Phase 3:** an audio-reactive LED mode. Originally planned as a standalone breakout board wired to the existing PCB (see [audio-breakout.md](audio-breakout.md), now superseded); the decision since Phase 2 bench testing is to instead remanufacture the PCB itself with the audio conditioning circuit integrated directly — see [the build plan](../docs/audio-reactive-led-plan.md) for the full reasoning and Phase 3 checklist. This is why PCB files below are now organised by revision (`v1`, `v2`) rather than as a single flat set. Phase 2 bench testing is complete and the circuit values, diode, and coupling capacitor are all confirmed — a few parts still need sourcing before starting `v2`'s design.
 
 ---
 
@@ -33,13 +33,13 @@ The custom PCB was designed in EasyEDA to replace the breadboard prototype and p
 - Left and right WS2812B LED outputs
 - JST-XH connectors
 - 12V power input connector
-- Toggle switch connector
+- Toggle switch connector (`J6_SWITCH` — never actually populated, just shorted instead; removed for `v2`, see below)
 - Decoupling capacitors
 - Mounting holes
 
 The PCB was designed as a two-layer FR4 board and verified against the breadboard prototype before manufacture. Full history — including the GPIO4 fault on the first assembled `v1` board and its replacement — is in [docs/pcb-design.md](../docs/pcb-design.md) and [docs/build-log.md](../docs/build-log.md).
 
-**`v2` (planned) adds the audio-reactive circuit** — R1, R2, R6, D1, C1, and a new RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist. Not yet designed.
+**`v2` (planned) adds the audio-reactive circuit** — R3, R4, R5, R6, C3, C4, D1 (BAT85), and a new `J7` RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned, and dropping the never-populated `J6_SWITCH`. Reference designators continue on from `v1`'s existing `R1`/`R2`/`C1`/`C2` (already used for other components) rather than reusing them — see [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist and parts still needed. Not yet designed.
 
 ---
 
@@ -87,7 +87,7 @@ These files allow the PCB schematic and layout to be reviewed or modified in Eas
 
 **`v1`: complete.** Designed in EasyEDA (schematic, layout, ERC/DRC), manufactured by JLCPCB, assembled, and installed in the car — see [docs/build-log.md](../docs/build-log.md) for the full history, including the GPIO4 fault on the first assembled board and its replacement.
 
-**`v2`: planned, not yet started.** Will follow the same EasyEDA → JLCPCB process, adding the audio conditioning circuit to the existing design. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3.
+**`v2`: ready to start, not yet designed.** Will follow the same EasyEDA → JLCPCB process, adding the audio conditioning circuit to the existing design. Recommended: clone the `v1` EasyEDA project rather than editing it in place. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist and parts-to-source list.
 
 ---
 
