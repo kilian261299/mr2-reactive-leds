@@ -22,7 +22,7 @@ Conditioning circuit (see component list below)
 ESP32 ADC pin (reads a 0–3.3V audio envelope)
         │
         ▼
-Firmware: smooth, map to brightness/colour
+Firmware: smooth (fast attack, slow release), drive a bar-graph visualizer
         │
         ▼
 WS2812B LED strips (existing LEFT_LED_PIN / RIGHT_LED_PIN)

@@ -8,7 +8,7 @@ Documents the small conditioning circuit for the audio-reactive LED feature — 
 
 ## Purpose
 
-Takes a line-level stereo audio signal (car radio's Front L/R RCA outputs) and converts it into a single, slowly-varying 0–3.3V envelope that an ESP32 ADC pin can read directly — the firmware then smooths and maps that envelope to LED brightness/colour.
+Takes a line-level stereo audio signal (car radio's Front L/R RCA outputs) and converts it into a single, slowly-varying 0–3.3V envelope that an ESP32 ADC pin can read directly — the firmware then smooths that envelope and drives a bar-graph audio visualizer (a growing/shrinking bar of lit LEDs with a bouncing peak-hold marker) on the strip.
 
 The circuit does four things in sequence: sums the two channels to mono, scales the voltage down to a safe range, rectifies it to a one-directional envelope, and smooths + biases it to sit within the ADC's 0–3.3V input range.
 
