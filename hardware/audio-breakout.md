@@ -72,8 +72,6 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 **R3/R4 removed entirely, R1/R2 reduced 2.2kΩ → 470Ω (further correction, same root cause).** *(Heads up: "R3"/"R4" get reused below for different, unrelated components in the production designator scheme — see the renumbering note in the production section. These two facts aren't connected; the numbers just get recycled once they're free.)* R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, each time sized as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed no response to music at all — the combined attenuation through R2 (2.2kΩ) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1/R2 to 470Ω (still enough for channel isolation and short-circuit protection, without adding unnecessary attenuation) restored a real response on the bench. Safe for production too — see the confirmed radio-voltage note in the production section for the resulting margin.
 
-R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expected to need retuning once real audio is flowing.
-
 ### Testing pinout (spare ESP32-C3 module)
 
 | Pin/net | Connects to | Purpose |

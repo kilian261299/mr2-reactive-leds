@@ -72,8 +72,6 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 **R3/R4 removed entirely, R1/R2 reduced 2.2kΩ → 470Ω (further design correction, same root cause).** *(Heads up: "R3"/"R4" get reused below for different, unrelated components in the production designator scheme — see the renumbering note in the production section. These two facts aren't connected; the numbers just get recycled once they're free.)* R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, sized each time as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed the circuit essentially dead — no response to music at all — because the combined attenuation through R2 (2.2kΩ) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1/R2 to 470Ω (still enough to isolate the two channels during summing and protect the source from a dead short, just without adding unnecessary attenuation on top) restored a real, visible response on the bench. This is safe for the production circuit too: with no divider at all, the ADC is protected purely by D1's own forward drop — see the confirmed radio-voltage note in the production section for the resulting margin.
 
-Values are starting points for Phase 2 — expect to retune R1/R2 and C1 (smoothing, jointly setting decay rate with R6) once you're actually watching the LED respond to real music.
-
 ### Production setup — full pipeline
 
 ![Production setup overview](../images/audio-circuit/production_setup_overview.png)
@@ -216,7 +214,6 @@ Decided against a standalone breakout board — the audio conditioning circuit w
 - JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap.
 - D1 — a **BAT85** Schottky diode (or equivalent, e.g. 1N5711/1N5817), replacing the 1N4007 for production — see the diode note above.
 
-- [ ] Confirm the RGB/addressable LED and conditioning circuit values from Phase 2
 - [ ] Clone the `v1` EasyEDA project rather than editing it in place — keeps the original, still-installed board's design intact
 - [ ] Remove `J6_SWITCH` — never populated on `v1` (shorted instead of a real switch), no reason to carry it forward
 - [ ] Add `R3`, `R4`, `R5`, `R6`, `C4`, `D1` (BAT85), and `C3` as new components, matching the confirmed values (the old bias pull-up resistor and the old divider, both from the testing-circuit's history, stay dropped from the design — see the component list note above). **Note the renumbering**: `v1` already uses `R1`/`R2` and `C1`/`C2` for other components, so the audio circuit's resistors/caps continue on as `R3`–`R6`/`C3`/`C4` instead — see the note above the production component list for the full mapping.
