@@ -129,11 +129,11 @@ Used for bench testing only — a separate, spare ESP32-C3 module, not the one i
 | Pin/net | Connects to | Purpose |
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin the production board uses |
-| `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
-| `5V` / `VIN` | LED strip `5V` power input | Power — see note* |
-| `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
+| `GPIO7` | Level shifter input → LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
+| `5V` / `VIN` | LED strip `5V` power input, and the level shifter's own supply | Power — see note* |
+| `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND`, level shifter `GND` | Common ground — all must share this one reference |
 
-*The strip is powered at its rated 5V here (most ESP32-C3 modules break out a separate `5V`/`VIN` pin), not under-driven at 3.3V. That means the data line (`GPIO7`, 3.3V logic) and the strip's power (5V) don't share the same logic threshold — without a level shifter, the WS2812B's ~70%-of-VDD "HIGH" threshold may not always be reliably cleared, more of a risk as the strip/wire gets longer. Working fine so far on this short bench run. The alternative would be powering the strip at 3.3V instead — matches the data line's logic level exactly, no level shifter needed on the bench, at the cost of slightly under-driving the LED chips (usually just dimmer/less accurate colour, not broken). The production board avoids this tradeoff entirely with a proper level shifter (SN74AHCT125N).
+*The strip is powered at its rated 5V here (most ESP32-C3 modules break out a separate `5V`/`VIN` pin). A level shifter now sits between `GPIO7` and the strip's `DIN`, converting the ESP32-C3's 3.3V data logic up to a clean 5V signal — the same role the production board's SN74AHCT125N plays — so the bench setup no longer has the "3.3V logic driving a 5V strip directly" risk it started with, and now matches the production power/logic arrangement more closely than the original bench-only 3.3V workaround did.
 
 ### Pinout — production board (ESP32-C3, new PCB revision)
 
