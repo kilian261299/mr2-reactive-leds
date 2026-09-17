@@ -1,5 +1,7 @@
 # PCB Design
 
+**This document covers `v1`, the original and currently-installed board.** A `v2` revision is in progress, adding the [audio-reactive LED circuit](audio-reactive-led-plan.md) directly onto the same design — see [hardware/README.md](../hardware/README.md) for its current status (design complete, about to be submitted to JLCPCB).
+
 ## Overview
 
 The custom PCB was designed in EasyEDA to replace the validated breadboard prototype and provide a compact, permanent controller for the MR2 reactive LED system.

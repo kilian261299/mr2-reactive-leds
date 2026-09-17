@@ -40,7 +40,7 @@ Completed:
 
 Next steps:
 
-- None for the core project — it's finished. Active work has moved to the [audio-reactive LED addition](audio-reactive-led-plan.md); Phase 2 (bench testing) is complete and validated, Phase 3 (PCB re-fab) is in progress. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
+- None for the core project — it's finished. Active work has moved to the [audio-reactive LED addition](audio-reactive-led-plan.md); Phase 2 (bench testing) is complete and validated, Phase 3 (PCB re-fab) is in progress — `v2`'s design is complete and about to be submitted to JLCPCB. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
 
 ## Stage 1 — Planning
 
@@ -738,6 +738,14 @@ Documented in `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md`
 `hardware/audio-breakout.md` (which documents the now-superseded standalone-breakout design) will need revisiting once this phase starts.
 
 **Hardware files are now organised by PCB revision**, the same way firmware versions are: the original board's files moved from `hardware/pcb/{gerbers,bom,easyeda}/` to `hardware/pcb/v1/{gerbers,bom,easyeda}/`, making room for `hardware/pcb/v2/` once the new revision is designed. `docs/pcb-design.md` and `hardware/README.md` were updated to match — no other changes to the `v1` files or history.
+
+**`v2` designed in EasyEDA, verified, and committed — about to be submitted to JLCPCB.** Cloned from the `v1` project (keeping the original intact), with `J6_SWITCH` removed and R3–R6, C3, C4, D1 (BAT85), and the new `J7` RCA connector added. DRC came back clean (0 errors). EasyEDA Standard (the free web editor) doesn't have a separate ERC report the way KiCad or EasyEDA Pro do — the exported schematic JSON was instead read and traced directly (wires, pin coordinates, and junction markers) to confirm the Node S / Node A / Node B topology and GND net exactly match the documented circuit, with no floating pins or duplicate designators.
+
+That check also caught a real mismatch on the first pass: `J7`'s Front Left/Front Right RCA pins were wired to R3=Right/R4=Left, backwards from the documented convention (R3=Front Left, R4=Front Right). Fixed by swapping the two connections in EasyEDA; re-checking the re-exported schematic confirmed R3=Left/R4=Right, matching the docs.
+
+Design files committed to the repo: `hardware/pcb/v2/{gerbers,bom,easyeda}/` (Gerbers, EasyEDA BOM export, and both schematic + PCB JSON). `v1`'s `easyeda/` folder was also retroactively completed with its own schematic JSON — previously only the PCB layout had been archived there, not the schematic.
+
+**System BOM updated** (`hardware/bom/MR2_Reactive_LEDs_System_BOM.xlsx`) with a new `Audio Addition` tab, kept separate from the original `Sheet1` to show it was added after the core system was already built — R3–R6, C3, C4, D1, and J7 are listed there. C4, D1, and J7 (the parts that weren't already on hand from Phase 2 bench testing) have since been ordered.
 
 ## Phase 4 — Install and Test
 

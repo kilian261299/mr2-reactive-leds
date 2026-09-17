@@ -203,22 +203,24 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 
 Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision). Firmware development happens in this phase too, once the board's been ordered — no need to wait idle for manufacturing/shipping when the new mode can be written and bench-tested against Phase 2's logic in parallel.
 
-**Parts to source before starting** (everything else needed is already on hand from Phase 2 bench testing or the original `v1` build):
-- Coupling capacitor (`C4` on the real board) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. Worth getting a couple of different values, since the best one may shift once tested against the real radio.
-- JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap.
-- D1 — a **BAT85** Schottky diode (or equivalent, e.g. 1N5711/1N5817), replacing the 1N4007 for production — see the diode note above.
+**Parts sourced** (everything else needed was already on hand from Phase 2 bench testing or the original `v1` build):
+- Coupling capacitor (`C4` on the real board) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. **Ordered.**
+- JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap. **Ordered.**
+- D1 — a **BAT85** Schottky diode, replacing the 1N4007 for production — see the diode note above. **Ordered.**
 
-- [ ] Clone the `v1` EasyEDA project rather than editing it in place — keeps the original, still-installed board's design intact
-- [ ] Remove `J6_SWITCH` — never populated on `v1` (shorted instead of a real switch), no reason to carry it forward
-- [ ] Add `R3`, `R4`, `R5`, `R6`, `C4`, `D1` (BAT85), and `C3` as new components, matching the confirmed values (the old bias pull-up resistor and the old divider, both from the testing-circuit's history, stay dropped from the design — see the component list note above). **Note the renumbering**: `v1` already uses `R1`/`R2` and `C1`/`C2` for other components, so the audio circuit's resistors/caps continue on as `R3`–`R6`/`C3`/`C4` instead — see the note above the production component list for the full mapping.
-- [ ] Add the new JST-XH connector (`J7`) for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
-- [ ] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
-- [ ] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
-- [ ] Run design checks (ERC/DRC) same as the original board
+The EasyEDA schematic/layout is designed and verified; the board is about to be submitted to JLCPCB.
+
+- [x] Clone the `v1` EasyEDA project rather than editing it in place — keeps the original, still-installed board's design intact
+- [x] Remove `J6_SWITCH` — never populated on `v1` (shorted instead of a real switch), no reason to carry it forward
+- [x] Add `R3`, `R4`, `R5`, `R6`, `C4`, `D1` (BAT85), and `C3` as new components, matching the confirmed values (the old bias pull-up resistor and the old divider, both from the testing-circuit's history, stay dropped from the design — see the component list note above). **Note the renumbering**: `v1` already uses `R1`/`R2` and `C1`/`C2` for other components, so the audio circuit's resistors/caps continue on as `R3`–`R6`/`C3`/`C4` instead — see the note above the production component list for the full mapping.
+- [x] Add the new JST-XH connector (`J7`) for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder. Front Left confirmed wired to `R3`, Front Right to `R4`, matching the production component list's Left/Right convention.
+- [x] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
+- [x] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
+- [x] Run design checks — DRC came back with 0 errors. EasyEDA Standard (the free web editor) has no separate ERC report like KiCad/EasyEDA Pro; schematic connectivity (Node S/A/B topology, GND net, no floating pins or duplicate designators) was instead verified directly against the exported schematic JSON, confirming it matches the documented circuit exactly.
 - [ ] Submit Gerbers to JLCPCB
 - [ ] **Develop the new firmware mode while the board is being manufactured/shipped**: a new version *line* — `v4.x`, branching from the current final `v2.4.1` — rather than a `v2.x` point release, to clearly distinguish this audio-reactive addition from the core motion-reactive line (`v2.x`) and the parked gyroscope experiment (`v3.x`). Use Phase 2's tuned values and logic, driving the actual strips through the existing `setStrip()` / NeoPixel functions. Written and bench-testable now — real-car integration and tuning still waits for Phase 4, once the new board is installed.
 - [ ] Assemble the new board once manufactured — visual inspection, continuity testing, power-on testing, same validation approach used for the original PCB and its replacement. This is bench-only electrical sanity-checking (no real radio involved yet); real-radio validation happens during install in Phase 4, not here, to avoid tapping the car's RCA wiring twice (once for an early bench check, again for the permanent install).
-- [ ] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout
+- [x] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout. `v1`'s `easyeda/` folder was also retroactively completed with its own schematic JSON export, which had been missing.
 
 ---
 
