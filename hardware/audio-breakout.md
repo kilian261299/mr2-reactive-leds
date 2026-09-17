@@ -93,10 +93,10 @@ R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expe
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin production uses |
 | `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
-| `3.3V` | LED strip's power input (labelled `5V` on the strip itself, deliberately under-driven — see note*) | Power |
+| `5V` / `VIN` | LED strip `5V` power input | Power — see note* |
 | `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
-\*The strip's power input is labelled `5V` because most addressable strips want 5V for reliable operation, but it's fed from the module's `3.3V` pin here — not a mistake, and not just "good enough" for a short bench run. Powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Powering at 5V instead (most ESP32-C3 modules break out a separate `5V`/`VIN` pin) risks the data line's 3.3V logic not reliably clearing the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has a level shifter (SN74AHCT125N) and doesn't need this workaround.
+\*The strip is powered at its rated 5V (most ESP32-C3 modules break out a separate `5V`/`VIN` pin) rather than under-driven at 3.3V. That means the data line (`GPIO7`, 3.3V logic) and the strip's power (5V) don't share the same logic threshold — without a level shifter, the WS2812B's ~70%-of-VDD "HIGH" threshold may not always be reliably cleared, more of a risk as the strip/wire gets longer. Working fine so far on this short bench run; the alternative would be powering the strip at 3.3V instead (matches the data line's logic level exactly, no level shifter needed, at the cost of slightly under-driving the LED chips — usually just dimmer/less accurate colour, not broken). The production board avoids this tradeoff entirely with a proper level shifter (SN74AHCT125N).
 
 ---
 

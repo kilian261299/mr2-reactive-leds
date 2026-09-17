@@ -130,12 +130,10 @@ Used for bench testing only — a separate, spare ESP32-C3 module, not the one i
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin the production board uses |
 | `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
-| `3.3V` | LED strip's power input (labelled `5V` on the strip itself, deliberately under-driven — see note*) | Power |
+| `5V` / `VIN` | LED strip `5V` power input | Power — see note* |
 | `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
-*The strip's power input is labelled `5V` because most addressable strips want 5V for reliable operation, but it's fed from the module's `3.3V` pin here — not a mistake, and not just "good enough" for a short bench run; running it off a separate `5V`/`VIN` pin instead is commonly acceptable too, but isn't the final production arrangement — the real install uses proper level shifting (below).
-
-The 3.3V choice here is deliberate, not just "good enough": powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Power the strip at 5V instead (also an option — most ESP32-C3 modules break out a `5V`/`VIN` pin) and the data line's 3.3V logic may not reliably clear the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has one (SN74AHCT125N). Trade-off either way: 3.3V power slightly under-drives the LED chips (usually just dimmer/less accurate colour, not broken); 5V power without a level shifter risks flicker or no response, more likely as the strip/wire gets longer.
+*The strip is powered at its rated 5V here (most ESP32-C3 modules break out a separate `5V`/`VIN` pin), not under-driven at 3.3V. That means the data line (`GPIO7`, 3.3V logic) and the strip's power (5V) don't share the same logic threshold — without a level shifter, the WS2812B's ~70%-of-VDD "HIGH" threshold may not always be reliably cleared, more of a risk as the strip/wire gets longer. Working fine so far on this short bench run. The alternative would be powering the strip at 3.3V instead — matches the data line's logic level exactly, no level shifter needed on the bench, at the cost of slightly under-driving the LED chips (usually just dimmer/less accurate colour, not broken). The production board avoids this tradeoff entirely with a proper level shifter (SN74AHCT125N).
 
 ### Pinout — production board (ESP32-C3, new PCB revision)
 
