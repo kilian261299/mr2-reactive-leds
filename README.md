@@ -37,8 +37,8 @@ In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-
 
 - Phase 1: GitHub/bench-test sketch setup — complete
 - Phase 2: Breadboard + bench-test the conditioning circuit — complete, validated with real music; component values, the coupling capacitor, and the diode swap to BAT85 all confirmed for production
-- Phase 3: Remanufacture the PCB with the audio circuit integrated (changed from an earlier standalone-breakout-board plan) — in progress, a few parts still need sourcing
-- Phase 4: Install the new PCB revision and integrate into the firmware — not started
+- Phase 3: Remanufacture the PCB (changed from an earlier standalone-breakout-board plan) and develop the new `v4.x` firmware mode in parallel — in progress, a few parts still need sourcing
+- Phase 4: Install the new PCB revision and test everything for real, including flashing the `v4.x` firmware — not started
 
 ## Features
 

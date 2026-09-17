@@ -199,9 +199,9 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 
 ---
 
-## Phase 3: Remanufacture the PCB with the audio circuit integrated
+## Phase 3: Remanufacture the PCB and develop the firmware
 
-Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision).
+Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision). Firmware development happens in this phase too, once the board's been ordered — no need to wait idle for manufacturing/shipping when the new mode can be written and bench-tested against Phase 2's logic in parallel.
 
 **Parts to source before starting** (everything else needed is already on hand from Phase 2 bench testing or the original `v1` build):
 - Coupling capacitor (`C4` on the real board) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. Worth getting a couple of different values, since the best one may shift once tested against the real radio.
@@ -216,12 +216,13 @@ Decided against a standalone breakout board — the audio conditioning circuit w
 - [ ] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
 - [ ] Run design checks (ERC/DRC) same as the original board
 - [ ] Submit Gerbers to JLCPCB
+- [ ] **Develop the new firmware mode while the board is being manufactured/shipped**: a new version *line* — `v4.x`, branching from the current final `v2.4.1` — rather than a `v2.x` point release, to clearly distinguish this audio-reactive addition from the core motion-reactive line (`v2.x`) and the parked gyroscope experiment (`v3.x`). Use Phase 2's tuned values and logic, driving the actual strips through the existing `setStrip()` / NeoPixel functions. Written and bench-testable now — real-car integration and tuning still waits for Phase 4, once the new board is installed.
 - [ ] Assemble the new board once manufactured — visual inspection, continuity testing, power-on testing, same validation approach used for the original PCB and its replacement. This is bench-only electrical sanity-checking (no real radio involved yet); real-radio validation happens during install in Phase 4, not here, to avoid tapping the car's RCA wiring twice (once for an early bench check, again for the permanent install).
 - [ ] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout
 
 ---
 
-## Phase 4: Install and integrate the firmware
+## Phase 4: Install and test
 
 - [ ] Install the new PCB revision in the control box, replacing the currently-installed board
 - [ ] Tap Front Left + Front Right RCA, plus ground/shield, in parallel at the radio harness (see Ground note above) — wire everything up before testing anything
@@ -229,6 +230,6 @@ Decided against a standalone breakout board — the audio conditioning circuit w
 - [ ] **Confirm the original accelerometer-reactive system still works** — motion-based brightness/colour, rotary encoder, both LED strips — exactly as it did on `v1`, before layering the new audio behaviour on top
 - [ ] **First real validation against the actual car radio happens here** — this is the earliest point real RCA access is practical. Confirm the ADC isn't clipping (a maxed-out, unresponsive-to-volume reading is the signature), that the idle baseline actually sits near-zero (confirming C4 is doing its job against whatever the real radio's DC characteristics turn out to be), and that C3's smoothing still feels right against real music.
 - [ ] If R3/R4/C3/C4 need correction, hand-swap those specific parts — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
-- [ ] Add a new mode to the real firmware (new version, e.g. v2.5, branching from the current final v2.4.1), using Phase 2's tuned values, driving the actual strips through the existing `setStrip()` / NeoPixel functions
+- [ ] Flash the `v4.x` firmware developed in Phase 3 and confirm it drives the real strips correctly with the new board installed
 - [ ] Test in the car with real music — expect some retuning against real strips, cabin acoustics, and road noise
 - [ ] Update `docs/build-log.md` and the firmware changelog with results, including documenting the new PCB revision (matching how the original GPIO4-fault replacement was documented)
