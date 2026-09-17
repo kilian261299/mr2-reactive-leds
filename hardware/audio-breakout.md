@@ -126,8 +126,6 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**⚠ Out of date:** this image shows R5, R3/R4, and the old R1/R2 value (2.2kΩ), and predates C2/R7 entirely. Needs regenerating to match the component list above.
-
 `*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R1/R2 exist only for channel isolation and short-circuit protection. C2/R7 (coupling cap and its reference resistor) and R6 aren't marked — see the notes above for why they're protective/topology choices rather than level-tuned values.
 
 ### Production pinout (ESP32-C3, already installed)
