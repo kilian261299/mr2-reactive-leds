@@ -219,8 +219,16 @@ void updateAudioReactiveLEDs() {
   // Print raw + smoothed values regularly so the conditioning
   // circuit (R1/R2, C1) can be tuned against real numbers, per
   // Phase 2 Stage A of the build plan.
+  //
+  // The ESP32-C3 uses native USB serial, not a separate USB-serial
+  // chip -- if nothing is reading the port (no Serial Monitor open),
+  // the internal buffer fills up and Serial.print() starts BLOCKING
+  // instead of discarding data, freezing the whole loop() (and the
+  // LEDs with it) until a monitor connects and drains it. Checking
+  // `if (Serial)` skips printing entirely when nothing's listening,
+  // so the LED updates above never get stuck waiting on this.
   unsigned long now = millis();
-  if (now - lastSerialPrint > serialPrintInterval) {
+  if (Serial && now - lastSerialPrint > serialPrintInterval) {
     Serial.print("Raw: ");
     Serial.print(rawAudio);
     Serial.print(" | Smoothed: ");
