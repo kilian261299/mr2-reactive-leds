@@ -34,43 +34,38 @@ ESP32 ADC pin (0–3.3V audio envelope)
 
 Used for Phase 2 bench testing only — a separate, spare ESP32-C3 module, not the one installed in the car. Originally planned around a full ESP32 dev board; a spare ESP32-C3 module turned out to be available instead, which is actually simpler, since it's the same chip as production — the audio ADC pin (`GPIO1`) is identical on both, so Phase 2 tuning carries straight into Phase 4 with no pin remapping.
 
-Input is a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit) rather than the car's RCA outputs, as a convenient stand-in for early tuning — same topology as the production circuit, just with a phone/PC headphone output instead of RCAs. Currently mono (red/R2 only) — see the white-wire note below for why.
+Input is a 3.5mm breakout cable (jack end into a phone or PC, stripped end wired to the circuit) rather than the car's RCA outputs, as a convenient stand-in for early tuning — same topology as the production circuit, just with a phone/PC headphone output instead of RCAs. Currently mono (red/R1 only) — see the white-wire note below for why.
 
 ```
-Red wire (signal) → R2 (470Ω) ──┐
-White wire (ground — see note) ─┤
+Red wire (signal) → R1 (470Ω) → D1 (1N4007) → Node B
+White wire (ground — see note) ─┐
 Shield wire (ground) ───────────┴── GND
-
-Node A → D1 (1N4007) → Node B
 
 Node B → C1 (2.2µF) → GND
 
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 (spare test module) GPIO1 (ADC input)
-
-(R1, 470Ω: present for a future true left-channel input,
- currently unconnected — see white-wire note below)
 ```
 
-A small monitoring speaker taps directly across the red wire and shield, *before* R2 — a separate parallel branch, not part of the conditioning circuit's signal path.
+A small monitoring speaker taps directly across the red wire and shield, *before* R1 — a separate parallel branch, not part of the conditioning circuit's signal path.
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
 | Component | Role |
 |---|---|
-| R1 / R2 (470Ω) | Series input resistors, isolate L+R during summing and protect the source from a dead short — not for signal attenuation (see notes below) |
+| R1 (470Ω) | Series input resistor, isolates the source from a dead short — not for signal attenuation (see notes below) |
 | D1 (1N4007) | Diode rectifier — converts the AC-ish audio signal into a one-directional envelope |
 | C1 (2.2µF) | Smoothing capacitor — turns the rectified pulses into a slower-moving envelope |
 | R6 (10kΩ) | Discharge/bias resistor to GND — sets both the resting (silent) voltage (~0V) and, together with C1, the envelope's decay rate |
 
-**White wire note:** on this particular breakout cable, "white" turned out to have continuity with the shield — a second ground/drain wire, not a real left-channel conductor (cheap 3.5mm pigtail cables don't reliably follow RCA's white=L/red=R convention). It ties to the same GND node as the shield. R1 stays in the circuit for a future genuine stereo source; its input is unconnected for now, so testing runs mono through R2 only.
+**White wire note:** on this particular breakout cable, "white" turned out to have continuity with the shield — a second ground/drain wire, not a real left-channel conductor (cheap 3.5mm pigtail cables don't reliably follow RCA's white=L/red=R convention). It ties to the same GND node as the shield, alongside the shield wire itself. There's no second resistor for a left channel here — testing runs mono, through the single R1 in series with red.
 
 **On D1's part choice:** a 1N4007 (general-purpose power rectifier) is used here rather than the more typical small-signal choice (e.g. 1N4148), based on what was already on hand. The 1N4007 switches much slower than a dedicated signal diode — normally a mismatch for audio-frequency work, but not a practical problem here, since C1 is deliberately the slow part of this circuit already, turning the rectified signal into a "how loud is the music right now" envelope over hundreds of milliseconds. The diode's speed was never the limiting factor for something changing that slowly.
 
 **On dropping R5 (design correction):** earlier versions of this circuit paired R6 with a second resistor, R5, pulling Node B up to 3.3V — a two-resistor bias network centring the resting voltage at their midpoint, 1.65V. ([Archived schematic showing the original circuit with R5, and the R3/R4 divider before it was changed and later removed](../images/audio-circuit/testing_circuit_schematic_original.png) — kept for reference since the current schematic no longer shows these. **Note:** that image also labels the white wire as the left-channel audio input, reflecting the assumption at the time — later found to be wrong for this specific cable, whose white wire is actually a second ground/drain conductor; see the white-wire note above.) That's incompatible with D1 ever conducting at realistic signal levels: D1 only conducts once Node A exceeds Node B by its own forward-voltage drop, so a 1.65V resting point demands roughly 2V+ at Node A just to register anything. Removing R5 and keeping R6 alone as the only path to ground brings the resting point down to ~0V, so D1 only needs to clear its own ~0.3–0.6V forward drop — the standard single-resistor diode-envelope-detector topology. Secondary effect: R6 is now the sole discharge path (previously R5 || R6), so the decay time constant is slower than before.
 
-**R3/R4 removed entirely, R1/R2 reduced 2.2kΩ → 470Ω (further correction, same root cause).** *(Heads up: "R3"/"R4" get reused below for different, unrelated components in the production designator scheme — see the renumbering note in the production section. These two facts aren't connected; the numbers just get recycled once they're free.)* R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, each time sized as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed no response to music at all — the combined attenuation through R2 (2.2kΩ) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1/R2 to 470Ω (still enough for channel isolation and short-circuit protection, without adding unnecessary attenuation) restored a real response on the bench. Safe for production too — see the confirmed radio-voltage note in the production section for the resulting margin.
+**R3/R4 removed entirely, R1 (the resistor in the red/signal path) reduced 2.2kΩ → 470Ω (further correction, same root cause).** *(Heads up: "R3"/"R4" get reused below for different, unrelated components in the production designator scheme — see the renumbering note in the production section. These two facts aren't connected; the numbers just get recycled once they're free.)* R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, each time sized as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed no response to music at all — the combined attenuation through R1 (2.2kΩ at the time) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1 to 470Ω (still enough for channel isolation and short-circuit protection, without adding unnecessary attenuation) restored a real response on the bench. Safe for production too — see the confirmed radio-voltage note in the production section for the resulting margin.
 
 ### Testing pinout (spare ESP32-C3 module)
 
@@ -113,7 +108,7 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**Note: resistor/capacitor designators were renumbered for the production schematic.** The testing-circuit list above uses R1, R2, R6, R7, C1, C2; the production list uses R3–R6, C3, C4 instead. This is deliberate — the testing circuit is breadboard-only and never gets loaded into EasyEDA, but the production designators have to avoid colliding with names `v1`'s real board already uses elsewhere (`R1`/`R2` = 330Ω, `C1`/`C2` = 1000µF/100nF), so they continue numbering straight on from `v1`'s existing `R1`/`R2` instead. (One quirk worth flagging: production's `R5` here is unrelated to "R5" in the R5-removal note above, which refers to a different, testing-circuit-only component from earlier in this circuit's history.)
+**Note: the production schematic uses different designators, and isn't just a renumbered copy of the testing circuit.** The testing circuit above only has R1 (isolation), R6 (discharge), and C1 (smoothing) — no coupling cap or reference resistor, since that stage was never validated on the breadboard, and only one isolation resistor since only one channel (red) turned out to be usable on this cable. Production genuinely needs two isolation resistors (R3 *and* R4, one per real stereo channel from the RCA tap) plus the coupling cap/reference resistor (C4/R5), so it isn't a 1:1 relabeling of the testing parts — see the production component list below for the full picture. Designators had to move regardless, since `v1`'s real board already uses `R1`/`R2` (330Ω) and `C1`/`C2` (1000µF/100nF) for other components, so production continues numbering straight on from those instead. (One quirk worth flagging: production's `R5` here is unrelated to "R5" in the R5-removal note above, which refers to a different, testing-circuit-only component from earlier in this circuit's history.)
 
 `*` = confirmed as a working starting point from Phase 2 bench testing, not yet confirmed against the real car radio — that only happens during Phase 4's install (see the status note above). There is no longer a dedicated divider stage (the old testing-circuit divider, removed entirely); R3/R4 exist only for channel isolation and short-circuit protection. C4/R5 (coupling cap and its reference resistor) and R6 aren't marked — see the notes below for why they're protective/topology choices rather than level-tuned values.
 
