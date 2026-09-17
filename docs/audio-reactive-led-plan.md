@@ -208,7 +208,7 @@ Decided against a standalone breakout board — the audio conditioning circuit w
 - JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap. **Ordered.**
 - D1 — a **BAT85** Schottky diode, replacing the 1N4007 for production — see the diode note above. **Ordered.**
 
-The EasyEDA schematic/layout is designed and verified; the board is about to be submitted to JLCPCB.
+The EasyEDA schematic/layout is designed and verified; the board has been ordered from JLCPCB (Global Standard Direct Line, 8–12 business days quoted) and is now in fabrication/shipping. Firmware development (below) can begin now, in parallel.
 
 - [x] Clone the `v1` EasyEDA project rather than editing it in place — keeps the original, still-installed board's design intact
 - [x] Remove `J6_SWITCH` — never populated on `v1` (shorted instead of a real switch), no reason to carry it forward
@@ -217,7 +217,7 @@ The EasyEDA schematic/layout is designed and verified; the board is about to be 
 - [x] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
 - [x] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
 - [x] Run design checks — DRC came back with 0 errors. EasyEDA Standard (the free web editor) has no separate ERC report like KiCad/EasyEDA Pro; schematic connectivity (Node S/A/B topology, GND net, no floating pins or duplicate designators) was instead verified directly against the exported schematic JSON, confirming it matches the documented circuit exactly.
-- [ ] Submit Gerbers to JLCPCB
+- [x] Submit Gerbers to JLCPCB — **ordered**, JLCPCB Global Standard Direct Line shipping, 8–12 business days quoted
 - [ ] **Develop the new firmware mode while the board is being manufactured/shipped**: a new version *line* — `v4.x`, branching from the current final `v2.4.1` — rather than a `v2.x` point release, to clearly distinguish this audio-reactive addition from the core motion-reactive line (`v2.x`) and the parked gyroscope experiment (`v3.x`). Use Phase 2's tuned values and logic, driving the actual strips through the existing `setStrip()` / NeoPixel functions. Written and bench-testable now — real-car integration and tuning still waits for Phase 4, once the new board is installed.
 - [ ] Assemble the new board once manufactured — visual inspection, continuity testing, power-on testing, same validation approach used for the original PCB and its replacement. This is bench-only electrical sanity-checking (no real radio involved yet); real-radio validation happens during install in Phase 4, not here, to avoid tapping the car's RCA wiring twice (once for an early bench check, again for the permanent install).
 - [x] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout. `v1`'s `easyeda/` folder was also retroactively completed with its own schematic JSON export, which had been missing.

@@ -2,7 +2,7 @@
 
 This folder contains the hardware design files, manufacturing resources, and source files for the MR2 Reactive LEDs controller.
 
-**New addition, Phase 3 in progress — about to submit to JLCPCB:** an audio-reactive LED mode. Originally planned as a standalone breakout board wired to the existing PCB (see [audio-breakout.md](audio-breakout.md), now superseded); the decision since Phase 2 bench testing is to instead remanufacture the PCB itself with the audio conditioning circuit integrated directly — see [the build plan](../docs/audio-reactive-led-plan.md) for the full reasoning and Phase 3 checklist. This is why PCB files below are now organised by revision (`v1`, `v2`) rather than as a single flat set. `v2`'s EasyEDA schematic/layout is designed and verified (DRC clean, connectivity checked against the exported netlist), design files are committed under `hardware/pcb/v2/`, and all remaining parts (C4, D1, J7) have been ordered.
+**New addition, Phase 3 in progress — board ordered, in fabrication/shipping:** an audio-reactive LED mode. Originally planned as a standalone breakout board wired to the existing PCB (see [audio-breakout.md](audio-breakout.md), now superseded); the decision since Phase 2 bench testing is to instead remanufacture the PCB itself with the audio conditioning circuit integrated directly — see [the build plan](../docs/audio-reactive-led-plan.md) for the full reasoning and Phase 3 checklist. This is why PCB files below are now organised by revision (`v1`, `v2`) rather than as a single flat set. `v2`'s EasyEDA schematic/layout is designed and verified (DRC clean, connectivity checked against the exported netlist), design files are committed under `hardware/pcb/v2/`, all remaining parts (C4, D1, J7) have been ordered, and Gerbers have been submitted to JLCPCB (Global Standard Direct Line, 8–12 business days quoted). Firmware development (`v4.x`) can now proceed in parallel while the board is manufactured/shipped.
 
 ---
 
@@ -41,7 +41,7 @@ The custom PCB was designed in EasyEDA to replace the breadboard prototype and p
 
 The PCB was designed as a two-layer FR4 board and verified against the breadboard prototype before manufacture. Full history — including the GPIO4 fault on the first assembled `v1` board and its replacement — is in [docs/pcb-design.md](../docs/pcb-design.md) and [docs/build-log.md](../docs/build-log.md).
 
-**`v2` (in progress, about to be submitted to JLCPCB) adds the audio-reactive circuit** — R3, R4, R5, R6, C3, C4, D1 (BAT85), and a new `J7` RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned, and dropping the never-populated `J6_SWITCH`. Reference designators continue on from `v1`'s existing `R1`/`R2`/`C1`/`C2` (already used for other components) rather than reusing them — see [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist. Design complete: cloned from `v1`, DRC clean, schematic connectivity verified, `J7` wired with Front Left → R3 / Front Right → R4 matching the documented convention.
+**`v2` (in progress, ordered from JLCPCB) adds the audio-reactive circuit** — R3, R4, R5, R6, C3, C4, D1 (BAT85), and a new `J7` RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned, and dropping the never-populated `J6_SWITCH`. Reference designators continue on from `v1`'s existing `R1`/`R2`/`C1`/`C2` (already used for other components) rather than reusing them — see [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist. Design complete: cloned from `v1`, DRC clean, schematic connectivity verified, `J7` wired with Front Left → R3 / Front Right → R4 matching the documented convention.
 
 ---
 
@@ -56,7 +56,7 @@ hardware/
     │   ├── gerbers/
     │   ├── bom/
     │   └── easyeda/
-    └── v2/  (audio circuit integrated, designed and about to be submitted to JLCPCB)
+    └── v2/  (audio circuit integrated, ordered from JLCPCB — in fabrication/shipping)
 ```
 
 ## Gerbers
@@ -93,7 +93,7 @@ These files allow the PCB schematic and layout to be reviewed or modified in Eas
 
 **`v1`: complete.** Designed in EasyEDA (schematic, layout, ERC/DRC), manufactured by JLCPCB, assembled, and installed in the car — see [docs/build-log.md](../docs/build-log.md) for the full history, including the GPIO4 fault on the first assembled board and its replacement.
 
-**`v2`: designed in EasyEDA, about to be submitted to JLCPCB.** Cloned from the `v1` project rather than editing it in place, adding the audio conditioning circuit (R3–R6, C3, C4, D1, J7). DRC clean (0 errors); EasyEDA Standard has no separate ERC report, so schematic connectivity was verified directly against the exported netlist instead. All parts (C4, D1, J7) ordered. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist.
+**`v2`: designed in EasyEDA, ordered from JLCPCB — in fabrication/shipping.** Cloned from the `v1` project rather than editing it in place, adding the audio conditioning circuit (R3–R6, C3, C4, D1, J7). DRC clean (0 errors); EasyEDA Standard has no separate ERC report, so schematic connectivity was verified directly against the exported netlist instead. All parts (C4, D1, J7) ordered. Gerbers submitted via JLCPCB's Global Standard Direct Line shipping, 8–12 business days quoted. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist.
 
 ---
 
