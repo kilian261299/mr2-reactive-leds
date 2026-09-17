@@ -60,7 +60,7 @@
 
 // Set this to the actual length of whatever test strip you're
 // using on the bench. Not tied to the production strip lengths.
-#define NUM_LEDS 30
+#define NUM_LEDS 60
 
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
