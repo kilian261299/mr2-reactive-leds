@@ -96,7 +96,7 @@ Tests:
 
 - Reading a conditioned audio envelope on an ADC pin
 - Smoothing that envelope in firmware, with separate fast-attack/slow-release rates for a natural bounce
-- Driving a bar-graph audio visualizer on a real addressable strip — a growing/shrinking bar of lit LEDs with a bouncing peak-hold marker, not just uniform brightness
+- Driving a bar-graph audio visualizer on a real addressable strip — a growing/shrinking bar of lit LEDs with a bouncing peak-hold marker, snapping from cyan to orange once the level crosses a loudness threshold, not just uniform brightness
 
 Purpose:
 

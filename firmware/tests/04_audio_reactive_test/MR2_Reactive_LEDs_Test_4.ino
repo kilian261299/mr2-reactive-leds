@@ -22,8 +22,9 @@
 // 1. Confirm the conditioning circuit produces a usable 0-3.3V
 //    envelope on an ADC pin from a real audio source.
 // 2. Smooth that envelope in firmware and map it to a growing/
-//    shrinking bar of lit LEDs, with a bouncing peak-hold marker --
-//    a level-meter/visualizer look, not just uniform brightness.
+//    shrinking bar of lit LEDs, with a bouncing peak-hold marker and
+//    a cyan-to-orange colour snap once it gets loud enough -- a
+//    level-meter/visualizer look, not just uniform brightness.
 // 3. Give a live Serial readout of raw vs smoothed values, so the
 //    conditioning circuit (R1/R2, C1 smoothing cap) can be tuned
 //    by watching real numbers, not just by eye on the LED.
@@ -97,6 +98,22 @@ float releaseSmoothing = 0.05;
 
 float smoothedAudio = 0.0;
 
+// Bar colour snaps from cyan to orange once the level gets loud enough
+// -- a hard cutoff rather than a gradual fade, so "getting loud" reads
+// as an unmistakable colour change instead of a subtle blend.
+//
+// Two thresholds, not one: level naturally jitters up and down on real
+// music, so a single cutoff caused the colour to flicker rapidly back
+// and forth right at that boundary -- fast enough that the eye blends
+// cyan and orange together into a washed-out white rather than seeing
+// either colour cleanly. The gap between an upper (snap-to-orange) and
+// a lower (snap-back-to-cyan) threshold means level has to clearly
+// cross into "loud" or clearly drop back into "quiet" before the
+// colour changes -- it can't flicker at a single boundary any more.
+const float orangeThresholdOn = 0.7;
+const float orangeThresholdOff = 0.55;
+bool isLoud = false;
+
 // Peak-hold marker: a single pixel riding ahead of the bar that
 // snaps up instantly whenever the bar catches up to or passes it,
 // then falls back down under its own slower "gravity" -- the
@@ -155,15 +172,35 @@ void updatePeak(float barHeightLEDs) {
 // DRAW THE BAR + PEAK MARKER
 // ==================================================
 
-void drawVisualizer(float barHeightLEDs) {
+void drawVisualizer(float barHeightLEDs, float level) {
   strip.clear();
 
-  // Dark cyan-blue bar colour -- deliberately different from any
-  // colour used by the main firmware (blue/orange/red), so it's
-  // obvious on the bench which system is driving the strip.
-  const uint8_t barR = 0;
-  const uint8_t barG = 90;
-  const uint8_t barB = 160;
+  // Bar colour snaps from dark cyan-blue (quiet) to orange (loud) once
+  // level gets loud enough -- a hard cutoff, not a gradual fade, so
+  // "getting loud" is an unmistakable colour change rather than a
+  // subtle blend. Cyan stays deliberately different from anything the
+  // main firmware uses at rest (blue/orange/red), so it's still obvious
+  // on the bench which system is driving the strip when it's quiet;
+  // orange deliberately matches the main firmware's own acceleration-
+  // orange (see blueToOrange() in the vehicle firmware), since "loud"
+  // and "hard acceleration" are both the excited end of their
+  // respective scales.
+  //
+  // isLoud is updated with hysteresis (see orangeThresholdOn/Off above)
+  // rather than recomputed fresh from level every frame, so it can't
+  // flicker rapidly at a single boundary.
+  const uint8_t cyanR = 0,   cyanG = 90, cyanB = 160;
+  const uint8_t orangeR = 255, orangeG = 40, orangeB = 0;
+
+  if (!isLoud && level >= orangeThresholdOn) {
+    isLoud = true;
+  } else if (isLoud && level < orangeThresholdOff) {
+    isLoud = false;
+  }
+
+  uint8_t barR = isLoud ? orangeR : cyanR;
+  uint8_t barG = isLoud ? orangeG : cyanG;
+  uint8_t barB = isLoud ? orangeB : cyanB;
 
   int fullLit = (int)barHeightLEDs;
   float fraction = barHeightLEDs - fullLit;
@@ -214,7 +251,7 @@ void updateAudioReactiveLEDs() {
   float barHeightLEDs = level * NUM_LEDS;
 
   updatePeak(barHeightLEDs);
-  drawVisualizer(barHeightLEDs);
+  drawVisualizer(barHeightLEDs, level);
 
   // Print raw + smoothed values regularly so the conditioning
   // circuit (R1/R2, C1) can be tuned against real numbers, per
