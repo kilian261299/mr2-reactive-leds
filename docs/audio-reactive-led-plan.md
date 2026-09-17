@@ -151,19 +151,21 @@ The repo scaffolding is done: this plan document and its images are committed at
 
 Using a spare ESP32-C3 module and the real addressable LED strip found for testing — **the ESP32-C3 installed in the car is not touched during this phase**, avoiding any risk to the already-working, installed v2.4.1 firmware. (Originally planned around a full ESP32 dev board — see the "Testing board update" note above for why a spare ESP32-C3 module is used instead.)
 
-**Stage A — initial tuning, laptop/phone audio (the only validation available before Phase 3):**
-- [ ] Breadboard the conditioning circuit using the component list above
-- [ ] Wire audio output to `GPIO1`, LED data to `GPIO7` (or confirmed equivalents)
-- [ ] Flash the Phase 1 test sketch
-- [ ] Feed it laptop/phone headphone audio (line-level output, good first stand-in for the radio)
-- [ ] Tune R1/R2 and C1 (smoothing) by watching how the LED actually responds
+**Stage A — initial tuning, laptop/phone audio (the only validation available before Phase 3): validated, working.**
+- [x] Breadboard the conditioning circuit using the component list above
+- [x] Wire audio output to `GPIO1`, LED data to `GPIO7` (or confirmed equivalents)
+- [x] Flash the Phase 1 test sketch — since rewritten as a bar-graph audio visualizer (growing/shrinking LED bar with a bouncing peak-hold marker, fast attack/slow release) rather than uniform whole-strip brightness; see `firmware/tests/04_audio_reactive_test/`
+- [x] Feed it laptop/phone headphone audio (line-level output, good first stand-in for the radio) — via a USB-C-to-3.5mm dongle; the laptop's built-in 3.5mm jack was tried and found too quiet even at max volume, reverted to the dongle
+- [x] Tune R1/R2 and C1 (smoothing) by watching how the LED actually responds — confirmed working with R1/R2 at 470Ω, C1 unchanged at 2.2µF; `audioFloor`/`audioCeiling` calibrated from real Serial readings to `900`/`1300` (idle settled ~950, loud peaks ~1200)
+
+**Known issue, not yet fixed:** the small USB-C-to-3.5mm dongle's audio occasionally distorts/corrupts mid-playback, recovering temporarily after unplugging and reconnecting it. Most likely cause: the monitoring speaker (8Ω) is a much lower-impedance load than the dongle's tiny onboard amp is rated to drive continuously, causing it to overload/distort over time. Since the speaker taps the same raw wire the conditioning circuit reads from, this could affect the LED response too during those moments, not just the audible sound. Left unaddressed for now since it hasn't blocked validation; a series resistor (~47–100Ω) between the source and the speaker, or swapping to a powered/amplified speaker, would fix it if it becomes a problem.
 
 **Real-radio validation moved to Phase 3.** The car's actual RCA wiring isn't practically accessible without opening up the already-installed system — not worth the risk to a working install just to bench-test. Two consequences, both accepted:
 
 - **The head unit's actual preamp output voltage is now confirmed.** The Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout of 1.8V RMS (~2.55V peak), well inside what was previously assumed (~2–4V RMS). Switching the head unit's internal amp off (already done here, since an external amp is used) doesn't affect this — RCA preamp outs are a separate signal path from the internal amp regardless of that setting. See the confirmed-voltage note above for what this means for ADC-protection margin now that there's no dedicated divider.
 - **R1/R2 and C1 should still be tuned by ear/Serial-monitor on the bench.** Watch how loud laptop content lands on the ADC's range and adjust `audioFloor`/`audioCeiling` in firmware to match what you actually see, rather than trusting the placeholder 200/3000 defaults — the confirmed spec means overshoot/clipping risk is low, but the real radio's exact levels can still differ from a laptop's. See Phase 3 for validating this in the car once real hardware is available.
 
-- [ ] **Record the working component values and firmware `audioFloor`/`audioCeiling` from Stage A** — carries into Phase 3 as a starting point, not a final answer
+- [x] **Record the working component values and firmware `audioFloor`/`audioCeiling` from Stage A** — R1/R2 = 470Ω, R3/R4 removed, C1 = 2.2µF unchanged, `audioFloor` = 900, `audioCeiling` = 1300; carries into Phase 3 as a starting point, not a final answer
 - [ ] Update the production schematic image and component list above with these values (replace the `*`-marked placeholders), noting they're laptop-derived and may still need correction per Phase 3
 
 ---

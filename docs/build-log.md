@@ -699,7 +699,7 @@ The two testing images were updated again to add a monitoring speaker, tapped ac
 
 ## Phase 2 — Build and Bench-Test
 
-**Status:** In progress. The conditioning circuit has been breadboarded on the bench, with a monitoring speaker added; Stage A tuning (live debugging, several design corrections below) is underway.
+**Status:** Stage A validated and working. The conditioning circuit has been breadboarded on the bench, with a monitoring speaker added, and confirmed responding correctly to real music after several design corrections below.
 
 Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — **the ESP32-C3 installed in the car is not touched during this phase**, so there's no risk to the already-working, installed firmware. See the build plan for the full Stage A (laptop/phone-audio tuning) checklist — real-radio validation has moved to Phase 3, since the car's actual RCA wiring isn't practically accessible without opening up the already-installed system.
 
@@ -715,7 +715,13 @@ Uses a spare ESP32-C3 module and a real addressable LED strip on the bench — *
 
 **Testing circuit discovered to be mono, not stereo:** the breakout cable's "white" wire turned out to have continuity with the shield — it's a second ground/drain wire on this cable, not a real left-channel conductor (common on cheap 3.5mm pigtail cables, which don't reliably follow RCA's white=L/red=R convention). Bench testing currently runs mono, through the red wire/R2 only; `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md` both note this. Doesn't affect the production design, which taps the radio's genuinely separate Front L/R RCA outputs.
 
-Documented in `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md`; both schematic images still show R5, R3/R4, and the old R1/R2 value, pending regeneration.
+Documented in `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md`; both schematic images have since been regenerated to match.
+
+**Firmware rewritten as a bar-graph audio visualizer, and calibrated from real numbers.** `firmware/tests/04_audio_reactive_test/` originally just scaled the whole strip's brightness uniformly with the audio level; rewritten to instead grow/shrink a bar of lit LEDs from one end of the strip, with a white peak-hold marker that snaps up instantly and falls back down under its own slower "gravity" (fast-attack/slow-release smoothing on the bar itself gives the same bounce). `audioFloor`/`audioCeiling` — placeholders since Phase 1 — calibrated from real Serial readings on the bench to `900`/`1300` (idle settled around 950, loud content peaked around 1200). `NUM_LEDS` updated to `60` to match the actual test strip. Confirmed working well, LEDs reacting cleanly to real audio.
+
+**Bench-testing detour, resolved:** partway through, the laptop's built-in 3.5mm jack was tried in place of the USB-C-to-3.5mm dongle, but its output was too quiet to register even at max volume — reverted to the dongle, which was already known to work.
+
+**Known issue, deferred:** the USB-C dongle occasionally distorts/corrupts mid-playback, recovering temporarily after being unplugged and reconnected. Most likely cause: the monitoring speaker (8Ω) is a much lower-impedance load than the dongle's small onboard amplifier is rated to drive continuously, causing it to overload over time. Since the speaker taps the same raw wire the conditioning circuit reads from, this could affect the LED response during those moments too, not just the audible sound — worth keeping in mind if odd behaviour shows up later. Not fixed yet since it hasn't blocked validation; a series resistor (~47–100Ω) on the speaker tap, or a powered/amplified speaker instead, would address it.
 
 ## Phase 3 — Remanufacture the PCB with the Audio Circuit Integrated
 
