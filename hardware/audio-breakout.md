@@ -60,8 +60,6 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 ![Testing circuit schematic](../images/audio-circuit/testing_circuit_schematic.png)
 
-**⚠ Out of date:** this image shows R5, R3/R4, and the old R1/R2 value (2.2kΩ), and predates C2/R7 entirely. Needs regenerating to match the component list above.
-
 | Component | Role |
 |---|---|
 | R1 / R2 (470Ω) | Series input resistors, isolate L+R during summing and protect the source from a dead short — not for signal attenuation (see notes below) |
@@ -102,7 +100,7 @@ R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expe
 
 ## Production Circuit (Car, ESP32-C3)
 
-Now that testing uses a spare ESP32-C3 module, this circuit is topologically identical to the testing circuit, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
+Now that testing uses a spare ESP32-C3 module, this circuit is topologically similar to the testing circuit, down to the same `GPIO1` ADC pin — besides the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here), it also differs in D1 (BAT85 here vs. 1N4007 on the bench — see the note below) and the addition of C2/R7 (never actually validated on the breadboard, see the note below).
 
 ```
 Front Left RCA  → R1 (470Ω*) ──┐
@@ -115,7 +113,7 @@ RCA shield/ground → GND
 Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
 Node A → R7 (100kΩ) → GND
 
-Node A → D1 (1N4007) → Node B
+Node A → D1 (BAT85) → Node B
 
 Node B → C1 (2.2µF*) → GND
 
@@ -127,6 +125,8 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
 `*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R1/R2 exist only for channel isolation and short-circuit protection. C2/R7 (coupling cap and its reference resistor) and R6 aren't marked — see the notes above for why they're protective/topology choices rather than level-tuned values.
+
+**D1 upgraded to a BAT85 Schottky diode for production**, replacing the 1N4007 the testing circuit still uses. The 1N4007 was picked purely for being on hand, not for suiting this job — it's a general-purpose power rectifier, not a signal diode. BAT85's much lower forward voltage (~0.15–0.3V vs. the 1N4007's estimated ~0.3–0.6V at these currents) isn't needed for loud content to clear the threshold, but it lets quieter passages register more faithfully — a standard choice for this kind of low-level envelope-detector duty. Cheap, through-hole, easy to hand-solder.
 
 ### Production pinout (ESP32-C3, already installed)
 
@@ -154,7 +154,7 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 - [ ] Confirm R1/R2 (summing/isolation resistors) and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
-- [ ] Confirm D1 (1N4007, chosen for availability rather than being a purpose-picked signal diode — see the note above for why that's expected to be fine, but not yet bench-verified)
+- [ ] Source a BAT85 Schottky diode (or equivalent) for D1 on the production board — replacing the 1N4007 the testing circuit still uses, see the note above
 - [ ] Source a genuinely non-polarized capacitor for C2 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above
 - [ ] Source a JST-XH 3-pin connector set for the new RCA input, matching the board's existing J2–J5 style
-- [ ] Regenerate the testing and production schematic images — both still show R5, R3/R4, and the old R1/R2 value, and predate C2/R7 entirely
+- [ ] Regenerate the production schematic image to show D1 as BAT85 (currently drawn as 1N4007) — the testing schematic and the rest of the production schematic are already current

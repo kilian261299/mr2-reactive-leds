@@ -80,6 +80,8 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 Not yet re-tested on the bench with a proper non-polarized part — the `v2` PCB is the next point this gets validated, alongside the real radio.
 
+**D1 upgraded to a BAT85 Schottky diode for the `v2` PCB** (production only — the testing circuit keeps the 1N4007 it's already validated with). The 1N4007 was originally picked purely for being on hand, not for suiting this job — it's a general-purpose power rectifier, not a signal diode. A Schottky like the BAT85 has a much lower forward voltage (~0.15–0.3V vs. the 1N4007's estimated ~0.3–0.6V at these tiny currents), which isn't needed for loud content to register — with the confirmed radio voltage and no divider, that clears either diode's threshold easily — but it does mean quieter passages register more faithfully instead of needing to clear a bigger bar first, which matters more now that C2 gives a genuinely clean near-0V baseline. BAT85 is a standard choice for exactly this kind of low-level envelope-detector duty (it's a textbook part for AM-detector circuits, the same basic task). Cheap, through-hole, easy to hand-solder alongside everything else on the board.
+
 Values are starting points for Phase 2 — expect to retune R1/R2 and C1 (smoothing, jointly setting decay rate with R6) once you're actually watching the LED respond to real music.
 
 ### Production setup — full pipeline
@@ -105,7 +107,7 @@ RCA shield/ground → GND
 Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
 Node A → R7 (100kΩ) → GND
 
-Node A → D1 (1N4007) → Node B
+Node A → D1 (BAT85) → Node B
 
 Node B → C1 (2.2µF*) → GND
 
@@ -185,9 +187,10 @@ Decided against a standalone breakout board — the audio conditioning circuit w
 **Parts to source before starting** (everything else needed is already on hand from Phase 2 bench testing or the original `v1` build):
 - Coupling capacitor (C2) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. Worth getting a couple of different values, since the best one may shift once tested against the real radio.
 - JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for Front Left, Front Right, and shield/ground from the RCA tap.
+- D1 — a **BAT85** Schottky diode (or equivalent, e.g. 1N5711/1N5817), replacing the 1N4007 for production — see the diode note above.
 
 - [ ] Confirm the RGB/addressable LED and conditioning circuit values from Phase 2
-- [ ] In the EasyEDA project, add R1, R2, R6, R7, C2, D1, and C1 as new components, matching the confirmed values (R5, R3, and R4 all dropped from the design — see the component list note above)
+- [ ] In the EasyEDA project, add R1, R2, R6, R7, C2, D1 (BAT85), and C1 as new components, matching the confirmed values (R5, R3, and R4 all dropped from the design — see the component list note above)
 - [ ] Add the new JST-XH connector for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
 - [ ] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
 - [ ] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
