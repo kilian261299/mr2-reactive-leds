@@ -103,19 +103,19 @@ R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expe
 Now that testing uses a spare ESP32-C3 module, this circuit is topologically similar to the testing circuit, down to the same `GPIO1` ADC pin — besides the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here), it also differs in D1 (BAT85 here vs. 1N4007 on the bench — see the note below) and the addition of C2/R7 (never actually validated on the breadboard, see the note below).
 
 ```
-Front Left RCA  → R1 (470Ω*) ──┐
-Front Right RCA → R2 (470Ω*) ──┼── Node S
+Front Left RCA  → R8 (470Ω*) ──┐
+Front Right RCA → R9 (470Ω*) ──┼── Node S
 RCA shield/ground → GND
    (shared ground reference for the whole circuit — see Ground
    note below, must be the RCA tap's own shield, not a separate
    chassis point)
 
-Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
+Node S → C4 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
 Node A → R7 (100kΩ) → GND
 
 Node A → D1 (BAT85) → Node B
 
-Node B → C1 (2.2µF*) → GND
+Node B → C3 (2.2µF*) → GND
 
 Node B → R6 (10kΩ) → GND
 
@@ -124,7 +124,9 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R1/R2 exist only for channel isolation and short-circuit protection. C2/R7 (coupling cap and its reference resistor) and R6 aren't marked — see the notes above for why they're protective/topology choices rather than level-tuned values.
+**Reference designators here (R8, R9, C3, C4) differ from the testing-circuit list above (R1, R2, C1, C2) on purpose** — the testing circuit is breadboard-only, never loaded into EasyEDA, but the production list has to avoid colliding with designators `v1`'s real board already uses elsewhere (`R1`/`R2` = 330Ω, `C1`/`C2` = 1000µF/100nF). R6, R7, and D1 don't collide with anything and keep the same names in both lists.
+
+`*` = expected to change once Phase 2 confirms real values. There is no longer a dedicated divider stage (R3/R4 removed); R8/R9 exist only for channel isolation and short-circuit protection. C4/R7 (coupling cap and its reference resistor) and R6 aren't marked — see the notes above for why they're protective/topology choices rather than level-tuned values.
 
 **D1 upgraded to a BAT85 Schottky diode for production**, replacing the 1N4007 the testing circuit still uses. The 1N4007 was picked purely for being on hand, not for suiting this job — it's a general-purpose power rectifier, not a signal diode. BAT85's much lower forward voltage (~0.15–0.3V vs. the 1N4007's estimated ~0.3–0.6V at these currents) isn't needed for loud content to clear the threshold, but it lets quieter passages register more faithfully — a standard choice for this kind of low-level envelope-detector duty. Cheap, through-hole, easy to hand-solder.
 
@@ -137,6 +139,8 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 | `GND` (existing PCB net) | Breakout board's `GND` — **which must trace to the RCA tap's own ground/shield**, not a separate chassis point, and is R6's return path | Common ground — see Ground note below |
 
 The only genuinely new wiring on the production board is two connections to the breakout: `GND` and `GPIO1`. No `3.3V` connection is needed — R5 was dropped from the design (see the component list note above). Everything else (LED strips, level shifter, encoder, accelerometer) is completely untouched.
+
+**`J6_SWITCH` removed.** `v1`'s BOM includes a 2-pin switch connector that was never actually populated — the physical toggle switch didn't fit, so that connector is currently just shorted instead (see `README.md`). Dropped entirely for `v2`; the new RCA connector is `J7` rather than reusing `J6`, to keep the freed-up number from meaning something unrelated between board revisions.
 
 ---
 
@@ -152,9 +156,10 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 ## Open Items (Before Phase 3)
 
-- [ ] Confirm R1/R2 (summing/isolation resistors) and C1 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
+- [ ] Confirm R8/R9 (summing/isolation resistors) and C3 (smoothing cap) against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this now happens on the assembled `v2` board instead, before permanent install — see the build plan's Phase 3
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones
 - [ ] Source a BAT85 Schottky diode (or equivalent) for D1 on the production board — replacing the 1N4007 the testing circuit still uses, see the note above
-- [ ] Source a genuinely non-polarized capacitor for C2 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above
-- [ ] Source a JST-XH 3-pin connector set for the new RCA input, matching the board's existing J2–J5 style
-- [ ] Regenerate the production schematic image to show D1 as BAT85 (currently drawn as 1N4007) — the testing schematic and the rest of the production schematic are already current
+- [ ] Source a genuinely non-polarized capacitor for C4 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above
+- [ ] Source a JST-XH 3-pin connector set for the new RCA input (`J7`), matching the board's existing J2–J5 style
+- [ ] Clone the `v1` EasyEDA project rather than editing it in place, and remove `J6_SWITCH` (never populated — see the note above)
+- [ ] Regenerate the production schematic image to show D1 as BAT85 (currently drawn as 1N4007) and the renumbered R8/R9/C3/C4 designators — the testing schematic is already current and doesn't need this renumbering, since it isn't built from real EasyEDA designators

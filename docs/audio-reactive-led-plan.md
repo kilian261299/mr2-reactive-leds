@@ -97,26 +97,28 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 ### Production circuit — component list
 
 ```
-Front Left RCA  → R1 (470Ω*) ──┐
-Front Right RCA → R2 (470Ω*) ──┼── Node S
+Front Left RCA  → R8 (470Ω*) ──┐
+Front Right RCA → R9 (470Ω*) ──┼── Node S
 RCA shield/ground → GND
    (shared ground reference for the whole circuit — see Ground
    note below, this must be the RCA tap's own shield, not a
    separate chassis point)
 
-Node S → C2 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
+Node S → C4 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
 Node A → R7 (100kΩ) → GND
 
 Node A → D1 (BAT85) → Node B
 
-Node B → C1 (2.2µF*) → GND
+Node B → C3 (2.2µF*) → GND
 
 Node B → R6 (10kΩ) → GND
 
 Node B → ESP32-C3 GPIO1 (ADC input, production board)
 ```
 
-`*` marks values expected to move once Phase 2 bench testing (and Phase 3's real-radio check) confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** There is no longer a dedicated divider stage (R3/R4 removed — see the note above); R1/R2 exist only to isolate the two channels during summing and protect the source from a dead short, not to attenuate the signal, and the ADC-protection margin now comes purely from D1's own forward drop against the Kenwood DPX-07MD's confirmed preout spec. C2/R7 (the coupling cap and its reference resistor) aren't marked, since they're a protective addition rather than a level-tuned value — see the note above for why C2 specifically must be non-polarized. R6 isn't marked either, for the same reason — but see the R5-removal note above: earlier versions of this doc paired R6 with an R5 pull-up to 3.3V that turned out to make D1 never conduct at realistic signal levels, so R5 has been dropped from the design entirely.
+**Reference designators here (R8, R9, C3, C4) differ from the testing-circuit list above (R1, R2, C1, C2) on purpose** — the testing circuit is breadboard-only and was never going to be loaded into EasyEDA, but the production list has to avoid colliding with designators `v1`'s real board already uses for other things (`R1`/`R2` = 330Ω, `C1`/`C2` = 1000µF/100nF elsewhere on the board). R6, R7, and D1 don't collide with anything and keep the same names in both lists.
+
+`*` marks values expected to move once Phase 2 bench testing (and Phase 3's real-radio check) confirms what actually works — currently the same as the testing circuit's starting values. **Update both this schematic and this list with confirmed values before Phase 3 begins.** There is no longer a dedicated divider stage (R3/R4 removed — see the note above); R8/R9 exist only to isolate the two channels during summing and protect the source from a dead short, not to attenuate the signal, and the ADC-protection margin now comes purely from D1's own forward drop against the Kenwood DPX-07MD's confirmed preout spec. C4/R7 (the coupling cap and its reference resistor) aren't marked, since they're a protective addition rather than a level-tuned value — see the note above for why C4 specifically must be non-polarized. R6 isn't marked either, for the same reason — but see the R5-removal note above: earlier versions of this doc paired R6 with an R5 pull-up to 3.3V that turned out to make D1 never conduct at realistic signal levels, so R5 has been dropped from the design entirely.
 
 Now that testing uses a spare ESP32-C3 module (see "Testing board update" above), this circuit and the testing circuit are topologically identical, down to the same `GPIO1` ADC pin — the only real difference is the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to.
 
@@ -145,7 +147,9 @@ Used for bench testing only — a separate, spare ESP32-C3 module, not the one i
 | `LEFT_LED_PIN` / `RIGHT_LED_PIN` | Existing LED strips | **Unchanged** — reuses the current output path, no new strip or data pin |
 | `GND` (existing board net) | Conditioning circuit ground — **which must trace to the RCA tap's own ground/shield**, tied into the board's single shared ground plane, and is R6's return path (the discharge/bias resistor) | Common ground — see Ground note above |
 
-The audio circuit is now part of the same PCB as everything else — R1, R2, R6, R7, C2, D1, and C1 sit alongside the existing components, with a new **JST-XH connector** for the RCA input (matching the J2–J5 style and 2.54mm pitch already used for the LED outputs, MPU6050, and encoder). No `3V3` connection is needed for the conditioning circuit itself — R5 was dropped from the design (see the component list note above), so nothing in this circuit draws from the 3.3V rail. Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
+The audio circuit is now part of the same PCB as everything else — R6, R7, R8, R9, C3, C4, and D1 sit alongside the existing components, with a new **JST-XH connector (`J7`)** for the RCA input (matching the J2–J5 style and 2.54mm pitch already used for the LED outputs, MPU6050, and encoder — `J6` was the now-removed switch connector, see below). No `3V3` connection is needed for the conditioning circuit itself — R5 was dropped from the design (see the component list note above), so nothing in this circuit draws from the 3.3V rail. Nothing about the LED strips, level shifter, encoder, or accelerometer changes.
+
+**`J6_SWITCH` removed.** `v1`'s BOM includes a 2-pin switch connector that was never actually populated — the physical toggle switch didn't fit, so that connector is currently just shorted instead (see `README.md`). Dropped entirely for `v2` rather than carried forward unused.
 
 ---
 
@@ -185,20 +189,22 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision).
 
 **Parts to source before starting** (everything else needed is already on hand from Phase 2 bench testing or the original `v1` build):
-- Coupling capacitor (C2) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. Worth getting a couple of different values, since the best one may shift once tested against the real radio.
-- JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for Front Left, Front Right, and shield/ground from the RCA tap.
+- Coupling capacitor (`C4` on the real board) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. Worth getting a couple of different values, since the best one may shift once tested against the real radio.
+- JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap.
 - D1 — a **BAT85** Schottky diode (or equivalent, e.g. 1N5711/1N5817), replacing the 1N4007 for production — see the diode note above.
 
 - [ ] Confirm the RGB/addressable LED and conditioning circuit values from Phase 2
-- [ ] In the EasyEDA project, add R1, R2, R6, R7, C2, D1 (BAT85), and C1 as new components, matching the confirmed values (R5, R3, and R4 all dropped from the design — see the component list note above)
-- [ ] Add the new JST-XH connector for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
+- [ ] Clone the `v1` EasyEDA project rather than editing it in place — keeps the original, still-installed board's design intact
+- [ ] Remove `J6_SWITCH` — never populated on `v1` (shorted instead of a real switch), no reason to carry it forward
+- [ ] Add `R8`, `R9`, `R6`, `R7`, `C4`, `D1` (BAT85), and `C3` as new components, matching the confirmed values (`R5`, and the old `R3`/`R4` divider, all dropped from the design — see the component list note above). **Note the renumbering**: `v1` already uses `R1`/`R2` and `C1`/`C2` for other components, so the audio circuit's resistors/caps use `R8`/`R9`/`C3`/`C4` instead — see the note above the production component list for the full mapping.
+- [ ] Add the new JST-XH connector (`J7`) for the RCA input (Front Left, Front Right, shield/ground), matching the existing J2–J5 connector style already used for the LED outputs, MPU6050, and encoder
 - [ ] Route the conditioning circuit's output to a free ADC-capable pin — `GPIO1`, per the pinout table above
 - [ ] Tie the new circuit's ground into the board's existing GND net — no separate ground path needed, since the whole board (and now the audio circuit too) already shares one common ground plane; no 3V3 connection is needed for this circuit
 - [ ] Run design checks (ERC/DRC) same as the original board
 - [ ] Submit Gerbers to JLCPCB
 - [ ] Assemble the new board once manufactured, bench-test before installing (same validation approach used for the original PCB and its replacement)
-- [ ] **First real validation against the actual car radio happens here**, on the assembled board, before permanent (re)install — this is the earliest point real RCA access is practical. Confirm the ADC isn't clipping (a maxed-out, unresponsive-to-volume reading is the signature), that the idle baseline actually sits near-zero (confirming C2 is doing its job against whatever the real radio's DC characteristics turn out to be), and that C1's smoothing still feels right against real music.
-- [ ] If R1/R2/C1/C2 need correction, hand-swap those specific parts on the assembled board — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
+- [ ] **First real validation against the actual car radio happens here**, on the assembled board, before permanent (re)install — this is the earliest point real RCA access is practical. Confirm the ADC isn't clipping (a maxed-out, unresponsive-to-volume reading is the signature), that the idle baseline actually sits near-zero (confirming C4 is doing its job against whatever the real radio's DC characteristics turn out to be), and that C3's smoothing still feels right against real music.
+- [ ] If R8/R9/C3/C4 need correction, hand-swap those specific parts on the assembled board — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
 - [ ] Save the new design files under `hardware/pcb/v2/` (gerbers/, bom/, easyeda/), matching the structure the original board's files already use under `hardware/pcb/v1/` — see the note in `hardware/README.md` on the versioned PCB folder layout
 
 ---
