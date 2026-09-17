@@ -78,11 +78,15 @@ Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 // audioCeiling: the raw ADC reading during loud audio. Above this,
 // treat it as a full bar.
 //
-// Both of these are placeholders -- watch the Serial output with
-// real audio (Phase 2, Stage A) and set these to what you actually
-// see, not what's guessed here.
-int audioFloor = 200;
-int audioCeiling = 3000;
+// Both of these were placeholders -- now set from real Serial
+// readings on the bench (Phase 2, Stage A): idle settled around
+// 950, loud content peaked around 1200. Floor/ceiling are set with
+// a bit of margin either side of those two observed points (rather
+// than snugly on top of them) so a quieter idle moment doesn't
+// clip the bar to fully-off, and a louder transient than what was
+// captured doesn't clip it to fully-on.
+int audioFloor = 900;
+int audioCeiling = 1300;
 
 // Asymmetric smoothing rather than one single rate: a fast attack
 // lets the bar jump up quickly on a transient, a slow release lets
