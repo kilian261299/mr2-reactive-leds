@@ -166,7 +166,6 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 ## Open Items (Phase 3, in progress)
 
-- [ ] Replace the `*`-marked placeholder values above with confirmed ones, once R3/R4 (summing/isolation resistors) and C3 (smoothing cap) are checked against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this happens during install instead — see the build plan's Phase 4
 - [ ] Source a BAT85 Schottky diode (or equivalent) for D1 on the production board — replacing the 1N4007 the testing circuit still uses, see the note above
 - [ ] Source a genuinely non-polarized capacitor for C4 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above
 - [ ] Source a JST-XH 3-pin connector set for the new RCA input (`J7`), matching the board's existing J2–J5 style
