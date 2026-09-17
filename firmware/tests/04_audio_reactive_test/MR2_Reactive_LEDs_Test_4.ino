@@ -224,21 +224,29 @@ void updateAudioReactiveLEDs() {
   // chip -- if nothing is reading the port (no Serial Monitor open),
   // the internal buffer fills up and Serial.print() starts BLOCKING
   // instead of discarding data, freezing the whole loop() (and the
-  // LEDs with it) until a monitor connects and drains it. Checking
-  // `if (Serial)` skips printing entirely when nothing's listening,
-  // so the LED updates above never get stuck waiting on this.
+  // LEDs with it) until a monitor connects and drains it.
+  //
+  // `if (Serial)` alone isn't reliable here -- on some ESP32 core
+  // versions it reflects "USB cable is plugged in" rather than "a
+  // program is actually reading the port", so it can stay true even
+  // after the monitor's closed. Checking availableForWrite() tests
+  // the thing that actually matters (is there buffer space right
+  // now), regardless of whether that connection flag is accurate.
+  const int lineLength = 90; // generous estimate for the line below
   unsigned long now = millis();
-  if (Serial && now - lastSerialPrint > serialPrintInterval) {
-    Serial.print("Raw: ");
-    Serial.print(rawAudio);
-    Serial.print(" | Smoothed: ");
-    Serial.print(smoothedAudio, 1);
-    Serial.print(" | Level: ");
-    Serial.print(level, 2);
-    Serial.print(" | Bar LEDs: ");
-    Serial.print(barHeightLEDs, 1);
-    Serial.print(" | Peak: ");
-    Serial.println(peakPositionLEDs, 1);
+  if (now - lastSerialPrint > serialPrintInterval) {
+    if (Serial.availableForWrite() >= lineLength) {
+      Serial.print("Raw: ");
+      Serial.print(rawAudio);
+      Serial.print(" | Smoothed: ");
+      Serial.print(smoothedAudio, 1);
+      Serial.print(" | Level: ");
+      Serial.print(level, 2);
+      Serial.print(" | Bar LEDs: ");
+      Serial.print(barHeightLEDs, 1);
+      Serial.print(" | Peak: ");
+      Serial.println(peakPositionLEDs, 1);
+    }
 
     lastSerialPrint = now;
   }
