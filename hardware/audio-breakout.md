@@ -67,6 +67,8 @@ A small monitoring speaker taps directly across the red wire and shield, *before
 
 **R3/R4 removed entirely, R1 (the resistor in the red/signal path) reduced 2.2kΩ → 470Ω (further correction, same root cause).** *(Heads up: "R3"/"R4" get reused below for different, unrelated components in the production designator scheme — see the renumbering note in the production section. These two facts aren't connected; the numbers just get recycled once they're free.)* R3/R4 started at 10kΩ:1kΩ, then 1kΩ:1kΩ, each time sized as ADC-protection headroom against an unconfirmed car radio signal. Bench testing with the 1kΩ:1kΩ divider still in place showed no response to music at all — the combined attenuation through R1 (2.2kΩ at the time) plus the R3/R4 divider left too little signal for D1 to ever clear its own conduction threshold. Removing R3/R4 entirely and reducing R1 to 470Ω (still enough for channel isolation and short-circuit protection, without adding unnecessary attenuation) restored a real response on the bench. Safe for production too — see the confirmed radio-voltage note in the production section for the resulting margin.
 
+**A DC-blocking coupling capacitor was also tried on this breadboard, and reverted.** A large, non-audio baseline jump appeared the instant the laptop's audio cable was connected, before any music played — most likely a DC bias specific to that laptop's headphone output. A first attempt at fixing it (two polarized electrolytics wired back-to-back) failed and stayed failed even after reseating, so it was removed from the circuit shown above — it was never actually working on this breadboard. See the C4/R5 notes in the production section for the full diagnosis and why it's still going into `v2` despite that failure.
+
 ### Testing pinout (spare ESP32-C3 module)
 
 | Pin/net | Connects to | Purpose |
@@ -162,7 +164,7 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 ---
 
-## Open Items (Before Phase 3)
+## Open Items (Phase 3, in progress)
 
 - [ ] Replace the `*`-marked placeholder values above with confirmed ones, once R3/R4 (summing/isolation resistors) and C3 (smoothing cap) are checked against real music through the car's actual radio and amp — no longer practical pre-manufacture (the car's RCA wiring isn't easily accessible without opening up the already-installed system), so this happens during install instead — see the build plan's Phase 4
 - [ ] Source a BAT85 Schottky diode (or equivalent) for D1 on the production board — replacing the 1N4007 the testing circuit still uses, see the note above

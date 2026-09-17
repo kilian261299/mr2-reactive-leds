@@ -40,7 +40,7 @@ Completed:
 
 Next steps:
 
-- None for the core project — it's finished. Active work has moved to the [audio-reactive LED addition](audio-reactive-led-plan.md); Phase 2 (bench testing) is complete and validated, Phase 3 (PCB re-fab) is ready to start. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
+- None for the core project — it's finished. Active work has moved to the [audio-reactive LED addition](audio-reactive-led-plan.md); Phase 2 (bench testing) is complete and validated, Phase 3 (PCB re-fab) is in progress. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
 
 ## Stage 1 — Planning
 
@@ -725,7 +725,7 @@ Documented in `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md`
 
 ## Phase 3 — Remanufacture the PCB with the Audio Circuit Integrated
 
-**Status:** Not started, ready to begin — Phase 2's Stage A is validated (see above), and every remaining circuit decision has since been finalized:
+**Status:** In progress — Phase 2's Stage A is validated (see above), and every remaining circuit decision has since been finalized:
 
 - **Reference designators renumbered for production.** `v1`'s real board already uses `R1`/`R2` (330Ω) and `C1`/`C2` (1000µF/100nF) for other components, so the audio circuit's parts continue straight on instead of colliding: **R3/R4** (470Ω isolation, testing-only names R1/R2), **R5** (100kΩ coupling reference, testing-only name R7), **R6** (10kΩ discharge, unchanged), **C3** (2.2µF smoothing, testing-only name C1), **C4** (coupling cap, testing-only name C2). The testing/breadboard circuit keeps its original simple R1/R2/R6/R7/C1/C2 names throughout these docs, since it's never loaded into EasyEDA and the two schemes were never meant to match 1:1.
 - **D1 upgraded to a BAT85 Schottky diode for production** (testing circuit keeps its validated 1N4007). Lower forward voltage than the 1N4007 helps quiet passages register now that C4/R5 give a genuinely clean near-0V baseline.

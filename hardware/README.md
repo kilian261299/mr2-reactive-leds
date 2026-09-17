@@ -39,7 +39,7 @@ The custom PCB was designed in EasyEDA to replace the breadboard prototype and p
 
 The PCB was designed as a two-layer FR4 board and verified against the breadboard prototype before manufacture. Full history — including the GPIO4 fault on the first assembled `v1` board and its replacement — is in [docs/pcb-design.md](../docs/pcb-design.md) and [docs/build-log.md](../docs/build-log.md).
 
-**`v2` (planned) adds the audio-reactive circuit** — R3, R4, R5, R6, C3, C4, D1 (BAT85), and a new `J7` RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned, and dropping the never-populated `J6_SWITCH`. Reference designators continue on from `v1`'s existing `R1`/`R2`/`C1`/`C2` (already used for other components) rather than reusing them — see [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist and parts still needed. Not yet designed.
+**`v2` (in progress) adds the audio-reactive circuit** — R3, R4, R5, R6, C3, C4, D1 (BAT85), and a new `J7` RCA input connector — directly onto the same board, replacing the standalone-breakout-board approach originally planned, and dropping the never-populated `J6_SWITCH`. Reference designators continue on from `v1`'s existing `R1`/`R2`/`C1`/`C2` (already used for other components) rather than reusing them — see [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist and parts still needed. Not yet designed.
 
 ---
 
@@ -87,7 +87,7 @@ These files allow the PCB schematic and layout to be reviewed or modified in Eas
 
 **`v1`: complete.** Designed in EasyEDA (schematic, layout, ERC/DRC), manufactured by JLCPCB, assembled, and installed in the car — see [docs/build-log.md](../docs/build-log.md) for the full history, including the GPIO4 fault on the first assembled board and its replacement.
 
-**`v2`: ready to start, not yet designed.** Will follow the same EasyEDA → JLCPCB process, adding the audio conditioning circuit to the existing design. Recommended: clone the `v1` EasyEDA project rather than editing it in place. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist and parts-to-source list.
+**`v2`: in progress, not yet designed in EasyEDA.** Will follow the same EasyEDA → JLCPCB process, adding the audio conditioning circuit to the existing design. Recommended: clone the `v1` EasyEDA project rather than editing it in place. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md), Phase 3, for the full checklist and parts-to-source list.
 
 ---
 

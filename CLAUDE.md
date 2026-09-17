@@ -43,7 +43,7 @@ Design updated after the initial plan: D1 (rectifier diode) is a 1N4007, not the
 
 **Testing circuit is currently mono, not stereo:** the breakout cable's "white" wire turned out to have continuity with the shield — it's a second ground/drain wire on this cable, not a real left-channel conductor. Testing runs through the red wire/R2 only for now; R1 stays in the circuit but its input is unconnected.
 
-**Phase 3: ready to start.** Rather than a standalone breakout board, the audio circuit will be integrated directly into a new PCB revision (`v2`) — same EasyEDA → JLCPCB process as the original board. All circuit decisions are finalized:
+**Phase 3: in progress.** Rather than a standalone breakout board, the audio circuit will be integrated directly into a new PCB revision (`v2`) — same EasyEDA → JLCPCB process as the original board. All circuit decisions are finalized:
 
 - **D1 upgraded to a BAT85 Schottky diode for production** (testing circuit keeps its validated 1N4007). Lower forward voltage (~0.15–0.3V vs. ~0.3–0.6V) helps quiet passages register now that the coupling cap gives a genuinely clean near-0V baseline. Not yet sourced.
 - **Production designators renumbered**, since `v1`'s real board already uses `R1`/`R2` (330Ω) and `C1`/`C2` (1000µF/100nF) for other things. Production continues straight on from those: **R3/R4** (470Ω isolation), **R5** (100kΩ coupling reference, informally "R7" in testing-only text), **R6** (10kΩ discharge, unchanged), **C3** (2.2µF smoothing), **C4** (coupling cap, non-polarized, not yet sourced). Full mapping and the transfer-function math showing C4/R5 barely attenuate the signal (~99.5% passes even at 20Hz, since R5 dominates) are in `docs/audio-reactive-led-plan.md` and `hardware/audio-breakout.md`.
