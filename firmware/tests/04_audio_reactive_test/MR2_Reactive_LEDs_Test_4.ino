@@ -2,7 +2,7 @@
 
 // --------------------------------------------------
 // MR2 Reactive LEDs - Test 4
-// Audio-reactive LED test (bench only)
+// Audio-reactive LED bar visualizer test (bench only)
 //
 // Hardware used:
 // - A SPARE ESP32-C3 module (NOT the one installed in the car)
@@ -21,10 +21,12 @@
 // Purpose of this test:
 // 1. Confirm the conditioning circuit produces a usable 0-3.3V
 //    envelope on an ADC pin from a real audio source.
-// 2. Smooth that envelope in firmware and map it to LED brightness.
+// 2. Smooth that envelope in firmware and map it to a growing/
+//    shrinking bar of lit LEDs, with a bouncing peak-hold marker --
+//    a level-meter/visualizer look, not just uniform brightness.
 // 3. Give a live Serial readout of raw vs smoothed values, so the
-//    conditioning circuit (R3/R4 divider, C1 smoothing cap) can be
-//    tuned by watching real numbers, not just by eye on the LED.
+//    conditioning circuit (R1/R2, C1 smoothing cap) can be tuned
+//    by watching real numbers, not just by eye on the LED.
 // 4. Prove the pipeline end-to-end before any of this touches the
 //    real car firmware.
 //
@@ -70,11 +72,11 @@ Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 // ESP32's analogRead() returns 0-4095 (12-bit) by default.
 //
 // audioFloor: the raw ADC reading with no audio playing (just the
-// conditioning circuit's bias network resting voltage). Below this,
-// treat it as silence.
+// conditioning circuit's resting voltage). Below this, treat it as
+// silence.
 //
 // audioCeiling: the raw ADC reading during loud audio. Above this,
-// treat it as maximum brightness.
+// treat it as a full bar.
 //
 // Both of these are placeholders -- watch the Serial output with
 // real audio (Phase 2, Stage A) and set these to what you actually
@@ -82,22 +84,34 @@ Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 int audioFloor = 200;
 int audioCeiling = 3000;
 
-// Exponential smoothing rate for the envelope, same style of
-// smoothing already used throughout the main v2.x firmware
-// (see gravitySmoothing / accelSmoothing there for reference).
-// Higher = more responsive but jumpier; lower = smoother but
-// laggier behind the actual music.
-float audioSmoothing = 0.15;
+// Asymmetric smoothing rather than one single rate: a fast attack
+// lets the bar jump up quickly on a transient, a slow release lets
+// it sink back down gradually -- that's what gives the "bounce"
+// look rather than a mushy blob that just fades in and out.
+float attackSmoothing = 0.5;
+float releaseSmoothing = 0.05;
 
 float smoothedAudio = 0.0;
+
+// Peak-hold marker: a single pixel riding ahead of the bar that
+// snaps up instantly whenever the bar catches up to or passes it,
+// then falls back down under its own slower "gravity" -- the
+// classic VU-meter peak indicator. Speed is in LEDs per second, so
+// the fall looks the same regardless of how fast the main loop runs.
+float peakPositionLEDs = 0.0;
+const float peakFallSpeed = 15.0;
+unsigned long lastPeakUpdate = 0;
 
 
 // ==================================================
 // USER-ADJUSTABLE BRIGHTNESS CAP
 // ==================================================
 
-// Keeps the strip from ever running at full 255 during bench
-// testing, same reasoning as the encoder tests before it.
+// A fixed ceiling on how bright any lit pixel can be -- unrelated
+// to audio level now, since the audio level controls how many
+// LEDs are lit, not how bright they are. Same reasoning as the
+// encoder tests before it: keeps the bench strip comfortable to
+// look at, never runs at full 255.
 const int maxBrightness = 180;
 
 
@@ -110,16 +124,65 @@ const unsigned long serialPrintInterval = 100;
 
 
 // ==================================================
-// SET ALL LEDS TO ONE COLOUR AT A GIVEN BRIGHTNESS
+// UPDATE THE PEAK-HOLD MARKER'S POSITION
 // ==================================================
 
-void setAllPixels(uint8_t r, uint8_t g, uint8_t b, int brightness) {
-  strip.setBrightness(brightness);
+void updatePeak(float barHeightLEDs) {
+  unsigned long now = millis();
+  float deltaSeconds = (now - lastPeakUpdate) / 1000.0;
+  lastPeakUpdate = now;
 
-  uint32_t colour = strip.Color(r, g, b);
+  if (barHeightLEDs >= peakPositionLEDs) {
+    // Bar has caught up to (or passed) the peak -- snap the peak
+    // up to match, no lag on the way up.
+    peakPositionLEDs = barHeightLEDs;
+  } else {
+    peakPositionLEDs -= peakFallSpeed * deltaSeconds;
+    // Never let the peak marker fall below the bar itself -- it
+    // rides on top of/ahead of the bar, not behind it.
+    if (peakPositionLEDs < barHeightLEDs) {
+      peakPositionLEDs = barHeightLEDs;
+    }
+  }
+}
 
-  for (int i = 0; i < NUM_LEDS; i++) {
-    strip.setPixelColor(i, colour);
+
+// ==================================================
+// DRAW THE BAR + PEAK MARKER
+// ==================================================
+
+void drawVisualizer(float barHeightLEDs) {
+  strip.clear();
+
+  // Dark cyan-blue bar colour -- deliberately different from any
+  // colour used by the main firmware (blue/orange/red), so it's
+  // obvious on the bench which system is driving the strip.
+  const uint8_t barR = 0;
+  const uint8_t barG = 90;
+  const uint8_t barB = 160;
+
+  int fullLit = (int)barHeightLEDs;
+  float fraction = barHeightLEDs - fullLit;
+
+  for (int i = 0; i < fullLit && i < NUM_LEDS; i++) {
+    strip.setPixelColor(i, strip.Color(barR, barG, barB));
+  }
+
+  // The LED right at the top of the bar gets a partial (fractional)
+  // brightness instead of a hard on/off cutoff -- gives noticeably
+  // smoother sub-pixel resolution with only NUM_LEDS steps to work with.
+  if (fullLit < NUM_LEDS) {
+    strip.setPixelColor(fullLit, strip.Color(
+      (uint8_t)(barR * fraction),
+      (uint8_t)(barG * fraction),
+      (uint8_t)(barB * fraction)
+    ));
+  }
+
+  // Peak marker in white, so it stands out against the bar colour.
+  int peakPixel = (int)peakPositionLEDs;
+  if (peakPixel >= 0 && peakPixel < NUM_LEDS) {
+    strip.setPixelColor(peakPixel, strip.Color(255, 255, 255));
   }
 
   strip.show();
@@ -133,9 +196,10 @@ void setAllPixels(uint8_t r, uint8_t g, uint8_t b, int brightness) {
 void updateAudioReactiveLEDs() {
   int rawAudio = analogRead(AUDIO_PIN);
 
-  // Low-pass filter the raw reading, same exponential-smoothing
-  // approach used elsewhere in this project.
-  smoothedAudio = (smoothedAudio * (1.0 - audioSmoothing)) + (rawAudio * audioSmoothing);
+  // Rising faster than falling is what gives the bounce its shape --
+  // see the attackSmoothing/releaseSmoothing note above.
+  float rate = (rawAudio > smoothedAudio) ? attackSmoothing : releaseSmoothing;
+  smoothedAudio = (smoothedAudio * (1.0 - rate)) + (rawAudio * rate);
 
   // Map the smoothed reading onto 0-1 using the floor/ceiling
   // above, then clamp -- constrain() alone won't reorder floor
@@ -143,20 +207,14 @@ void updateAudioReactiveLEDs() {
   float level = (smoothedAudio - audioFloor) / (float)(audioCeiling - audioFloor);
   level = constrain(level, 0.0, 1.0);
 
-  int brightness = (int)(level * maxBrightness);
+  float barHeightLEDs = level * NUM_LEDS;
 
-  // Dark cyan-blue test colour -- deliberately different from any
-  // colour used by the main firmware (blue/orange/red), so it's
-  // obvious on the bench which system is driving the strip. More
-  // blue than green and capped well under 255 so it reads as a
-  // deep cyan-blue rather than a bright neon cyan, even before
-  // the brightness scaling below darkens it further. Adjust the
-  // ratio here if you want more green (more cyan) or more blue.
-  setAllPixels(0, 90, 160, brightness);
+  updatePeak(barHeightLEDs);
+  drawVisualizer(barHeightLEDs);
 
   // Print raw + smoothed values regularly so the conditioning
-  // circuit (R3/R4, C1) can be tuned against real numbers, per
-  // Phase 2 Stage A/B of the build plan.
+  // circuit (R1/R2, C1) can be tuned against real numbers, per
+  // Phase 2 Stage A of the build plan.
   unsigned long now = millis();
   if (now - lastSerialPrint > serialPrintInterval) {
     Serial.print("Raw: ");
@@ -165,8 +223,10 @@ void updateAudioReactiveLEDs() {
     Serial.print(smoothedAudio, 1);
     Serial.print(" | Level: ");
     Serial.print(level, 2);
-    Serial.print(" | Brightness: ");
-    Serial.println(brightness);
+    Serial.print(" | Bar LEDs: ");
+    Serial.print(barHeightLEDs, 1);
+    Serial.print(" | Peak: ");
+    Serial.println(peakPositionLEDs, 1);
 
     lastSerialPrint = now;
   }
@@ -182,15 +242,18 @@ void setup() {
   delay(500);
 
   Serial.println("MR2 Reactive LEDs - Test 4");
-  Serial.println("Audio-reactive LED test (bench only, spare ESP32-C3 module)");
+  Serial.println("Audio-reactive LED bar visualizer test (bench only, spare ESP32-C3 module)");
   Serial.println("Not the ESP32-C3 installed in the car -- this board is bench-only.");
 
   // No pinMode() call needed for an ADC read on the ESP32 --
   // analogRead() configures the pin itself.
 
   strip.begin();
+  strip.setBrightness(maxBrightness);
   strip.clear();
   strip.show();
+
+  lastPeakUpdate = millis();
 
   Serial.println("Setup complete. Play audio into the conditioning circuit input.");
 }
