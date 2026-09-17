@@ -93,10 +93,10 @@ R1/R2 and C1 (smoothing, jointly setting decay rate with R6) are the values expe
 |---|---|---|
 | `GPIO1` | Conditioning circuit output (Node B) | ADC audio input — ADC1_CH1, same pin production uses |
 | `GPIO7` | LED strip `DIN` | LED data output — free, non-strapping pin; confirm against your specific board's silkscreen |
-| `3.3V` | LED strip `5V`* (conditioning circuit no longer draws from 3.3V — R6 alone returns to GND) | Power |
+| `3.3V` | LED strip's power input (labelled `5V` on the strip itself, deliberately under-driven — see note*) | Power |
 | `GND` | Conditioning circuit ground, LED strip `GND`, ESP32-C3 `GND` | Common ground — all must share this one reference |
 
-\*Most addressable strips want 5V for reliable operation; running directly off the module's 3.3V is commonly acceptable for a short bench-test wire run, but isn't the final production arrangement. This choice is deliberate, not just "good enough": powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Powering at 5V instead (most ESP32-C3 modules break out a `5V`/`VIN` pin) risks the data line's 3.3V logic not reliably clearing the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has one (SN74AHCT125N).
+\*The strip's power input is labelled `5V` because most addressable strips want 5V for reliable operation, but it's fed from the module's `3.3V` pin here — not a mistake, and not just "good enough" for a short bench run. Powering the strip at 3.3V makes its data-logic threshold match the ESP32-C3's 3.3V `GPIO7` output exactly, avoiding the need for a level shifter on the bench. Powering at 5V instead (most ESP32-C3 modules break out a separate `5V`/`VIN` pin) risks the data line's 3.3V logic not reliably clearing the WS2812B's ~70%-of-VDD "HIGH" threshold without one — exactly why the production board has a level shifter (SN74AHCT125N) and doesn't need this workaround.
 
 ---
 
