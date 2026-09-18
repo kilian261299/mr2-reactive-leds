@@ -37,7 +37,7 @@ In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-
 
 - Phase 1: GitHub/bench-test sketch setup — complete
 - Phase 2: Breadboard + bench-test the conditioning circuit — complete, validated with real music; component values, the coupling capacitor, and the diode swap to BAT85 all confirmed for production
-- Phase 3: Remanufacture the PCB (changed from an earlier standalone-breakout-board plan) and develop the new `v4.x` firmware mode in parallel — in progress; `v2`'s EasyEDA design is complete and verified (DRC clean, connectivity checked), all parts ordered, and the board has been ordered from JLCPCB (Global Standard Direct Line, 8–12 business days) and is now in fabrication/shipping; firmware development can now proceed in parallel, not yet started
+- Phase 3: Remanufacture the PCB (changed from an earlier standalone-breakout-board plan) and develop the new `v4.0` firmware mode in parallel — in progress; `v2`'s EasyEDA design is complete and verified (DRC clean, connectivity checked), all parts ordered, and the board has been ordered from JLCPCB (Global Standard Direct Line, 8–12 business days) and is now in fabrication/shipping; `v4.0` firmware is drafted and compiles clean, but not yet bench-tested against real audio (conditioning circuit parts are with the board)
 - Phase 4: Install the new PCB revision and test everything for real, including flashing the `v4.x` firmware — not started
 
 ## Features

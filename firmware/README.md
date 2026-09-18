@@ -32,7 +32,8 @@ firmware/
     ├── v2.3/
     ├── v2.4.0/
     ├── v2.4.1/
-    └── v3.0/
+    ├── v3.0/
+    └── v4.0/
 ```
 
 ---
@@ -101,6 +102,8 @@ Tests:
 Purpose:
 
 Prove the audio-conditioning-circuit-to-LED pipeline works before any of it touches the real car firmware. **Validated and working** — confirmed responding correctly to real music, with `audioFloor`/`audioCeiling` calibrated from real Serial readings. See [docs/audio-reactive-led-plan.md](../docs/audio-reactive-led-plan.md) for the full build plan and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for the conditioning circuit this sketch reads from.
+
+This sketch's logic has since been ported into the real production firmware as `v4.0`'s Mode 1 — see [mr2-reactive-leds/README.md](mr2-reactive-leds/README.md#v40--audio-reactive-mode-drafted-not-yet-bench-tested).
 
 ---
 
@@ -195,6 +198,14 @@ Branches from v2.3. Splits `gravitySmoothing` by direction instead of reverting 
 Branches from v2.4.0. Extends the same direction-aware rate to `gravityZ`, using the same forward-axis direction flag as `gravityX` (a hill/braking event is a forward-axis phenomenon; `gravityZ`'s shift is a side effect of it, not independent). `gravityY` (lateral/cornering) is left untouched.
 
 **Confirmed on real driving — the downhill flicker is gone.** Acceleration-hold and braking both feel unchanged from v2.2/v2.3, as expected. **v2.4.1 is confirmed as the final firmware version — the core reactive-LED project is complete.** See the changelog for the full root-cause trace and implementation detail.
+
+---
+
+## v4.0 – Audio-Reactive Mode (Drafted, Not Yet Bench-Tested)
+
+New version line branching from v2.4.1 (v3.0/v3.1's gyroscope work stays parked, unrelated) — adds the [audio-reactive LED feature](../docs/audio-reactive-led-plan.md). Mode 1 (previously a fixed purple theme) is replaced entirely by a bar-graph visualizer driven by the conditioning circuit's envelope on `GPIO1`, ported from the validated bench-test sketch: bar length tracks volume, colour snaps cyan-to-orange with hysteresis once loud enough, LED brightness stays capped by the same rotary-encoder ceiling every other mode uses. Modes 0, 2, 3, 4 are untouched. Also applies the bench-test sketch's `Serial.availableForWrite()` fix to the rest of this file's pre-existing Serial calls, which never had it.
+
+Compiles clean against the real `ESP32-C3 Super Mini` target. `audioFloor`/`audioCeiling` are still Phase 2 bench placeholders (`900`/`1300`) needing retuning against the real radio. Not yet bench-tested — the conditioning circuit parts are with the `v2` PCB rather than available for a bench rebuild; first real test will be a semi-install against the car radio in Phase 4.
 
 For detailed version history and development notes, see:
 

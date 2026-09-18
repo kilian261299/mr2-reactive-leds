@@ -719,3 +719,31 @@ Branches from v3.0: the same acceleration response tuning as v2.1 (`acceleration
 Tested once, visually. Braking worked well. Acceleration briefly reached orange only under hard 1st-gear launches, fading back to blue in under a second even while still accelerating — noticeably faster than v2.1's fade, not slower. The timing closely matches the pitch drift seen in the original v3.0 log, strengthening (though not fully confirming, absent a controlled flat-ground test) the theory that the gyro is absorbing genuine acceleration as if it were a hill.
 
 **Parked, not pursued further.** v3.0/v3.1's gyroscope approach was expected to outperform the accelerometer-only v2.x line at exactly this problem; the one real-world test so far suggested the opposite. v2.x's line of tuning reached a good enough result with v2.4.1 (adopted as the final firmware version, see above), so the flat-ground test that would have properly settled the pitch-drift question was never needed and won't be pursued. Not deleted or considered a dead end in principle — just not required to finish this project.
+
+---
+
+## v4.0 – Audio-Reactive Mode (Drafted, Not Yet Bench-Tested)
+
+New version *line*, not a v2.x point release — branches from the final `v2.4.1` above (v3.x's gyroscope work is parked and unrelated), adding the [audio-reactive LED feature](../../docs/audio-reactive-led-plan.md) on top of it. Nothing about v2.4.1's hill-compensation/baseline system changes; Mode 0 and the remaining theme modes are untouched.
+
+### Change: Mode 1 Replaced Entirely
+
+Mode 1 (previously a fixed purple theme, brightness-only reactive to movement like Modes 2–4) is replaced by a new audio-reactive mode — not added as a 6th mode, an explicit choice to keep the mode count at five. Modes 0, 2, 3, 4 keep their existing numbers and behaviour unchanged; only what used to live at slot 1 is different.
+
+Ported from the bench-test sketch (`firmware/tests/04_audio_reactive_test/`), validated there against real music: reads the conditioning circuit's envelope on `GPIO1` (identical pin on both the bench-test board and this production board — the same chip, by design, so no remapping was needed), smooths it with the same fast-attack/slow-release curve, and drives a bar-graph visualizer — a growing/shrinking bar with a bouncing peak-hold marker — across **both** strips identically, rather than the whole-strip solid colour every other mode uses. One mono envelope, no left/right distinction the way cornering has one.
+
+Colour snaps from cyan (quiet) to orange (loud) once the level clears a threshold, using **separate on/off thresholds** (hysteresis) rather than one — a single threshold let the level jitter right at the boundary on real music, which read as a rapid cyan/orange flicker blending into a washed-out white; a real bug hit and fixed on the bench-test sketch first, then carried over here from the start.
+
+The bar's *length* represents audio level (the whole point of the visualizer) — its *LED brightness* is a separate, independent thing, capped by `userBrightness` exactly like every other mode's colour is, using the same scaling maths `setStrip()` already uses elsewhere in this file. The rotary encoder's brightness dial dims/brightens Mode 1 exactly like it does Mode 0.
+
+### Change: Serial Safety Fix Applied File-Wide
+
+`Serial.availableForWrite()` guards added not just around the new audio debug fields, but around the pre-existing periodic debug block and the mode-change print inherited from v2.4.1 — neither had this guard before. Same native-USB-CDC blocking bug found on the ESP32-C3 bench-test sketch: without a Serial Monitor open to drain the buffer, an unguarded print can block indefinitely and freeze the whole `loop()`, LEDs included. Not something the installed v2.x line has ever hit (it runs on permanent vehicle power, USB never connected there), but this file will be bench-tested and installed over USB during Phases 3–4, so it was worth fixing everywhere in this file, not just in the new code.
+
+### Known Placeholder: audioFloor / audioCeiling
+
+Carried over unchanged from Phase 2 bench testing (laptop/phone audio via a USB-C dongle): `audioFloor = 900`, `audioCeiling = 1300`. Almost certainly wrong for the real car radio — different source strength, a volume-dependent preout level, and BAT85 replacing the bench's 1N4007 all change the numbers these were calibrated against. Both are clearly commented in-file as needing retuning from real Serial readings once connected to the actual radio, the same way the originals were derived on the bench.
+
+### Result
+
+**Compiles clean** — 0 errors, 0 warnings — against the real `ESP32-C3 Super Mini` target (`esp32:esp32:nologo_esp32c3_super_mini`) via `arduino-cli`. **Not yet bench-tested**: the conditioning circuit components are with the `v2` PCB, not available for a bench rebuild at time of writing. First real test will be a semi-install directly against the car radio during Phase 4, powered over USB (never simultaneously with vehicle power) so Serial stays available for calibrating `audioFloor`/`audioCeiling` against real numbers.
