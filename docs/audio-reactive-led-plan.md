@@ -76,6 +76,8 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
+**Note: this image still shows R5 as `100kΩ`, from before the Multisim-found correction below.** It was exported from EasyEDA before that value changed to `4.7kΩ` and hasn't been re-exported since. Trust the component list and maths in this doc over the image for R5's value until it's refreshed.
+
 ### Production circuit — component list
 
 ```
@@ -86,8 +88,8 @@ RCA shield/ground → GND
    note below, this must be the RCA tap's own shield, not a
    separate chassis point)
 
-Node S → C4 (coupling cap, non-polarized, ~2.2–4.7µF) → Node A
-Node A → R5 (100kΩ) → GND
+Node S → C4 (coupling cap, non-polarized, 2.2µF) → Node A
+Node A → R5 (4.7kΩ) → GND
 
 Node A → D1 (BAT85) → Node B
 
@@ -104,39 +106,50 @@ Node B → ESP32-C3 GPIO1 (ADC input, production board)
 
 Now that testing uses a spare ESP32-C3 module (see "Testing board update" above), this circuit and the testing circuit are topologically similar, down to the same `GPIO1` ADC pin — but no longer identical: besides the input source (a phone's 3.5mm jack for testing vs. the real Front L/R RCA here) and which physical ESP32-C3 module it's wired to, production also adds C4/R5 and uses D1 as a BAT85 rather than the testing circuit's 1N4007 — neither was ever part of the validated breadboard circuit, so both are explained here rather than in the testing section above.
 
-**Car radio preout voltage — now confirmed, not estimated.** Only relevant to production, since testing never involves the actual radio: the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout level of 1.8V RMS into a 10kΩ load. That's the output stage's own voltage-swing ceiling (the same hardware drives every source — CD, MD, AUX, tuner — the "(FM)" just notes the test condition used to rate it), so a full-scale peak works out to roughly 1.8V × √2 ≈ **2.55V peak** — replacing the earlier unconfirmed "~4V RMS / ~5.6V peak" guess entirely. With R3/R4 (the old divider) removed, Node A sees close to that full 2.55V peak directly (R3/R4 at 470Ω is too small to meaningfully attenuate it) — but C3 only ever charges to `peak − D1's forward drop`, landing around **1.95–2.25V** at Node B, still comfortably under the ADC's 3.3V ceiling (1V+ margin). The production circuit's ADC-protection margin is no longer a guess, and no dedicated divider is needed to provide it.
+**Car radio preout voltage — confirmed, not estimated.** Only relevant to production, since testing never involves the actual radio: the Kenwood DPX-07MD's own service manual (`仕様一覧` / specifications page) lists `プリアウトレベル (FM): 1.8V/10kΩ` — a rated preout level of 1.8V RMS into a 10kΩ load, per channel (each channel has its own independent output stage — not a combined/shared figure). That's the output stage's own voltage-swing ceiling (the same hardware drives every source — CD, MD, AUX, tuner — the "(FM)" just notes the test condition used to rate it), so a full-scale peak works out to roughly 1.8V × √2 ≈ **2.55V peak**. R3/R4 sum Left and Right into Node S via two equal (470Ω) resistors, which *averages* the two channels rather than adding them — so even with both channels simultaneously at their individual peak, Node S never exceeds a single channel's own peak (2.55V), not double it.
 
-**C4/R5 — DC-blocking coupling capacitor, added for production.** Bench testing (with the testing circuit's original C2/R7, before the production renumbering) surfaced a large, non-audio baseline jump the instant the laptop's audio cable was connected, before any music played — most likely a DC bias specific to that laptop's headphone output; ground loops and cable faults were both tested and ruled out as the cause. C4 (a coupling cap between Node S and Node A) blocks that steady bias while passing real audio through essentially untouched; R5 gives the post-cap node a defined reference to ground rather than leaving it floating. This is standard practice for audio inputs generally, and while a proper automotive RCA preout is usually already internally AC-coupled (so the real radio may never have needed this), it's cheap insurance on a board being re-fabbed anyway, and directly protects against the class of problem just observed on the bench.
+**C4/R5 — DC-blocking coupling capacitor, added for production.** Bench testing (with the testing circuit's original C2/R7, before the production renumbering) surfaced a large, non-audio baseline jump the instant the laptop's audio cable was connected, before any music played — most likely a DC bias specific to that laptop's headphone output; ground loops and cable faults were both tested and ruled out as the cause. C4 (a coupling cap between Node S and Node A) blocks that steady bias while passing real audio through; R5 gives the post-cap node a defined reference to ground rather than leaving it floating. This is standard practice for audio inputs generally, and while a proper automotive RCA preout is usually already internally AC-coupled (so the real radio may never have needed this), it's cheap insurance on a board being re-fabbed anyway, and directly protects against the class of problem just observed on the bench.
 
-**The maths behind why C4/R5 barely touch the real signal:** R5 (100kΩ) so thoroughly dominates the circuit that adding C4 in series changes almost nothing. The transfer function from Node S to Node A is:
+**Correction (found via Multisim simulation, after the board was already ordered): R5 was originally spec'd at 100kΩ, based on an incomplete analysis — corrected to 4.7kΩ.** The original reasoning only modelled C4/R5 as a simple AC high-pass filter, and on that basis alone 100kΩ looked ideal (barely attenuates audio at all, see the transfer-function math below). What that analysis missed: R5 and R6 (10kΩ, at Node B) interact with each other through D1 in a way the simple transfer function doesn't capture. Because C4 blocks DC entirely, Node A's *average* voltage is forced to self-adjust — D1 only draws current on the AC signal's positive peaks, and since a capacitor can't sustain net DC current, that peak current has to be exactly balanced by current flowing the other way through R5. The result is that Node A's average sits well *below* 0V (not centred on it, as the original "peak − Vf" shortcut assumed), which eats directly into the peak voltage that actually reaches D1. This is a real, well-known behaviour for this class of circuit (the same self-biasing effect used deliberately in clamper/DC-restorer circuits) — it just wasn't accounted for here originally.
+
+Working through the steady-state balance: with `D1` conducting only briefly near each peak, Node B settles to approximately
+
+```
+V_B ≈ (A×H − Vf) / (1 + R5/R6)
+```
+
+where `A` is the source peak, `H` is the AC transfer function below, and `Vf` is D1's forward drop. At the original `R5 = 100kΩ`, that `(1 + R5/R6)` term is `(1 + 10) = 11` — meaning **roughly 91% of the signal that reaches Node A never makes it to Node B at all**, regardless of how well C4/R5 pass the AC signal itself. Simulated in Multisim against the confirmed 2.55V peak, this predicted (and then confirmed) Node B settling around **~0.2V** — a fraction of the ADC's usable range, not the ~2.2–2.4V the original math assumed.
+
+**Fix: R5 lowered to 4.7kΩ.** This isn't simply "as low as possible" — there's a genuine trade-off. Lower R5 improves the `(1 + R5/R6)` self-bias factor, but also increases how much R5 attenuates bass frequencies in the transfer function below (R5 needs to stay large relative to C4's impedance for that). Working through several values at the worst-case frequency (20Hz) and the confirmed 2.55V peak, Node B's voltage actually *peaks* around R5 ≈ 5–6kΩ and falls off on both sides — `4.7kΩ` sits within ~1% of that optimum, using the exact `2.2µF` non-polarized C4 already on hand (no new part needed):
+
+```
+R5 = 10,000Ω:  self-bias factor = 1/(1+1.00) ≈ 50%   →  V_B(20Hz) ≈ 1.05V
+R5 =  4,700Ω:  self-bias factor = 1/(1+0.47) ≈ 68%   →  V_B(20Hz) ≈ 1.15V
+R5 =  2,200Ω:  self-bias factor = 1/(1+0.22) ≈ 82%   →  V_B(20Hz) ≈ 0.86V  (worse — bass loss now dominates)
+```
+
+**The maths behind the corrected C4/R5 transfer function** (the AC pass-through part of the picture — still correct on its own, just not the whole story):
 
 ```
 H(f) = R5 / √[(R5 + R_series)² + (1 / (2πfC4))²]
 ```
 
-where R_series is R3 or R4 (470Ω, whichever channel is driving). Working this out at 20Hz — the worst case, since a capacitor's impedance is highest at the lowest frequency, and bass content is exactly where losing signal would matter most — with C4 at its smallest recommended value (2.2µF, since a smaller cap has higher impedance and is the more conservative case to check):
+where R_series is R3 or R4 (470Ω). At 20Hz (worst case) with `R5 = 4.7kΩ`, `C4 = 2.2µF`:
 
 ```
 Z_C4(20Hz) = 1 / (2π × 20 × 0.0000022) ≈ 3,617Ω
-R5 + R_series = 100,000 + 470 = 100,470
-H(20Hz) = 100,000 / √(100,470² + 3,617²) = 100,000 / √10,107,303,589 ≈ 0.9947
+H(20Hz) = 4,700 / √(5,170² + 3,617²) ≈ 0.74
 ```
 
-So even at 20Hz, roughly **99.5% of the signal passes through** — C4/R5 cost almost nothing in signal strength, at any frequency in the audible range (higher frequencies are attenuated even less, since C4's impedance keeps shrinking). Applied to the confirmed radio peak: 2.55V × 0.9947 ≈ 2.54V reaches Node A, essentially unchanged from the no-C4 case.
+So ~74% of the signal reaches Node A at the worst-case bass frequency (up to ~91% at higher, more typical frequencies, where C4's impedance becomes negligible and the limit is just the R5/R_series resistive divider). Combined with the self-bias factor above, Node B lands around **~1.1–1.15V at the worst case, up to roughly 1.4V for typical midrange/treble content** — a **5x+ improvement** over the original 100kΩ spec, confirmed against the real 2.55V peak in Multisim (both the AC-coupling behaviour and this self-bias effect were validated there before committing to the change).
 
 **D1 upgraded to a BAT85 Schottky diode for production** (testing circuit keeps the 1N4007 it's already validated with). The 1N4007 was originally picked purely for being on hand, not for suiting this job — it's a general-purpose power rectifier, not a signal diode. A Schottky like the BAT85 has a much lower forward voltage (~0.15–0.3V vs. the 1N4007's estimated ~0.3–0.6V at these tiny currents). BAT85 is a standard choice for exactly this kind of low-level envelope-detector duty (it's a textbook part for AM-detector circuits, the same basic task). Cheap, through-hole, easy to hand-solder alongside everything else on the board.
 
-**The maths behind why this works comfortably:** taking the confirmed 2.54V that reaches Node A (from the C4/R5 calculation above), C1 only ever charges to `peak − D1's forward drop`:
-
-```
-Node B (BAT85, low estimate):  2.54V − 0.15V = 2.39V
-Node B (BAT85, high estimate): 2.54V − 0.30V = 2.24V
-Node B (1N4007, for comparison): 2.54V − 0.30 to 0.60V = 2.24V to 1.94V
-```
-
-Either diode clears the 3.3V ADC ceiling with real margin (0.75V+ to spare) for loud content — that question was already settled once R3/R4's old divider was removed. What BAT85 actually buys is at the *quiet* end: its lower threshold means less signal is needed before D1 conducts at all, so quiet passages register instead of vanishing below the diode's turn-on point — the same reasoning that made C4/R5 worth adding now that the circuit's resting baseline is genuinely near 0V instead of an elevated bias.
+Either diode still clears the 3.3V ADC ceiling with generous margin — that was never actually in question, even before this correction (if anything, the corrected numbers make overvoltage even less of a concern than previously assumed). What BAT85 actually buys is at the *quiet* end: its lower threshold means less signal is needed before D1 conducts at all, so quiet passages register instead of vanishing below the diode's turn-on point — the same reasoning that made C4/R5 worth adding now that the circuit's resting baseline is genuinely near 0V instead of an elevated bias, and now doubly important given how much of the available range this self-bias effect was already eating into.
 
 **Component choice matters for C4 — a first attempt using two polarized electrolytics wired back-to-back failed and stayed failed, even after reseating.** That trick (tying two same-polarity electrolytics together to approximate a non-polarized cap) only works for a signal that's purely symmetric AC with no sustained DC offset — exactly the opposite of what C4 needs to handle here, since blocking a *sustained* DC bias means one of the two caps in that pair ends up under continuous reverse bias, not the brief, symmetric reverse-bias the trick is designed to tolerate. Sustained reverse bias degrades an electrolytic's leakage behaviour over time, which likely explains why the failure was reproducible — it wasn't a wiring fault, it was the wrong kind of capacitor for this specific job. **C4 must be a genuinely non-polarized capacitor** (ceramic or film, not two electrolytics) — no reverse-bias concern at all, regardless of which direction (or whether) a DC bias is present. Not yet re-tested on the bench with a proper non-polarized part — the `v2` PCB is the next point this gets validated, alongside the real radio.
+
+**Note on the `v2` PCB's schematic/BOM:** the EasyEDA design and its BOM export were finalized (and Gerbers submitted) with `R5 = 100kΩ`, before this correction was found. Since R5 is a through-hole part meant to be hand-soldered (already on the "cheap hand-swap, not a re-fab" list alongside R3/R4/C3/C4), this doesn't require a re-fab — solder a `4.7kΩ` resistor in that position instead of `100kΩ` when assembling. Worth updating the EasyEDA project's own labelling too, so the schematic matches what's actually built, but that's a bookkeeping fix, not a hardware blocker.
 
 **Ground note:** the conditioning circuit's ground must trace back to the RCA tap's own ground/shield connection — not a separate chassis ground point used elsewhere in the car (e.g. the 12V system's ground). Referencing two different chassis points that aren't at exactly the same potential is a classic source of audible ground-loop hum in the actual audio system, not just an LED-behaviour issue.
 
@@ -231,7 +244,8 @@ The EasyEDA schematic/layout is designed and verified; the board has been ordere
 - [ ] **Confirm the radio/speaker system still works normally** — the RCA tap is a parallel bridge, never cut in series, but verify nothing about the original audio system broke before moving on
 - [ ] **Confirm the original accelerometer-reactive system still works** — motion-based brightness/colour, rotary encoder, both LED strips — exactly as it did on `v1`, before layering the new audio behaviour on top
 - [ ] **First real validation against the actual car radio happens here** — this is the earliest point real RCA access is practical. Confirm the ADC isn't clipping (a maxed-out, unresponsive-to-volume reading is the signature), that the idle baseline actually sits near-zero (confirming C4 is doing its job against whatever the real radio's DC characteristics turn out to be), and that C3's smoothing still feels right against real music.
-- [ ] If R3/R4/C3/C4 need correction, hand-swap those specific parts — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
+- [x] R5 corrected from `100kΩ` to `4.7kΩ` before assembly (found via Multisim simulation — see the C4/R5 maths note above) — solder `4.7kΩ` in that position, not the value shown on the `v2` schematic
+- [ ] If R3/R4/C3/C4 need further correction once tested against the real radio, hand-swap those specific parts too — cheap, quick, doesn't require a re-fab, since the values from Stage A were only ever a laptop-derived starting point
 - [ ] Flash the `v4.x` firmware developed in Phase 3 and confirm it drives the real strips correctly with the new board installed
 - [ ] Test in the car with real music — expect some retuning against real strips, cabin acoustics, and road noise
 - [ ] Update `docs/build-log.md` and the firmware changelog with results, including documenting the new PCB revision (matching how the original GPIO4-fault replacement was documented)
