@@ -76,8 +76,6 @@ Same Y-split concept as the testing pipeline, now with the real components: the 
 
 ![Production circuit schematic](../images/audio-circuit/production_circuit_schematic.png)
 
-**Note: this image still shows R5 as `100kΩ`, from before the Multisim-found correction below.** It was exported from EasyEDA before that value changed to `4.7kΩ` and hasn't been re-exported since. Trust the component list and maths in this doc over the image for R5's value until it's refreshed.
-
 ### Production circuit — component list
 
 ```
