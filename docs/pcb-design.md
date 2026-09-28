@@ -1,6 +1,6 @@
 # PCB Design
 
-**This document covers `v1`, the original and currently-installed board.** A `v2` revision is in progress, adding the [audio-reactive LED circuit](audio-reactive-led-plan.md) directly onto the same design — see [hardware/README.md](../hardware/README.md) for its current status (design complete, about to be submitted to JLCPCB).
+**This document covers `v1`, the original and currently-installed board.** A `v2` revision is in progress, adding the [audio-reactive LED circuit](audio-reactive-led-plan.md) directly onto the same design — see [hardware/README.md](../hardware/README.md) for its current status (design complete, board manufactured and arrived from JLCPCB, assembly not yet started) and [docs/multisim-simulation.md](multisim-simulation.md) for the R5 correction found via simulation after Gerbers were submitted.
 
 ## Overview
 

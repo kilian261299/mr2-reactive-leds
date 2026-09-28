@@ -37,7 +37,7 @@ In progress (audio-reactive LED addition — see [plan](docs/audio-reactive-led-
 
 - Phase 1: GitHub/bench-test sketch setup — complete
 - Phase 2: Breadboard + bench-test the conditioning circuit — complete, validated with real music; component values, the coupling capacitor, and the diode swap to BAT85 all confirmed for production
-- Phase 3: Remanufacture the PCB (changed from an earlier standalone-breakout-board plan) and develop the new `v4.0` firmware mode in parallel — in progress; `v2`'s EasyEDA design is complete and verified (DRC clean, connectivity checked), all parts ordered, and the board has been ordered from JLCPCB (Global Standard Direct Line, 8–12 business days) and is now in fabrication/shipping; `v4.0` firmware is drafted and compiles clean, but not yet bench-tested against real audio (conditioning circuit parts are with the board)
+- Phase 3: Remanufacture the PCB (changed from an earlier standalone-breakout-board plan) and develop the new `v4.0` firmware mode in parallel — in progress; `v2`'s EasyEDA design is complete and verified (DRC clean, connectivity checked), all parts ordered, and the board has been manufactured and has now arrived from JLCPCB (Global Standard Direct Line shipping) — visually inspected, not yet assembled; `R5` corrected from `100kΩ` to `4.7kΩ` after Gerbers were submitted, found via Multisim simulation (see [docs/multisim-simulation.md](docs/multisim-simulation.md)); `v4.0` firmware is drafted and compiles clean, but not yet bench-tested against real audio (conditioning circuit parts are with the board)
 - Phase 4: Install the new PCB revision and test everything for real, including flashing the `v4.x` firmware — not started
 
 ## Features
@@ -139,4 +139,5 @@ Full wiring details are available in [`docs/wiring-plan.md`](docs/wiring-plan.md
 - [PCB Design Documentation](docs/pcb-design.md)
 - [Hardware Files](hardware/README.md)
 - [Audio-Reactive LED Plan](docs/audio-reactive-led-plan.md) - New, optional addition: LEDs reacting to car audio. Circuit design, pinouts, and build plan.
+- [Multisim Simulation](docs/multisim-simulation.md) - Simulation work behind the R5 correction found after Gerbers were submitted.
 - [Audio Conditioning Breakout](hardware/audio-breakout.md) - Circuit design detail for the audio feature (originally planned as a standalone board; now being integrated into a new PCB revision instead — see the plan's Phase 3).

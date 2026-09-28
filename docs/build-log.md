@@ -40,7 +40,7 @@ Completed:
 
 Next steps:
 
-- None for the core project — it's finished. Active work has moved to the [audio-reactive LED addition](audio-reactive-led-plan.md); Phase 2 (bench testing) is complete and validated, Phase 3 (PCB re-fab) is in progress — `v2` has been ordered from JLCPCB and is now in fabrication/shipping, and the `v4.0` firmware is drafted and compiles clean but not yet bench-tested against real audio. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
+- None for the core project — it's finished. Active work has moved to the [audio-reactive LED addition](audio-reactive-led-plan.md); Phase 2 (bench testing) is complete and validated, Phase 3 (PCB re-fab) is in progress — `v2` has arrived from JLCPCB, visually inspected but not yet assembled, and the `v4.0` firmware is drafted and compiles clean but not yet bench-tested against real audio. v3.0/v3.1's gyroscope approach remains parked, not being pursued further.
 
 ## Stage 1 — Planning
 
@@ -759,7 +759,9 @@ At the original `R5 = 100kΩ`, the resulting factor (`1/(1+R5/R6)`, with `R6 = 1
 
 **Fix:** `R5` lowered to `4.7kΩ`. Not simply "as low as possible" — lowering `R5` also increases how much it attenuates bass frequencies (it needs to stay large relative to C4's impedance for that), and working through the combined trade-off at several values showed Node B's actual voltage peaks around `R5 ≈ 5–6kΩ` and falls off on both sides. `4.7kΩ` sits within ~1% of that optimum, using the exact `2.2µF` non-polarized C4 already sourced — no new part needed. Simulated result against the real 2.55V peak: Node B settles around `~1.0–1.05V` (confirmed directly in Multisim, not just predicted) — roughly a **5x improvement** over the original spec, using only a resistor value change.
 
-Since `R5` is a through-hole part meant to be hand-soldered (already on the same "cheap hand-swap, not a re-fab" list as `R3`/`R4`/`C3`/`C4`), this doesn't affect the board already in fabrication — solder `4.7kΩ` in that position instead of the `100kΩ` shown on the `v2` schematic when assembling. Updated across `docs/audio-reactive-led-plan.md`, `hardware/audio-breakout.md`, `CLAUDE.md`, and the system BOM's `Audio Addition` tab; the EasyEDA project's own schematic label is still stale and worth correcting for bookkeeping, though it isn't a hardware blocker.
+Since `R5` is a through-hole part meant to be hand-soldered (already on the same "cheap hand-swap, not a re-fab" list as `R3`/`R4`/`C3`/`C4`), this doesn't affect the board already in fabrication — solder `4.7kΩ` in that position instead of the `100kΩ` shown on the `v2` schematic when assembling. Updated across `docs/audio-reactive-led-plan.md`, `hardware/audio-breakout.md`, `CLAUDE.md`, and the system BOM's `Audio Addition` tab; the EasyEDA project's own schematic label is still stale and worth correcting for bookkeeping, though it isn't a hardware blocker. Full simulation methodology and results written up separately in [docs/multisim-simulation.md](multisim-simulation.md), including the AC Sweep and transient-analysis setup, the R5 trade-off sweep, and a later transient test using an AM-modulated source to approximate realistic dynamic radio content.
+
+**Board received from JLCPCB.** Visually inspected — bare-board front and rear photos taken, the same documentation approach used for `v1`'s pre-assembly board (see [docs/pcb-design.md](pcb-design.md)). Not yet assembled; continuity testing, soldering, and power-on testing are next, per the Phase 3 checklist.
 
 ## Phase 4 — Install and Test
 

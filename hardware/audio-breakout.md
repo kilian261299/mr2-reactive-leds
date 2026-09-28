@@ -161,7 +161,7 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 
 ---
 
-## Open Items (Phase 3, in progress — board ordered, in fabrication/shipping)
+## Open Items (Phase 3, in progress — board arrived from JLCPCB, not yet assembled)
 
 - [x] Source a BAT85 Schottky diode (or equivalent) for D1 on the production board — replacing the 1N4007 the testing circuit still uses, see the note above. Ordered.
 - [x] Source a genuinely non-polarized capacitor for C4 (ceramic or film, ~2.2–4.7µF) — the earlier back-to-back-electrolytics attempt was the wrong component for this job, not a wiring fault, see the note above. Ordered.
@@ -170,6 +170,7 @@ Bridge off both signal wires and the ground in parallel at the radio's RCA harne
 - [x] Regenerate the production schematic image to show D1 as BAT85 and the renumbered R3/R4/R5/C3/C4 designators — the testing schematic is already current and doesn't need this renumbering, since it isn't built from real EasyEDA designators
 - [x] Design the `v2` schematic/layout in EasyEDA — DRC clean (0 errors), schematic connectivity manually verified against the exported netlist (Node S/A/B topology and GND all match this document); `J7`'s Front Left/Front Right wiring confirmed matching R3=Left/R4=Right
 - [x] Export and commit the design files (`gerbers/`, `bom/`, `easyeda/`) under `hardware/pcb/v2/` — see [hardware/README.md](README.md)
-- [x] Submit Gerbers to JLCPCB — ordered, Global Standard Direct Line shipping, 8–12 business days quoted
-- [x] R5 corrected from `100kΩ` to `4.7kΩ` before assembly (found via Multisim simulation after Gerbers were already submitted — see the C4/R5 maths note above) — solder `4.7kΩ`, not the value shown on the `v2` schematic
-- [ ] Assemble and bench-test the new board once it arrives (visual inspection, continuity, power-on — no real radio involved yet, see the build plan's Phase 3)
+- [x] Submit Gerbers to JLCPCB — ordered, Global Standard Direct Line shipping
+- [x] R5 corrected from `100kΩ` to `4.7kΩ` before assembly (found via Multisim simulation after Gerbers were already submitted — see the C4/R5 maths note above and [docs/multisim-simulation.md](../docs/multisim-simulation.md) for the full simulation writeup) — solder `4.7kΩ`, not the value shown on the `v2` schematic
+- [x] Board arrived from JLCPCB — visually inspected, bare-board front/rear photos taken (same approach as `v1`)
+- [ ] Assemble and bench-test the new board (visual inspection done — continuity, soldering, power-on next — no real radio involved yet, see the build plan's Phase 3)
