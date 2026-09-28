@@ -12,6 +12,10 @@ The original `R5 = 100kΩ` spec was based purely on the C4/R5 transfer-function 
 
 ## Circuit modelled
 
+![Multisim schematic](../images/multisim/multisim_schematic.png)
+
+The final corrected circuit as built in Multisim: `R3`/`R4 = 470Ω`, `C1 (=C4) = 2.2µF`, `R5 = 4.7kΩ`, `D1 = BAT85`, `C2 (=C3) = 2.2µF`, `R6 = 10kΩ`, driven by an `AM_VOLTAGE` source (`V2`) and read on a two-channel oscilloscope (`XSC1`).
+
 Same topology as the production `v2` circuit (see the audio-reactive-led-plan.md component list), using Multisim's standard SPICE parts:
 
 ```
@@ -113,11 +117,13 @@ A clean 1kHz sine wave is a poor stand-in for real music, which varies constantl
 - **Carrier amplitude:** `1.3V` (chosen so the resulting AM peak, `Carrier × (1+m)`, lands at the confirmed real-world peak of ~2.55V)
 - **Carrier frequency:** `1kHz` — stands in for the audio content itself
 - **Modulation index:** `1` — full-depth modulation, so the envelope swings from ~0 up to the full peak
-- **Intelligence (modulation) frequency:** `5Hz` — a slow, music-like loudness variation (the default `100Hz` was also tried as a worst-case "unrealistically fast dynamics" stress test; 5Hz better represents how quickly real music's loudness actually changes)
+- **Intelligence (modulation) frequency:** `10Hz` — a slow, music-like loudness variation (the default `100Hz` was also tried as a worst-case "unrealistically fast dynamics" stress test; 10Hz better represents how quickly real music's loudness actually changes)
 
-With Channel A (source) and Channel B (Node B) both on **DC coupling**, the resulting trace showed exactly the expected shape: Node B tracking the slow AM envelope, entirely positive throughout, with fine `1kHz`-carrier ripple riding on top of the smoothed envelope — the smoothing/discharge stage (C3/R6) doing its job of turning the rectified ripple into a slowly-varying "how loud is it right now" signal, on top of the now-much-smaller self-bias sag from the corrected R5 value.
+![Multisim oscilloscope — AM-modulated transient test](../images/multisim/multisim_oscilloscope.png)
 
-**One debugging detour along the way:** an earlier pass at this same test showed Node B appearing to swing both positive *and* negative — physically impossible for a signal downstream of a one-way diode. After ruling out a mislabelled channel and reversed polarity, the actual cause was **Channel A's coupling being left on AC instead of DC** — AC coupling re-centres a trace around its own average, so an always-positive signal can appear to straddle zero purely as a scope display artifact. Switching to DC coupling resolved it immediately, and the corrected trace matched the expected, physically-sensible shape. (This is the same lesson as the DC-coupling note in the setup section above — it came up independently in both places.)
+Both channels set to **DC coupling**. Blue (Channel A) is the raw AM-modulated input — the `1kHz` carrier visibly riding inside the slower `10Hz` envelope. Red (Channel B) is Node B, the circuit's output: it tracks the AM envelope cleanly, staying **entirely positive** throughout, with only faint `1kHz`-carrier ripple left on top after C3/R6's smoothing — exactly the "how loud is it right now" envelope the firmware needs, confirming the corrected `R5 = 4.7kΩ` circuit behaves correctly under a signal much closer to real dynamic music than a fixed 1kHz sine ever could.
+
+**One debugging detour along the way:** an earlier pass at this same test showed Node B appearing to swing both positive *and* negative — physically impossible for a signal downstream of a one-way diode. After ruling out a mislabelled channel and reversed polarity, the actual cause was **Channel A's coupling being left on AC instead of DC** — AC coupling re-centres a trace around its own average, so an always-positive signal can appear to straddle zero purely as a scope display artifact. Switching to DC coupling (as shown in the screenshot above) resolved it immediately, and the corrected trace matched the expected, physically-sensible shape. (This is the same lesson as the DC-coupling note in the setup section above — it came up independently in both places.)
 
 ---
 

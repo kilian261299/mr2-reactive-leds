@@ -1,6 +1,6 @@
 # PCB Design
 
-**This document covers `v1`, the original and currently-installed board.** A `v2` revision is in progress, adding the [audio-reactive LED circuit](audio-reactive-led-plan.md) directly onto the same design — see [hardware/README.md](../hardware/README.md) for its current status (design complete, board manufactured and arrived from JLCPCB, assembly not yet started) and [docs/multisim-simulation.md](multisim-simulation.md) for the R5 correction found via simulation after Gerbers were submitted.
+**The sections below cover `v1`, the original and currently-installed board.** A `v2` revision is in progress, adding the [audio-reactive LED circuit](audio-reactive-led-plan.md) directly onto the same design — see [hardware/README.md](../hardware/README.md) for its current status (design complete, board manufactured and arrived from JLCPCB, assembly not yet started), [the `v2` section further down this document](#v2--audio-reactive-revision) for its own schematic/layout/renders and bare-board photos, and [docs/multisim-simulation.md](multisim-simulation.md) for the R5 correction found via simulation after Gerbers were submitted.
 
 ## Overview
 
@@ -294,3 +294,55 @@ The buck converter is installed inside the control box but will be tested using 
 ### Control Box Photo
 
 ![Completed Control Box](../images/control-box/control_box.jpeg)
+
+---
+
+# `v2` — Audio-Reactive Revision
+
+**In progress.** Adds the [audio-reactive LED circuit](audio-reactive-led-plan.md) — R3–R6, C3, C4, D1 (BAT85), and a new `J7` RCA input connector — directly onto the same board as `v1`, replacing the standalone-breakout-board approach originally planned. Cloned from the `v1` EasyEDA project rather than editing it in place. Design files: [hardware/pcb/v2/](../hardware/pcb/v2/).
+
+**Status: board manufactured and received from JLCPCB, visually inspected, assembly not yet started.** See [hardware/README.md](../hardware/README.md) for the full status and [docs/multisim-simulation.md](multisim-simulation.md) for the R5 correction found via Multisim simulation after Gerbers were already submitted.
+
+## Schematic
+
+![PCB V2 Schematic](../images/pcb/v2/PCB_V2_schematic.png)
+
+**Note: this schematic still shows `R5` as `100kΩ`.** The EasyEDA project's own label was never updated after the correction was found (see [docs/multisim-simulation.md](multisim-simulation.md)) — this is a bookkeeping gap, not a hardware issue. The board is hand-assembled with a `4.7kΩ` resistor in that position, not the `100kΩ` shown here.
+
+---
+
+## PCB Layout
+
+![PCB V2 Layout](../images/pcb/v2/PCB_V2_LAYOUT.png)
+
+Same two-layer FR4 approach as `v1`. DRC came back clean (0 errors); EasyEDA Standard has no separate ERC report, so schematic connectivity (Node S/A/B topology, GND net, no floating pins or duplicate designators) was verified directly against the exported schematic JSON instead — see [docs/build-log.md](build-log.md) for the full Phase 3 history, including the `J7` Front Left/Right wiring mistake caught and fixed during that check.
+
+---
+
+## 2D Preview
+
+![PCB V2 2D Top Render](../images/pcb/v2/PCB_V2_RENDER_TOP.png)
+
+![PCB V2 2D Bottom Render](../images/pcb/v2/PCB_V2_RENDER_BOTTOM.png)
+
+---
+
+## 3D Preview
+
+![PCB V2 3D Top Render](../images/pcb/v2/PCB_V2_RENDER_TOP_3D.png)
+
+---
+
+## Manufactured PCB Photos
+
+Photos of the manufactured `v2` board, before component assembly — same documentation approach as `v1`'s bare-board photos above.
+
+![Manufactured PCB V2 Top](../images/pcb/v2/pcb_v2_picture_top.jpeg)
+
+![Manufactured PCB V2 Bottom](../images/pcb/v2/pcb_v2_picture_bottom.jpeg)
+
+---
+
+## Next Steps
+
+Assembly (continuity testing, soldering, power-on testing) hasn't started yet — see the Phase 3 checklist in [docs/audio-reactive-led-plan.md](audio-reactive-led-plan.md) and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for what's left. `R5` must be hand-soldered as `4.7kΩ`, not the `100kΩ` shown on the schematic above.
