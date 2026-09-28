@@ -27,7 +27,7 @@ The PCB design was developed from the hardware architecture validated during the
 
 ## Schematic
 
-![PCB Schematic](../images/pcb/PCB_schematic.png)
+![PCB Schematic](../images/pcb/v1/PCB_schematic.png)
 
 The schematic defines the electrical connections between the ESP32-C3, level shifter, accelerometer, rotary encoder, LED outputs, power supply, and external connectors.
 
@@ -39,7 +39,7 @@ The PCB also provides dedicated connectors for the external system components, a
 
 ## PCB Layout
 
-![PCB Layout](../images/pcb/PCB_LAYOUT.png)
+![PCB Layout](../images/pcb/v1/PCB_LAYOUT.png)
 
 The PCB uses a two-layer FR4 design with dedicated 5V power routing.
 
@@ -56,9 +56,9 @@ The completed layout was reviewed against the schematic and breadboard prototype
 
 ## 2D Preview
 
-![PCB 2D Top Render](../images/pcb/PCB_RENDER_TOP.png)
+![PCB 2D Top Render](../images/pcb/v1/PCB_RENDER_TOP.png)
 
-![PCB 2D Bottom Render](../images/pcb/PCB_RENDER_BOTTOM.png)
+![PCB 2D Bottom Render](../images/pcb/v1/PCB_RENDER_BOTTOM.png)
 
 The 2D PCB previews show the final board outline, copper layout, component placement, mounting holes, and connector positions before manufacture.
 
@@ -66,7 +66,7 @@ The 2D PCB previews show the final board outline, copper layout, component place
 
 ## 3D Preview
 
-![PCB 3D Top Render](../images/pcb/PCB_RENDER_TOP_3D.png)
+![PCB 3D Top Render](../images/pcb/v1/PCB_RENDER_TOP_3D.png)
 
 The 3D render was used to review the physical arrangement of components, connector placement, and overall board layout before manufacturing.
 
@@ -157,11 +157,11 @@ The tested connections were found to be correct, with no unexpected shorts or op
 
 Photos documenting the manufactured PCBs before component assembly are included below.
 
-![Manufactured PCB Before Assembly Front](../images/pcb/pcb_picture_3.jpeg)
+![Manufactured PCB Before Assembly Front](../images/pcb/v1/pcb_picture_3.jpeg)
 
-![Manufactured PCB Before Assembly Back](../images/pcb/pcb_picture_2.jpeg)
+![Manufactured PCB Before Assembly Back](../images/pcb/v1/pcb_picture_2.jpeg)
 
-![Manufactured PCB Before Assembly Angled](../images/pcb/pcb_picture_1.jpeg)
+![Manufactured PCB Before Assembly Angled](../images/pcb/v1/pcb_picture_1.jpeg)
 
 ---
 
@@ -243,7 +243,7 @@ The replacement PCB successfully reproduced the functionality previously validat
 
 Photos documenting the completed PCB assembly and testing process are included below.
 
-![Assembled PCB](../images/pcb/soldered_pcb.jpeg)
+![Assembled PCB](../images/pcb/v1/soldered_pcb.jpeg)
 
 ---
 

@@ -395,9 +395,9 @@ The original GPIO4 issue was therefore isolated to the first ESP32-C3 assembly r
 
 Photos documenting the PCB assembly and testing process are available in the project image archive:
 
-[PCB Assembly Photos](../images/pcb/)
+[PCB Assembly Photos](../images/pcb/v1/)
 
-![Assembled PCB](../images/pcb/soldered_pcb.jpeg)
+![Assembled PCB](../images/pcb/v1/soldered_pcb.jpeg)
 
 ---
 
