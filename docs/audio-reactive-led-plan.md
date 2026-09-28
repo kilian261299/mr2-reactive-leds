@@ -214,10 +214,10 @@ Using a spare ESP32-C3 module and the real addressable LED strip found for testi
 
 Decided against a standalone breakout board — the audio conditioning circuit will instead be added directly to a new PCB revision, following the same EasyEDA → JLCPCB process already used for the original board (including its GPIO4-fault replacement revision). Firmware development happens in this phase too, once the board's been ordered — no need to wait idle for manufacturing/shipping when the new mode can be written and bench-tested against Phase 2's logic in parallel.
 
-**Parts sourced** (everything else needed was already on hand from Phase 2 bench testing or the original `v1` build):
-- Coupling capacitor (`C4` on the real board) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. **Ordered.**
-- JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap. **Ordered.**
-- D1 — a **BAT85** Schottky diode, replacing the 1N4007 for production — see the diode note above. **Ordered.**
+**Parts sourced and in hand** (everything else needed was already on hand from Phase 2 bench testing or the original `v1` build):
+- Coupling capacitor (`C4` on the real board) — genuinely **non-polarized** (ceramic or film, not electrolytic), ~2.2–4.7µF, 16V+ rating. **Received.**
+- JST-XH 3-pin connector set (male PCB header + female housing + crimp pins), 2.54mm pitch, matching the J2–J5 connectors already on the board — for `J7`, carrying Front Left, Front Right, and shield/ground from the RCA tap. **Received.**
+- D1 — a **BAT85** Schottky diode, replacing the 1N4007 for production — see the diode note above. **Received.**
 
 The EasyEDA schematic/layout is designed and verified; the board was ordered from JLCPCB (Global Standard Direct Line shipping) and has now arrived, visually inspected (bare-board photos taken), assembly not yet started. See [docs/multisim-simulation.md](multisim-simulation.md) for the Multisim work behind the R5 correction below. The `v4.0` firmware (below) has been drafted in parallel and compiles clean, though it hasn't been bench-tested yet — the conditioning circuit parts are with the board rather than available on the bench.
 
