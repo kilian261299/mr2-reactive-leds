@@ -307,7 +307,7 @@ The buck converter is installed inside the control box but will be tested using 
 
 ![PCB V2 Schematic](../images/pcb/v2/PCB_V2_schematic.png)
 
-**Note: this schematic still shows `R5` as `100kΩ`.** The EasyEDA project's own label was never updated after the correction was found (see [docs/multisim-simulation.md](multisim-simulation.md)) — this is a bookkeeping gap, not a hardware issue. The board is hand-assembled with a `4.7kΩ` resistor in that position, not the `100kΩ` shown here.
+`R5` is shown here as `4.7kΩ` — the EasyEDA project's label was updated to match the corrected value found via Multisim simulation (see [docs/multisim-simulation.md](multisim-simulation.md)), so this schematic and the physical board now agree.
 
 ---
 
@@ -345,4 +345,4 @@ Photos of the manufactured `v2` board, before component assembly — same docume
 
 ## Next Steps
 
-Assembly (continuity testing, soldering, power-on testing) hasn't started yet — see the Phase 3 checklist in [docs/audio-reactive-led-plan.md](audio-reactive-led-plan.md) and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for what's left. `R5` must be hand-soldered as `4.7kΩ`, not the `100kΩ` shown on the schematic above.
+Assembly (continuity testing, soldering, power-on testing) hasn't started yet — see the Phase 3 checklist in [docs/audio-reactive-led-plan.md](audio-reactive-led-plan.md) and [hardware/audio-breakout.md](../hardware/audio-breakout.md) for what's left. `R5` is `4.7kΩ`, matching both the schematic above and the physical board.
